@@ -43,6 +43,7 @@ const entryLookupOverrides = {
 const bootstrap = window.SOLAR_BOOTSTRAP || {};
 const sampleEntries = Array.isArray(bootstrap.sample_entries) ? bootstrap.sample_entries : [];
 const defaultConfig = bootstrap.default_config || {};
+const dashboardCompactModeStorageKey = "solar-dashboard-compact-mode";
 let entriesPageState = {
   entries: [],
   selectedDate: ""
@@ -396,6 +397,52 @@ function formatCurrency(value) {
   return `$${formatNumber(value, 0, 0)}`;
 }
 
+function isDashboardCompactModeEnabled() {
+  return window.localStorage?.getItem(dashboardCompactModeStorageKey) === "true";
+}
+
+function updateDashboardViewToggleLabels(isCompactMode) {
+  document.querySelectorAll("[data-dashboard-view-toggle]").forEach((button) => {
+    button.textContent = isCompactMode ? "Standard View" : "Field Mode";
+    button.setAttribute("aria-pressed", String(isCompactMode));
+    button.classList.toggle("dashboard-view-button-active", isCompactMode);
+  });
+}
+
+function resizeDashboardCharts() {
+  if (typeof Plotly === "undefined") return;
+  const chartHeight = document.body.classList.contains("dashboard-compact-mode") ? 210 : 320;
+  document.querySelectorAll(".dashboard-chart, .dashboard-chart-embedded .js-plotly-plot").forEach((chart) => {
+    try {
+      Plotly.relayout(chart, { height: chartHeight });
+      Plotly.Plots.resize(chart);
+    } catch (error) {
+      // Ignore elements that are wrappers instead of direct Plotly nodes.
+    }
+  });
+}
+
+function applyDashboardCompactMode(isCompactMode) {
+  if (getPageName() !== "dashboard") return;
+  document.body.classList.toggle("dashboard-compact-mode", isCompactMode);
+  updateDashboardViewToggleLabels(isCompactMode);
+  window.localStorage?.setItem(dashboardCompactModeStorageKey, String(isCompactMode));
+  window.setTimeout(resizeDashboardCharts, 30);
+}
+
+function setupDashboardViewToggle() {
+  if (getPageName() !== "dashboard") return;
+  document.querySelectorAll("[data-dashboard-view-toggle]").forEach((button) => {
+    if (button.dataset.boundToggle === "true") return;
+    button.dataset.boundToggle = "true";
+    button.addEventListener("click", () => {
+      const nextState = !document.body.classList.contains("dashboard-compact-mode");
+      applyDashboardCompactMode(nextState);
+    });
+  });
+  applyDashboardCompactMode(isDashboardCompactModeEnabled());
+}
+
 function renderDashboardHtmlClient(entries, metrics, config, firebaseStatus, alerts) {
   const recentEntries = [...entries].slice(-10).reverse();
   const summaryHref = isStaticSite() ? "contract-summary.html" : "/contract-summary";
@@ -422,6 +469,7 @@ function renderDashboardHtmlClient(entries, metrics, config, firebaseStatus, ale
               <p class="eyebrow mb-2">Sunrun + NYSEG + Irradiance + Weather</p>
               <div class="d-flex flex-wrap align-items-center gap-2">
                 <h1 class="hero-title mb-0">Solar performance and guarantee tracking</h1>
+                <button type="button" class="btn btn-contract btn-sm" data-dashboard-view-toggle aria-pressed="false">Field Mode</button>
                 <button type="button" class="btn btn-contract btn-sm" data-bs-toggle="modal" data-bs-target="#dashboardIntroModal">About</button>
               </div>
             </div>
@@ -476,7 +524,9 @@ function renderDashboardHtmlClient(entries, metrics, config, firebaseStatus, ale
 function renderDashboardChartsClient(entries) {
   if (typeof Plotly === "undefined" || !entries.length) return;
   const dates = entries.map((entry) => entry.entry_date);
-  const baseLayout = { margin: { l: 20, r: 20, t: 48, b: 32 }, template: "plotly_white" };
+  const compactMode = document.body.classList.contains("dashboard-compact-mode");
+  const chartHeight = compactMode ? 210 : 320;
+  const baseLayout = { margin: { l: 20, r: 20, t: 48, b: 32 }, template: "plotly_white", height: chartHeight };
 
   Plotly.newPlot("daily-chart", [
     { type: "bar", x: dates, y: entries.map((entry) => entry.production_kwh), name: "Production (kWh)", marker: { color: "#e3a008" } },
@@ -531,6 +581,7 @@ async function renderDashboard(entries, config, firebaseStatus) {
     const target = document.getElementById("dashboard-root");
     if (target) {
       target.innerHTML = renderDashboardHtmlClient(computedEntries, metrics, config, firebaseStatus, alerts);
+      setupDashboardViewToggle();
       renderDashboardChartsClient(computedEntries);
     }
     return;
@@ -549,6 +600,7 @@ async function renderDashboard(entries, config, firebaseStatus) {
   if (target) {
     target.innerHTML = payload.html;
     activateInjectedScripts(target);
+    setupDashboardViewToggle();
   }
 }
 

@@ -40,6 +40,12 @@
             <button
               type="button"
               class="btn btn-contract btn-sm"
+              data-dashboard-view-toggle
+              aria-pressed="false"
+            >Field Mode</button>
+            <button
+              type="button"
+              class="btn btn-contract btn-sm"
               data-bs-toggle="modal"
               data-bs-target="#dashboardIntroModal"
             >About</button>
@@ -213,10 +219,12 @@
 
     <section class="row g-3 mb-4">
       <div class="col-lg-8">
-        <div class="card tracker-card h-100">
+          <div class="card tracker-card h-100">
           <div class="card-body">
             <h2 class="h5 mb-3">Production Overview</h2>
-            {{ charts.daily_chart|safe }}
+            <div class="dashboard-chart dashboard-chart-embedded">
+              {{ charts.daily_chart|safe }}
+            </div>
           </div>
         </div>
       </div>
@@ -253,7 +261,9 @@
         <div class="card tracker-card h-100">
           <div class="card-body">
             <h2 class="h5 mb-3">Grid Flow and Virtual Consumption Monitor</h2>
-            {{ charts.flow_chart|safe }}
+            <div class="dashboard-chart dashboard-chart-embedded">
+              {{ charts.flow_chart|safe }}
+            </div>
           </div>
         </div>
       </div>
@@ -281,21 +291,27 @@
       <div class="col-lg-4">
         <div class="card tracker-card h-100">
           <div class="card-body">
-            {{ charts.irradiance_chart|safe }}
+            <div class="dashboard-chart dashboard-chart-embedded">
+              {{ charts.irradiance_chart|safe }}
+            </div>
           </div>
         </div>
       </div>
       <div class="col-lg-4">
         <div class="card tracker-card h-100">
           <div class="card-body">
-            {{ charts.weather_chart|safe }}
+            <div class="dashboard-chart dashboard-chart-embedded">
+              {{ charts.weather_chart|safe }}
+            </div>
           </div>
         </div>
       </div>
       <div class="col-lg-4">
         <div class="card tracker-card h-100">
           <div class="card-body">
-            {{ charts.monthly_chart|safe }}
+            <div class="dashboard-chart dashboard-chart-embedded">
+              {{ charts.monthly_chart|safe }}
+            </div>
           </div>
         </div>
       </div>

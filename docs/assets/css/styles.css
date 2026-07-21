@@ -34,6 +34,11 @@ body[data-page="dashboard"] .container {
   padding-right: 18px;
 }
 
+body[data-page="dashboard"].dashboard-compact-mode .container {
+  padding-left: 10px;
+  padding-right: 10px;
+}
+
 .dashboard-editorial-shell {
   display: grid;
   grid-template-columns: minmax(270px, 1fr) minmax(900px, 1080px) minmax(270px, 1fr);
@@ -44,6 +49,11 @@ body[data-page="dashboard"] .container {
 .dashboard-main-column {
   min-width: 0;
   padding: 0 14px;
+}
+
+.dashboard-main-column .row {
+  --bs-gutter-x: 1rem;
+  --bs-gutter-y: 1rem;
 }
 
 .dashboard-side-panel {
@@ -242,6 +252,21 @@ body[data-page="dashboard"] .container {
 
 .tracker-card .card-body {
   padding: 1.4rem;
+}
+
+.dashboard-chart {
+  min-height: 320px;
+}
+
+.dashboard-chart.dashboard-chart-embedded > div {
+  width: 100%;
+}
+
+.dashboard-chart.dashboard-chart-embedded .js-plotly-plot,
+.dashboard-chart.dashboard-chart-embedded .plot-container,
+.dashboard-chart.dashboard-chart-embedded .svg-container {
+  width: 100% !important;
+  min-height: 320px !important;
 }
 
 .tracker-progress {
@@ -551,6 +576,100 @@ body[data-page="dashboard"] .container {
   font-weight: 600;
 }
 
+.dashboard-view-button-active {
+  background: linear-gradient(135deg, #d9a441, #ecd49d);
+  border-color: rgba(217, 164, 65, 0.42);
+  color: #31404b;
+}
+
+body[data-page="dashboard"].dashboard-compact-mode .dashboard-editorial-shell {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+body[data-page="dashboard"].dashboard-compact-mode .dashboard-main-column {
+  padding: 0;
+}
+
+body[data-page="dashboard"].dashboard-compact-mode .dashboard-side-panel {
+  display: none;
+}
+
+body[data-page="dashboard"].dashboard-compact-mode .hero-panel {
+  padding: 0.95rem 1rem;
+}
+
+body[data-page="dashboard"].dashboard-compact-mode .hero-title {
+  font-size: clamp(1.15rem, 3vw, 1.6rem);
+}
+
+body[data-page="dashboard"].dashboard-compact-mode .eyebrow,
+body[data-page="dashboard"].dashboard-compact-mode .small-label {
+  font-size: 0.68rem;
+}
+
+body[data-page="dashboard"].dashboard-compact-mode .stat-callout {
+  padding: 1rem 1.1rem;
+}
+
+body[data-page="dashboard"].dashboard-compact-mode .callout-value {
+  font-size: 1.7rem;
+}
+
+body[data-page="dashboard"].dashboard-compact-mode .metric-card {
+  padding: 1rem;
+  border-radius: 18px;
+}
+
+body[data-page="dashboard"].dashboard-compact-mode .metric-card strong {
+  font-size: 1.5rem;
+}
+
+body[data-page="dashboard"].dashboard-compact-mode .tracker-card,
+body[data-page="dashboard"].dashboard-compact-mode .hero-panel,
+body[data-page="dashboard"].dashboard-compact-mode .metric-card {
+  border-radius: 18px;
+}
+
+body[data-page="dashboard"].dashboard-compact-mode .tracker-card .card-body {
+  padding: 1rem;
+}
+
+body[data-page="dashboard"].dashboard-compact-mode .info-grid {
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.8rem;
+}
+
+body[data-page="dashboard"].dashboard-compact-mode .info-grid strong {
+  font-size: 0.98rem;
+}
+
+body[data-page="dashboard"].dashboard-compact-mode .dashboard-chart {
+  min-height: 210px;
+}
+
+body[data-page="dashboard"].dashboard-compact-mode .dashboard-chart.dashboard-chart-embedded .js-plotly-plot,
+body[data-page="dashboard"].dashboard-compact-mode .dashboard-chart.dashboard-chart-embedded .plot-container,
+body[data-page="dashboard"].dashboard-compact-mode .dashboard-chart.dashboard-chart-embedded .svg-container {
+  min-height: 210px !important;
+  height: 210px !important;
+}
+
+body[data-page="dashboard"].dashboard-compact-mode .table {
+  font-size: 0.86rem;
+}
+
+body[data-page="dashboard"].dashboard-compact-mode .table th,
+body[data-page="dashboard"].dashboard-compact-mode .table td {
+  padding-top: 0.45rem;
+  padding-bottom: 0.45rem;
+}
+
+body[data-page="dashboard"].dashboard-compact-mode .btn-sun,
+body[data-page="dashboard"].dashboard-compact-mode .btn-contract {
+  padding: 0.42rem 0.72rem;
+  font-size: 0.84rem;
+}
+
 @media (max-width: 991px) {
   .tracker-nav .navbar-nav {
     padding-top: 0.75rem;
@@ -558,6 +677,21 @@ body[data-page="dashboard"] .container {
 
   .status-banner {
     flex-direction: column;
+  }
+
+  .dashboard-chart,
+  .dashboard-chart.dashboard-chart-embedded .js-plotly-plot,
+  .dashboard-chart.dashboard-chart-embedded .plot-container,
+  .dashboard-chart.dashboard-chart-embedded .svg-container {
+    min-height: 250px !important;
+  }
+
+  body[data-page="dashboard"].dashboard-compact-mode .dashboard-chart,
+  body[data-page="dashboard"].dashboard-compact-mode .dashboard-chart.dashboard-chart-embedded .js-plotly-plot,
+  body[data-page="dashboard"].dashboard-compact-mode .dashboard-chart.dashboard-chart-embedded .plot-container,
+  body[data-page="dashboard"].dashboard-compact-mode .dashboard-chart.dashboard-chart-embedded .svg-container {
+    min-height: 190px !important;
+    height: 190px !important;
   }
 }
 
