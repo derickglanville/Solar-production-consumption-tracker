@@ -217,6 +217,30 @@ def build_historical_spreadsheet_pricing(spreadsheet_summary, monthly_bill_summa
     return spreadsheet
 
 
+def build_energy_impact_summary(config, metrics):
+    average_home_day_kwh = (config.annual_home_usage_kwh or 0.0) / 365.0
+    today_house_days = (
+        metrics.today_production / average_home_day_kwh if average_home_day_kwh else 0.0
+    )
+    ytd_house_days = (
+        metrics.ytd_production / average_home_day_kwh if average_home_day_kwh else 0.0
+    )
+    ev_kwh_per_mile = 0.30
+    today_ev_miles = metrics.today_production / ev_kwh_per_mile if ev_kwh_per_mile else 0.0
+    ytd_ev_miles = metrics.ytd_production / ev_kwh_per_mile if ev_kwh_per_mile else 0.0
+    average_home_hours_supported = today_house_days * 24.0
+
+    return {
+        "average_home_day_kwh": average_home_day_kwh,
+        "today_house_days": today_house_days,
+        "ytd_house_days": ytd_house_days,
+        "today_ev_miles": today_ev_miles,
+        "ytd_ev_miles": ytd_ev_miles,
+        "average_home_hours_supported": average_home_hours_supported,
+        "ev_kwh_per_mile": ev_kwh_per_mile,
+    }
+
+
 def hydrate_entries(items):
     hydrated = []
     for item in items or []:
@@ -267,13 +291,14 @@ def render_dashboard(entries, config, firebase_status):
     df = build_dataframe(entries, config)
     metrics = calculate_metrics(df, config)
     alerts = build_alerts(df, config)
-    charts = build_chart_bundle(df)
+    charts = build_chart_bundle(df, config)
     recent_entries = list(reversed(entries[-10:]))
     historical_usage = load_historical_usage_summary(
         expected_annual_home_usage_kwh=config.annual_home_usage_kwh
     )
     monthly_bill = load_monthly_bill_summary()
     billing_outlook = build_billing_outlook(config, metrics, monthly_bill)
+    energy_impact = build_energy_impact_summary(config, metrics)
     return render_template(
         "dashboard_content.html",
         metrics=metrics,
@@ -286,6 +311,7 @@ def render_dashboard(entries, config, firebase_status):
         historical_usage=historical_usage_to_dict(historical_usage),
         monthly_bill=monthly_bill_to_dict(monthly_bill),
         billing_outlook=billing_outlook,
+        energy_impact=energy_impact,
     )
 
 
@@ -299,6 +325,7 @@ def dashboard():
     monthly_bill = load_monthly_bill_summary()
     metrics = calculate_metrics(build_dataframe(entries, config), config)
     billing_outlook = build_billing_outlook(config, metrics, monthly_bill)
+    energy_impact = build_energy_impact_summary(config, metrics)
     firebase_status = {
         "message": "Loading live Firebase data in the browser. Demo data is shown until the connection completes.",
         "kind": "warning",
@@ -310,13 +337,14 @@ def dashboard():
         bootstrap_data=build_bootstrap_data(),
         metrics=metrics,
         alerts=build_alerts(build_dataframe(entries, config), config),
-        charts=build_chart_bundle(build_dataframe(entries, config)),
+        charts=build_chart_bundle(build_dataframe(entries, config), config),
         recent_entries=list(reversed(entries[-10:])),
         config=config,
         firebase_status=firebase_status,
         historical_usage=historical_usage_to_dict(historical_usage),
         monthly_bill=monthly_bill_to_dict(monthly_bill),
         billing_outlook=billing_outlook,
+        energy_impact=energy_impact,
     )
 
 

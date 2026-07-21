@@ -250,9 +250,96 @@ def build_alerts(df, config):
     return alerts
 
 
-def build_chart_bundle(df):
+def build_chart_bundle(df, config=None):
     if df.empty:
         return {}
+
+    electric_rate = (
+        float(config.current_electric_rate)
+        if config and getattr(config, "current_electric_rate", None) is not None
+        else 0.24
+    )
+    monthly_fixed_charges = (
+        float(config.monthly_fixed_charges)
+        if config and getattr(config, "monthly_fixed_charges", None) is not None
+        else 19.50
+    )
+    monthly_lease_payment = (
+        float(config.monthly_lease_payment)
+        if config and getattr(config, "monthly_lease_payment", None) is not None
+        else 155.0
+    )
+    observed_months = max(1, df["entry_date"].dt.to_period("M").nunique())
+    daily_fixed_charge = (monthly_fixed_charges * observed_months) / max(len(df), 1)
+    daily_lease_charge = (monthly_lease_payment * observed_months) / max(len(df), 1)
+    cumulative_net_savings = (
+        (df["production_kwh"] * electric_rate)
+        - (df["daily_import_kwh"] * electric_rate)
+        - daily_fixed_charge
+        - daily_lease_charge
+    ).cumsum()
+
+    running_totals_chart = go.Figure()
+    running_totals_chart.add_trace(
+        go.Scatter(
+            x=df["entry_date"],
+            y=df["production_kwh"].cumsum(),
+            name="Cumulative Production",
+            line={"color": "#e3a008", "width": 3},
+        )
+    )
+    running_totals_chart.add_trace(
+        go.Scatter(
+            x=df["entry_date"],
+            y=df["daily_import_kwh"].cumsum(),
+            name="Cumulative Import",
+            line={"color": "#b42318", "width": 3},
+        )
+    )
+    running_totals_chart.add_trace(
+        go.Scatter(
+            x=df["entry_date"],
+            y=df["daily_export_kwh"].cumsum(),
+            name="Cumulative Export",
+            line={"color": "#157f3b", "width": 3},
+        )
+    )
+    running_totals_chart.add_trace(
+        go.Scatter(
+            x=df["entry_date"],
+            y=df["estimated_self_consumption_kwh"].cumsum(),
+            name="Cumulative Self Consumption",
+            line={"color": "#0f4c81", "width": 3, "dash": "dot"},
+        )
+    )
+    running_totals_chart.add_trace(
+        go.Scatter(
+            x=df["entry_date"],
+            y=cumulative_net_savings,
+            name="Cumulative Net Savings",
+            line={"color": "#7c3aed", "width": 3, "dash": "dash"},
+            yaxis="y2",
+        )
+    )
+    running_totals_chart.update_layout(
+        title="Running Totals",
+        margin={"l": 20, "r": 20, "t": 110, "b": 20},
+        template="plotly_white",
+        yaxis={"title": "Energy (kWh)"},
+        yaxis2={
+            "title": "Dollars ($)",
+            "overlaying": "y",
+            "side": "right",
+            "showgrid": False,
+        },
+        legend={
+            "orientation": "h",
+            "yanchor": "bottom",
+            "y": 1.18,
+            "x": 0,
+            "font": {"size": 11},
+        },
+    )
 
     daily_chart = go.Figure()
     daily_chart.add_trace(
@@ -366,6 +453,9 @@ def build_chart_bundle(df):
     )
 
     return {
+        "running_totals_chart": running_totals_chart.to_html(
+            full_html=False, include_plotlyjs="cdn"
+        ),
         "daily_chart": daily_chart.to_html(full_html=False, include_plotlyjs="cdn"),
         "flow_chart": flow_chart.to_html(full_html=False, include_plotlyjs=False),
         "irradiance_chart": irradiance_chart.to_html(

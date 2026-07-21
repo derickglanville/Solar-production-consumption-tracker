@@ -296,6 +296,44 @@
             <div class="dashboard-chart dashboard-chart-embedded">
               {{ charts.daily_chart|safe }}
             </div>
+            <div class="energy-impact-panel mt-3">
+              <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
+                <div>
+                  <h3 class="h6 mb-1">What This Energy Could Do</h3>
+                  <p class="text-muted mb-0">A quick real-world translation of your solar output using your historic household baseline and a typical EV efficiency.</p>
+                </div>
+                <span class="energy-impact-assumption">
+                  {{ "{:,.1f}".format(energy_impact.average_home_day_kwh) }} kWh/day home use • {{ "{:,.2f}".format(energy_impact.ev_kwh_per_mile) }} kWh/EV mile
+                </span>
+              </div>
+              <div class="info-grid energy-impact-grid">
+                <div>
+                  <span>Today's Output</span>
+                  <strong>{{ "{:,.1f}".format(metrics.today_production) }} kWh</strong>
+                  <small>Enough for about {{ "{:,.0f}".format(energy_impact.average_home_hours_supported) }} hours of whole-home usage at your historic average.</small>
+                </div>
+                <div>
+                  <span>House Coverage</span>
+                  <strong>{{ "{:,.2f}".format(energy_impact.today_house_days) }} day{% if energy_impact.today_house_days != 1 %}s{% endif %}</strong>
+                  <small>Based on your pre-solar average of {{ "{:,.1f}".format(energy_impact.average_home_day_kwh) }} kWh per day.</small>
+                </div>
+                <div>
+                  <span>EV Range Equivalent</span>
+                  <strong>{{ "{:,.0f}".format(energy_impact.today_ev_miles) }} miles</strong>
+                  <small>Approximate EV driving range that one day of solar production could provide.</small>
+                </div>
+                <div>
+                  <span>Year-To-Date Impact</span>
+                  <strong>{{ "{:,.1f}".format(energy_impact.ytd_house_days) }} home-days</strong>
+                  <small>That same production is roughly equal to {{ "{:,.0f}".format(energy_impact.ytd_ev_miles) }} EV miles so far.</small>
+                </div>
+                <div>
+                  <span>Total Energy To Date</span>
+                  <strong>{{ "{:,.1f}".format(metrics.ytd_production) }} kWh</strong>
+                  <small>Enough cumulative solar energy to cover about {{ "{:,.1f}".format(energy_impact.ytd_house_days) }} full home-days or roughly {{ "{:,.0f}".format(energy_impact.ytd_ev_miles) }} EV miles.</small>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -352,6 +390,20 @@
               <div><span>Lease Cost</span><strong>${{ "{:,.0f}".format(metrics.lease_cost) }}</strong></div>
               <div><span>Lifetime Savings</span><strong>${{ "{:,.0f}".format(metrics.lifetime_savings) }}</strong></div>
               <div><span>Tree Removal Payback</span><strong>{% if metrics.tree_payback_months %}{{ "%.1f"|format(metrics.tree_payback_months) }} months{% else %}N/A{% endif %}</strong></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="row g-3 mb-4">
+      <div class="col-12">
+        <div class="card tracker-card h-100">
+          <div class="card-body">
+            <h2 class="h5 mb-2">Running Totals</h2>
+            <p class="text-muted mb-3">Cumulative solar production, grid import, grid export, estimated self-consumption, and cumulative net savings over time.</p>
+            <div class="dashboard-chart dashboard-chart-embedded">
+              {{ charts.running_totals_chart|safe }}
             </div>
           </div>
         </div>
