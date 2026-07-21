@@ -401,47 +401,73 @@ function renderDashboardHtmlClient(entries, metrics, config, firebaseStatus, ale
   const summaryHref = isStaticSite() ? "contract-summary.html" : "/contract-summary";
   const contractHref = isStaticSite() ? "Documents/SunRun Solar Contract.pdf" : "/documents/sunrun-contract";
   const entriesHref = isStaticSite() ? "entries.html?autocreate=1" : "/entries?autocreate=1";
+  const leftImageUrl = getAssetUrl("images/solar-home-side.png");
+  const rightImageUrl = getAssetUrl("images/solar-farm-side.png");
   return `
-    <section class="hero-panel mb-4">
-      <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
-        <div>
-          <p class="eyebrow mb-2">Sunrun + NYSEG + Irradiance + Weather</p>
-          <div class="d-flex flex-wrap align-items-center gap-2">
-            <h1 class="hero-title mb-0">Solar performance and guarantee tracking</h1>
-            <button type="button" class="btn btn-contract btn-sm" data-bs-toggle="modal" data-bs-target="#dashboardIntroModal">About</button>
+    <div class="dashboard-editorial-shell">
+      <aside class="dashboard-side-panel">
+        <div class="dashboard-side-frame">
+          <img src="${leftImageUrl}" alt="Residential home with rooftop solar panels">
+          <div class="dashboard-side-overlay">
+            <span class="dashboard-side-kicker">Residential Array</span>
+            <strong>Home-scale production context</strong>
+            <p>Keep rooftop system performance visible alongside production, weather, and household energy flow.</p>
           </div>
         </div>
-        <div class="stat-callout">
-          <span class="small-label">Annual Projection</span>
-          <div class="callout-value">${formatNumber(metrics.annual_projection, 0, 0)} kWh</div>
-          <div class="${metrics.projection_vs_guarantee_kwh >= 0 ? "text-success" : "text-danger"}">
-            ${metrics.projection_vs_guarantee_kwh >= 0 ? "Ahead" : "Behind"} ${formatNumber(Math.abs(metrics.projection_vs_guarantee_kwh), 0, 0)} kWh (${formatNumber(Math.abs(metrics.projection_vs_guarantee_pct), 1, 1)}%)
+      </aside>
+      <div class="dashboard-main-column">
+        <section class="hero-panel mb-4">
+          <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+            <div>
+              <p class="eyebrow mb-2">Sunrun + NYSEG + Irradiance + Weather</p>
+              <div class="d-flex flex-wrap align-items-center gap-2">
+                <h1 class="hero-title mb-0">Solar performance and guarantee tracking</h1>
+                <button type="button" class="btn btn-contract btn-sm" data-bs-toggle="modal" data-bs-target="#dashboardIntroModal">About</button>
+              </div>
+            </div>
+            <div class="stat-callout">
+              <span class="small-label">Annual Projection</span>
+              <div class="callout-value">${formatNumber(metrics.annual_projection, 0, 0)} kWh</div>
+              <div class="${metrics.projection_vs_guarantee_kwh >= 0 ? "text-success" : "text-danger"}">
+                ${metrics.projection_vs_guarantee_kwh >= 0 ? "Ahead" : "Behind"} ${formatNumber(Math.abs(metrics.projection_vs_guarantee_kwh), 0, 0)} kWh (${formatNumber(Math.abs(metrics.projection_vs_guarantee_pct), 1, 1)}%)
+              </div>
+            </div>
           </div>
-        </div>
+        </section>
+        ${firebaseStatus?.message ? `<section class="mb-4"><div class="status-banner ${firebaseStatus.kind === "success" ? "status-banner-success" : ""}"><div><p class="status-title mb-1">${firebaseStatus.kind === "success" ? "Firebase connected" : "Firestore connection issue"}</p><p class="mb-0">${firebaseStatus.message}</p></div>${firebaseStatus.using_demo_data ? '<span class="status-pill">Showing demo data</span>' : ""}</div></section>` : ""}
+        ${alerts.length ? `<section class="mb-4"><div class="card tracker-card"><div class="card-body"><h2 class="h5 mb-3">Alerts</h2><div class="d-flex flex-wrap gap-2">${alerts.map((alert) => `<span class="badge text-bg-warning p-2">${alert}</span>`).join("")}</div></div></div></section>` : ""}
+        <section class="row g-3 mb-4">
+          <div class="col-md-6 col-xl-3"><div class="metric-card sun"><span>Today's Production</span><strong>${formatNumber(metrics.today_production, 1, 1)} kWh</strong><small>Yesterday: ${formatNumber(metrics.yesterday_production, 1, 1)} kWh</small></div></div>
+          <div class="col-md-6 col-xl-3"><div class="metric-card export"><span>Today's Export</span><strong>${formatNumber(metrics.today_export, 1, 1)} kWh</strong><small>Import: ${formatNumber(metrics.today_import, 1, 1)} kWh</small></div></div>
+          <div class="col-md-6 col-xl-3"><div class="metric-card sky"><span>Today's Irradiance</span><strong>${formatNumber(metrics.today_irradiance, 0, 0)} W/m²</strong><small>Weekly Avg: ${formatNumber(metrics.weekly_average, 1, 1)} kWh</small></div></div>
+          <div class="col-md-6 col-xl-3"><div class="metric-card money"><div class="d-flex justify-content-between align-items-start gap-2"><span>Monthly Savings</span><button type="button" class="metric-info-button" data-bs-toggle="modal" data-bs-target="#monthlySavingsModal">?</button></div><strong>${formatCurrency(metrics.monthly_savings)}</strong><small>Annual: ${formatCurrency(metrics.annual_savings)}</small></div></div>
+        </section>
+        <section class="row g-3 mb-4">
+          <div class="col-lg-8"><div class="card tracker-card h-100"><div class="card-body"><h2 class="h5 mb-3">Production Overview</h2><div id="daily-chart" class="dashboard-chart"></div></div></div></div>
+          <div class="col-lg-4"><div class="card tracker-card h-100"><div class="card-body"><div class="d-flex justify-content-between align-items-start gap-3 mb-3"><h2 class="h5 mb-0">Contract Progress</h2><div class="d-flex flex-wrap gap-2 justify-content-end"><a class="btn btn-contract btn-sm" href="${summaryHref}">Summary</a><a class="btn btn-contract btn-sm" href="${contractHref}" target="_blank" rel="noopener noreferrer">PDF</a></div></div><div class="progress tracker-progress mb-3"><div class="progress-bar" role="progressbar" style="width: ${Math.min(metrics.guarantee_progress_pct, 100)}%"></div></div><div class="info-grid"><div><span>Guarantee</span><strong>${formatNumber(config.production_guarantee_kwh, 0, 0)} kWh</strong></div><div><span>Progress</span><strong>${formatNumber(metrics.guarantee_progress_pct, 1, 1)}%</strong></div><div><span>YTD Production</span><strong>${formatNumber(metrics.ytd_production, 1, 1)} kWh</strong></div><div><span>Avg Daily</span><strong>${formatNumber(metrics.average_daily_production, 1, 1)} kWh</strong></div><div><span>Best Day</span><strong>${formatNumber(metrics.highest_production_day, 1, 1)} kWh</strong></div><div><span>Lowest Day</span><strong>${formatNumber(metrics.lowest_production_day, 1, 1)} kWh</strong></div><div><span>Consecutive Poor Days</span><strong>${metrics.consecutive_poor_days}</strong></div><div><span>Monthly Avg</span><strong>${formatNumber(metrics.monthly_average, 1, 1)} kWh</strong></div></div></div></div></div>
+        </section>
+        <section class="row g-3 mb-4">
+          <div class="col-lg-6"><div class="card tracker-card h-100"><div class="card-body"><h2 class="h5 mb-3">Grid Flow and Virtual Consumption Monitor</h2><div id="flow-chart" class="dashboard-chart"></div></div></div></div>
+          <div class="col-lg-6"><div class="card tracker-card h-100"><div class="card-body"><h2 class="h5 mb-3">Solar Offset Snapshot</h2><div class="info-grid"><div><span>Estimated Self Consumption</span><strong>${formatNumber(metrics.estimated_self_consumption, 1, 1)} kWh</strong></div><div><span>Total Home Consumption</span><strong>${formatNumber(metrics.total_home_consumption, 1, 1)} kWh</strong></div><div><span>Solar Offset</span><strong>${formatNumber(metrics.solar_offset_pct, 1, 1)}%</strong></div><div><span>Expected Offset</span><strong>${formatNumber(config.expected_offset_pct, 1, 1)}%</strong></div><div><span>Electricity Value Produced</span><strong>${formatCurrency(metrics.electricity_value_produced)}</strong></div><div><span>Grid Cost</span><strong>${formatCurrency(metrics.grid_cost)}</strong></div><div><span>Lease Cost</span><strong>${formatCurrency(metrics.lease_cost)}</strong></div><div><span>Lifetime Savings</span><strong>${formatCurrency(metrics.lifetime_savings)}</strong></div><div><span>Tree Removal Payback</span><strong>${metrics.tree_payback_months ? `${formatNumber(metrics.tree_payback_months, 1, 1)} months` : "N/A"}</strong></div></div></div></div></div>
+        </section>
+        <section class="row g-3 mb-4">
+          <div class="col-lg-4"><div class="card tracker-card h-100"><div class="card-body"><div id="irradiance-chart" class="dashboard-chart"></div></div></div></div>
+          <div class="col-lg-4"><div class="card tracker-card h-100"><div class="card-body"><div id="weather-chart" class="dashboard-chart"></div></div></div></div>
+          <div class="col-lg-4"><div class="card tracker-card h-100"><div class="card-body"><div id="monthly-chart" class="dashboard-chart"></div></div></div></div>
+        </section>
+        <section class="card tracker-card"><div class="card-body"><div class="d-flex justify-content-between align-items-center mb-3"><h2 class="h5 mb-0">Recent Entries</h2><a href="${entriesHref}" class="btn btn-sun btn-sm">Add Daily Entry</a></div><div class="table-responsive"><table class="table align-middle"><thead><tr><th>Date</th><th>Production</th><th>Irradiance</th><th>Meter 01</th><th>Meter 02</th><th>Weather</th></tr></thead><tbody>${recentEntries.map((entry) => `<tr><td>${entry.entry_date}</td><td>${formatNumber(entry.production_kwh, 1, 1)} kWh</td><td>${formatNumber(entry.irradiance_peak_wm2, 0, 0)}</td><td>${formatNumber(entry.meter_01_import_reading, 1, 1)}</td><td>${formatNumber(entry.meter_02_export_reading, 1, 1)}</td><td>${entry.weather}</td></tr>`).join("")}</tbody></table></div></div></section>
       </div>
-    </section>
-    ${firebaseStatus?.message ? `<section class="mb-4"><div class="status-banner ${firebaseStatus.kind === "success" ? "status-banner-success" : ""}"><div><p class="status-title mb-1">${firebaseStatus.kind === "success" ? "Firebase connected" : "Firestore connection issue"}</p><p class="mb-0">${firebaseStatus.message}</p></div>${firebaseStatus.using_demo_data ? '<span class="status-pill">Showing demo data</span>' : ""}</div></section>` : ""}
-    ${alerts.length ? `<section class="mb-4"><div class="card tracker-card"><div class="card-body"><h2 class="h5 mb-3">Alerts</h2><div class="d-flex flex-wrap gap-2">${alerts.map((alert) => `<span class="badge text-bg-warning p-2">${alert}</span>`).join("")}</div></div></div></section>` : ""}
-    <section class="row g-3 mb-4">
-      <div class="col-md-6 col-xl-3"><div class="metric-card sun"><span>Today's Production</span><strong>${formatNumber(metrics.today_production, 1, 1)} kWh</strong><small>Yesterday: ${formatNumber(metrics.yesterday_production, 1, 1)} kWh</small></div></div>
-      <div class="col-md-6 col-xl-3"><div class="metric-card export"><span>Today's Export</span><strong>${formatNumber(metrics.today_export, 1, 1)} kWh</strong><small>Import: ${formatNumber(metrics.today_import, 1, 1)} kWh</small></div></div>
-      <div class="col-md-6 col-xl-3"><div class="metric-card sky"><span>Today's Irradiance</span><strong>${formatNumber(metrics.today_irradiance, 0, 0)} W/m²</strong><small>Weekly Avg: ${formatNumber(metrics.weekly_average, 1, 1)} kWh</small></div></div>
-      <div class="col-md-6 col-xl-3"><div class="metric-card money"><div class="d-flex justify-content-between align-items-start gap-2"><span>Monthly Savings</span><button type="button" class="metric-info-button" data-bs-toggle="modal" data-bs-target="#monthlySavingsModal">?</button></div><strong>${formatCurrency(metrics.monthly_savings)}</strong><small>Annual: ${formatCurrency(metrics.annual_savings)}</small></div></div>
-    </section>
-    <section class="row g-3 mb-4">
-      <div class="col-lg-8"><div class="card tracker-card h-100"><div class="card-body"><h2 class="h5 mb-3">Production Overview</h2><div id="daily-chart" class="dashboard-chart"></div></div></div></div>
-      <div class="col-lg-4"><div class="card tracker-card h-100"><div class="card-body"><div class="d-flex justify-content-between align-items-start gap-3 mb-3"><h2 class="h5 mb-0">Contract Progress</h2><div class="d-flex flex-wrap gap-2 justify-content-end"><a class="btn btn-contract btn-sm" href="${summaryHref}">Summary</a><a class="btn btn-contract btn-sm" href="${contractHref}" target="_blank" rel="noopener noreferrer">PDF</a></div></div><div class="progress tracker-progress mb-3"><div class="progress-bar" role="progressbar" style="width: ${Math.min(metrics.guarantee_progress_pct, 100)}%"></div></div><div class="info-grid"><div><span>Guarantee</span><strong>${formatNumber(config.production_guarantee_kwh, 0, 0)} kWh</strong></div><div><span>Progress</span><strong>${formatNumber(metrics.guarantee_progress_pct, 1, 1)}%</strong></div><div><span>YTD Production</span><strong>${formatNumber(metrics.ytd_production, 1, 1)} kWh</strong></div><div><span>Avg Daily</span><strong>${formatNumber(metrics.average_daily_production, 1, 1)} kWh</strong></div><div><span>Best Day</span><strong>${formatNumber(metrics.highest_production_day, 1, 1)} kWh</strong></div><div><span>Lowest Day</span><strong>${formatNumber(metrics.lowest_production_day, 1, 1)} kWh</strong></div><div><span>Consecutive Poor Days</span><strong>${metrics.consecutive_poor_days}</strong></div><div><span>Monthly Avg</span><strong>${formatNumber(metrics.monthly_average, 1, 1)} kWh</strong></div></div></div></div></div>
-    </section>
-    <section class="row g-3 mb-4">
-      <div class="col-lg-6"><div class="card tracker-card h-100"><div class="card-body"><h2 class="h5 mb-3">Grid Flow and Virtual Consumption Monitor</h2><div id="flow-chart" class="dashboard-chart"></div></div></div></div>
-      <div class="col-lg-6"><div class="card tracker-card h-100"><div class="card-body"><h2 class="h5 mb-3">Solar Offset Snapshot</h2><div class="info-grid"><div><span>Estimated Self Consumption</span><strong>${formatNumber(metrics.estimated_self_consumption, 1, 1)} kWh</strong></div><div><span>Total Home Consumption</span><strong>${formatNumber(metrics.total_home_consumption, 1, 1)} kWh</strong></div><div><span>Solar Offset</span><strong>${formatNumber(metrics.solar_offset_pct, 1, 1)}%</strong></div><div><span>Expected Offset</span><strong>${formatNumber(config.expected_offset_pct, 1, 1)}%</strong></div><div><span>Electricity Value Produced</span><strong>${formatCurrency(metrics.electricity_value_produced)}</strong></div><div><span>Grid Cost</span><strong>${formatCurrency(metrics.grid_cost)}</strong></div><div><span>Lease Cost</span><strong>${formatCurrency(metrics.lease_cost)}</strong></div><div><span>Lifetime Savings</span><strong>${formatCurrency(metrics.lifetime_savings)}</strong></div><div><span>Tree Removal Payback</span><strong>${metrics.tree_payback_months ? `${formatNumber(metrics.tree_payback_months, 1, 1)} months` : "N/A"}</strong></div></div></div></div></div>
-    </section>
-    <section class="row g-3 mb-4">
-      <div class="col-lg-4"><div class="card tracker-card h-100"><div class="card-body"><div id="irradiance-chart" class="dashboard-chart"></div></div></div></div>
-      <div class="col-lg-4"><div class="card tracker-card h-100"><div class="card-body"><div id="weather-chart" class="dashboard-chart"></div></div></div></div>
-      <div class="col-lg-4"><div class="card tracker-card h-100"><div class="card-body"><div id="monthly-chart" class="dashboard-chart"></div></div></div></div>
-    </section>
-    <section class="card tracker-card"><div class="card-body"><div class="d-flex justify-content-between align-items-center mb-3"><h2 class="h5 mb-0">Recent Entries</h2><a href="${entriesHref}" class="btn btn-sun btn-sm">Add Daily Entry</a></div><div class="table-responsive"><table class="table align-middle"><thead><tr><th>Date</th><th>Production</th><th>Irradiance</th><th>Meter 01</th><th>Meter 02</th><th>Weather</th></tr></thead><tbody>${recentEntries.map((entry) => `<tr><td>${entry.entry_date}</td><td>${formatNumber(entry.production_kwh, 1, 1)} kWh</td><td>${formatNumber(entry.irradiance_peak_wm2, 0, 0)}</td><td>${formatNumber(entry.meter_01_import_reading, 1, 1)}</td><td>${formatNumber(entry.meter_02_export_reading, 1, 1)}</td><td>${entry.weather}</td></tr>`).join("")}</tbody></table></div></div></section>
+      <aside class="dashboard-side-panel">
+        <div class="dashboard-side-frame">
+          <img src="${rightImageUrl}" alt="Solar farm at sunrise">
+          <div class="dashboard-side-overlay">
+            <span class="dashboard-side-kicker">Utility Perspective</span>
+            <strong>Grid-scale reference frame</strong>
+            <p>Balance residential performance against export behavior, annual projections, and contract progress.</p>
+          </div>
+        </div>
+      </aside>
+    </div>
     <div class="modal fade" id="dashboardIntroModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content tracker-modal"><div class="modal-header border-0 pb-0"><div><p class="eyebrow mb-2">Dashboard Overview</p><h2 class="modal-title h4 mb-0">What this dashboard is tracking</h2></div><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body pt-3"><div class="tracker-modal-math"><div class="tracker-modal-step"><strong>Production and Grid Flow</strong><p>Tracks daily production, import, export, and rolling averages so you can see how the system is behaving day to day.</p></div><div class="tracker-modal-step"><strong>Virtual Consumption Estimate</strong><p>Because there are no consumption CTs installed, the app estimates self-consumption and home usage from production, grid readings, seasonality, and weather.</p></div><div class="tracker-modal-step"><strong>Contract Tracking</strong><p>Compares observed average production against the Sunrun production guarantee and shows whether your current pace is ahead or behind.</p></div><div class="tracker-modal-step"><strong>Financial View</strong><p>Estimates electricity value, grid cost, lease cost, and monthly or annual savings using the current settings saved in the app.</p></div></div></div></div></div></div>
     <div class="modal fade" id="monthlySavingsModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content tracker-modal"><div class="modal-header border-0 pb-0"><div><p class="eyebrow mb-2">Financial Breakdown</p><h2 class="modal-title h4 mb-0">How Monthly Savings Is Calculated</h2></div><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body pt-3"><div class="info-grid mb-4"><div><span>Observed Months</span><strong>${metrics.observed_months}</strong></div><div><span>Electric Rate</span><strong>$${formatNumber(config.current_electric_rate,2,2)}/kWh</strong></div><div><span>Monthly Fixed Charges</span><strong>$${formatNumber(config.monthly_fixed_charges,2,2)}</strong></div><div><span>Monthly Lease Payment</span><strong>$${formatNumber(config.monthly_lease_payment,2,2)}</strong></div></div><div class="tracker-modal-math"><div class="tracker-modal-step"><strong>1. Electricity Value Produced</strong><p>Total solar production × electric rate</p><code>${formatCurrency(metrics.electricity_value_produced)}</code></div><div class="tracker-modal-step"><strong>2. Grid Cost</strong><p>(Total imported kWh × electric rate) + (monthly fixed charges × observed months)</p><code>${formatCurrency(metrics.grid_cost)}</code></div><div class="tracker-modal-step"><strong>3. Lease Cost</strong><p>Monthly lease payment × observed months</p><code>${formatCurrency(metrics.lease_cost)}</code></div><div class="tracker-modal-step"><strong>4. Monthly Savings</strong><p>(Electricity value produced - grid cost - lease cost) ÷ observed months</p><code>${formatCurrency(metrics.monthly_savings)}</code></div><div class="tracker-modal-step"><strong>5. Annual Savings</strong><p>Monthly savings × 12</p><code>${formatCurrency(metrics.annual_savings)}</code></div></div></div></div></div></div>
   `;
