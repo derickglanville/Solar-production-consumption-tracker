@@ -32,11 +32,18 @@
     {% endif %}
 
     <section class="hero-panel mb-4">
-      <div class="row g-4 align-items-end">
+      <div class="row g-3 align-items-center">
         <div class="col-lg-8">
           <p class="eyebrow mb-2">Sunrun + NYSEG + Irradiance + Weather</p>
-          <h1 class="display-6 mb-3">Residential solar performance, grid flow, and guarantee tracking in one place.</h1>
-          <p class="lead mb-0">This dashboard estimates self-consumption for your current no-CT setup while tracking annual production against your contract guarantee.</p>
+          <div class="d-flex flex-wrap align-items-center gap-2">
+            <h1 class="hero-title mb-0">Solar performance and guarantee tracking</h1>
+            <button
+              type="button"
+              class="btn btn-contract btn-sm"
+              data-bs-toggle="modal"
+              data-bs-target="#dashboardIntroModal"
+            >About</button>
+          </div>
         </div>
         <div class="col-lg-4">
           <div class="stat-callout">
@@ -51,6 +58,44 @@
         </div>
       </div>
     </section>
+
+    <div class="modal fade" id="dashboardIntroModal" tabindex="-1" aria-labelledby="dashboardIntroModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content tracker-modal">
+          <div class="modal-header border-0 pb-0">
+            <div>
+              <p class="eyebrow mb-2">Dashboard Overview</p>
+              <h2 class="modal-title h4 mb-0" id="dashboardIntroModalLabel">What this dashboard is tracking</h2>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body pt-3">
+            <p class="text-muted">
+              This dashboard combines Sunrun production, NYSEG import and export readings, irradiance, weather,
+              and contract assumptions in one place.
+            </p>
+            <div class="tracker-modal-math">
+              <div class="tracker-modal-step">
+                <strong>Production and Grid Flow</strong>
+                <p>Tracks daily production, import, export, and rolling averages so you can see how the system is behaving day to day.</p>
+              </div>
+              <div class="tracker-modal-step">
+                <strong>Virtual Consumption Estimate</strong>
+                <p>Because there are no consumption CTs installed, the app estimates self-consumption and home usage from production, grid readings, seasonality, and weather.</p>
+              </div>
+              <div class="tracker-modal-step">
+                <strong>Contract Tracking</strong>
+                <p>Compares observed average production against the Sunrun production guarantee and shows whether your current pace is ahead or behind.</p>
+              </div>
+              <div class="tracker-modal-step">
+                <strong>Financial View</strong>
+                <p>Estimates electricity value, grid cost, lease cost, and monthly or annual savings using the current settings saved in the app.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
 
     {% if alerts %}
     <section class="mb-4">
@@ -91,12 +136,80 @@
       </div>
       <div class="col-md-6 col-xl-3">
         <div class="metric-card money">
-          <span>Monthly Savings</span>
+          <div class="d-flex justify-content-between align-items-start gap-2">
+            <span>Monthly Savings</span>
+            <button
+              type="button"
+              class="metric-info-button"
+              data-bs-toggle="modal"
+              data-bs-target="#monthlySavingsModal"
+              aria-label="Explain monthly savings calculation"
+            >?</button>
+          </div>
           <strong>${{ "{:,.0f}".format(metrics.monthly_savings) }}</strong>
           <small>Annual: ${{ "{:,.0f}".format(metrics.annual_savings) }}</small>
         </div>
       </div>
     </section>
+
+    <div class="modal fade" id="monthlySavingsModal" tabindex="-1" aria-labelledby="monthlySavingsModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content tracker-modal">
+          <div class="modal-header border-0 pb-0">
+            <div>
+              <p class="eyebrow mb-2">Financial Breakdown</p>
+              <h2 class="modal-title h4 mb-0" id="monthlySavingsModalLabel">How Monthly Savings Is Calculated</h2>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body pt-3">
+            <p class="text-muted">
+              The dashboard currently estimates monthly savings from your observed solar production, estimated grid imports,
+              and the lease assumptions in your settings. A negative number means current costs are exceeding the electricity value produced.
+            </p>
+
+            <div class="info-grid mb-4">
+              <div><span>Observed Months</span><strong>{{ metrics.observed_months }}</strong></div>
+              <div><span>Electric Rate</span><strong>${{ "%.2f"|format(config.current_electric_rate) }}/kWh</strong></div>
+              <div><span>Monthly Fixed Charges</span><strong>${{ "{:,.2f}".format(config.monthly_fixed_charges) }}</strong></div>
+              <div><span>Monthly Lease Payment</span><strong>${{ "{:,.2f}".format(config.monthly_lease_payment) }}</strong></div>
+            </div>
+
+            <div class="tracker-modal-math">
+              <div class="tracker-modal-step">
+                <strong>1. Electricity Value Produced</strong>
+                <p>Total solar production × electric rate</p>
+                <code>${{ "{:,.0f}".format(metrics.electricity_value_produced) }}</code>
+              </div>
+              <div class="tracker-modal-step">
+                <strong>2. Grid Cost</strong>
+                <p>(Total imported kWh × electric rate) + (monthly fixed charges × observed months)</p>
+                <code>${{ "{:,.0f}".format(metrics.grid_cost) }}</code>
+              </div>
+              <div class="tracker-modal-step">
+                <strong>3. Lease Cost</strong>
+                <p>Monthly lease payment × observed months</p>
+                <code>${{ "{:,.0f}".format(metrics.lease_cost) }}</code>
+              </div>
+              <div class="tracker-modal-step">
+                <strong>4. Monthly Savings</strong>
+                <p>(Electricity value produced - grid cost - lease cost) ÷ observed months</p>
+                <code>${{ "{:,.0f}".format(metrics.monthly_savings) }}</code>
+              </div>
+              <div class="tracker-modal-step">
+                <strong>5. Annual Savings</strong>
+                <p>Monthly savings × 12</p>
+                <code>${{ "{:,.0f}".format(metrics.annual_savings) }}</code>
+              </div>
+            </div>
+
+            <div class="tracker-modal-note mt-4">
+              This is an estimate. It does not yet include actual consumption CT data, TOU complexity, tax treatment, or utility credit settlement timing.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <section class="row g-3 mb-4">
       <div class="col-lg-8">
@@ -192,7 +305,7 @@
       <div class="card-body">
         <div class="d-flex justify-content-between align-items-center mb-3">
           <h2 class="h5 mb-0">Recent Entries</h2>
-          <a href="{{ url_for('main.entries') }}" class="btn btn-sun btn-sm">Add Daily Entry</a>
+          <a href="{{ url_for('main.entries') }}?autocreate=1" class="btn btn-sun btn-sm">Add Daily Entry</a>
         </div>
         <div class="table-responsive">
           <table class="table align-middle">

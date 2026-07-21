@@ -1,0 +1,110 @@
+window.SOLAR_STATIC_SITE = true;
+window.SOLAR_ASSET_BASE = "assets";
+window.SOLAR_BOOTSTRAP = {
+  default_config: {
+    activation_date: "2026-07-10",
+    annual_home_usage_kwh: 17967.0,
+    current_electric_rate: 0.24,
+    expected_grid_usage_kwh: 6826.0,
+    expected_offset_pct: 62.0,
+    inverter_count: 2,
+    lease_term_years: 25,
+    monthly_fixed_charges: 19.5,
+    monthly_lease_payment: 155.0,
+    panel_count: 41,
+    production_guarantee_kwh: 11141.0,
+    smart_meter_install_date: "2026-07-16",
+    sunrun_escalator_pct: 2.99,
+    system_size_kw_dc: 18.45,
+    tree_removal_cost: 3090.0,
+    utility_name: "NYSEG"
+  },
+  sample_entries: [
+    {
+      entry_date: "2026-07-16",
+      irradiance_peak_wm2: 860,
+      production_kwh: 62.4,
+      meter_01_import_reading: 36,
+      meter_02_export_reading: 74,
+      weather: "Sunny",
+      temperature_f: null,
+      humidity_pct: null,
+      cloud_cover_pct: null,
+      wind_mph: null,
+      notes: "Smart meter data starts.",
+      created_at: "",
+      updated_at: ""
+    },
+    {
+      entry_date: "2026-07-17",
+      irradiance_peak_wm2: 910,
+      production_kwh: 70.8,
+      meter_01_import_reading: 53,
+      meter_02_export_reading: 128,
+      weather: "Sunny",
+      temperature_f: null,
+      humidity_pct: null,
+      cloud_cover_pct: null,
+      wind_mph: null,
+      notes: "Strong clear day.",
+      created_at: "",
+      updated_at: ""
+    },
+    {
+      entry_date: "2026-07-18",
+      irradiance_peak_wm2: 740,
+      production_kwh: 58.2,
+      meter_01_import_reading: 71,
+      meter_02_export_reading: 170,
+      weather: "Cloudy",
+      temperature_f: null,
+      humidity_pct: null,
+      cloud_cover_pct: null,
+      wind_mph: null,
+      notes: "Afternoon cloud cover.",
+      created_at: "",
+      updated_at: ""
+    },
+    {
+      entry_date: "2026-07-19",
+      irradiance_peak_wm2: 802,
+      production_kwh: 63.1,
+      meter_01_import_reading: 79,
+      meter_02_export_reading: 207,
+      weather: "Sunny",
+      temperature_f: null,
+      humidity_pct: null,
+      cloud_cover_pct: null,
+      wind_mph: null,
+      notes: "Recovered after clouds.",
+      created_at: "",
+      updated_at: ""
+    },
+    {
+      entry_date: "2026-07-20",
+      irradiance_peak_wm2: 950,
+      production_kwh: 75.0,
+      meter_01_import_reading: 82,
+      meter_02_export_reading: 229,
+      weather: "Sunny",
+      temperature_f: null,
+      humidity_pct: null,
+      cloud_cover_pct: null,
+      wind_mph: null,
+      notes: "Excellent solar day.",
+      created_at: "",
+      updated_at: ""
+    }
+  ],
+  weather_options: [
+    "Sunny",
+    "Cloudy",
+    "Smoke",
+    "Rain",
+    "Snow",
+    "Overcast",
+    "Extreme Heat",
+    "Wind",
+    "Unknown"
+  ]
+};

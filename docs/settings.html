@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Solar Tracker</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/styles.css">
+</head>
+<body data-page="settings">
+  <nav class="navbar navbar-expand-lg tracker-nav">
+    <div class="container">
+      <a class="navbar-brand fw-semibold" href="index.html">Solar Production & Consumption Tracker</a>
+      <div class="navbar-nav ms-auto">
+        <a class="nav-link" href="index.html">Dashboard</a>
+        <a class="nav-link" href="entries.html">Daily Entry</a>
+        <a class="nav-link" href="contract-summary.html">Contract Summary</a>
+        <a class="nav-link" href="settings.html">Settings</a>
+      </div>
+    </div>
+  </nav>
+  <main class="py-4">
+    <div class="container">
+      <div id="settings-status"></div>
+      <div class="row justify-content-center">
+        <div class="col-xl-8">
+          <div class="card tracker-card">
+            <div class="card-body">
+              <h1 class="h4 mb-4">Contract and Financial Settings</h1>
+              <form id="settings-form" class="row g-3">
+                <div class="col-md-6"><label class="form-label">Production Guarantee (kWh/year)</label><input type="number" step="0.1" name="production_guarantee_kwh" class="form-control"></div>
+                <div class="col-md-6"><label class="form-label">Expected Offset %</label><input type="number" step="0.1" name="expected_offset_pct" class="form-control"></div>
+                <div class="col-md-6"><label class="form-label">Annual Home Usage (kWh)</label><input type="number" step="0.1" name="annual_home_usage_kwh" class="form-control"></div>
+                <div class="col-md-6"><label class="form-label">Current Electric Rate ($/kWh)</label><input type="number" step="0.01" name="current_electric_rate" class="form-control"></div>
+                <div class="col-md-6"><label class="form-label">NYSEG Monthly Fixed Charges</label><input type="number" step="0.01" name="monthly_fixed_charges" class="form-control"></div>
+                <div class="col-md-6"><label class="form-label">Sunrun Lease Payment</label><input type="number" step="0.01" name="monthly_lease_payment" class="form-control"></div>
+                <div class="col-md-6"><label class="form-label">Sunrun Escalator %</label><input type="number" step="0.01" name="sunrun_escalator_pct" class="form-control"></div>
+                <div class="col-md-6"><label class="form-label">Tree Removal Cost</label><input type="number" step="0.01" name="tree_removal_cost" class="form-control"></div>
+                <div class="col-12"><button class="btn btn-sun">Save Settings</button></div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="assets/js/site-bootstrap.js"></script>
+  <script src="assets/js/firebase-config.js"></script>
+  <script type="module" src="assets/js/app-client.js"></script>
+</body>
+</html>

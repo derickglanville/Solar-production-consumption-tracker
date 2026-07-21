@@ -45,6 +45,7 @@ class DashboardMetrics:
     electricity_value_produced: float
     grid_cost: float
     lease_cost: float
+    observed_months: int
     monthly_savings: float
     annual_savings: float
     lifetime_savings: float
@@ -135,6 +136,7 @@ def calculate_metrics(df, config):
             electricity_value_produced=0.0,
             grid_cost=0.0,
             lease_cost=0.0,
+            observed_months=0,
             monthly_savings=0.0,
             annual_savings=0.0,
             lifetime_savings=0.0,
@@ -209,6 +211,7 @@ def calculate_metrics(df, config):
         electricity_value_produced=float(electricity_value),
         grid_cost=float(grid_cost),
         lease_cost=float(lease_cost),
+        observed_months=int(observed_months),
         monthly_savings=float(monthly_savings),
         annual_savings=float(annual_savings),
         lifetime_savings=float(lifetime_savings),
