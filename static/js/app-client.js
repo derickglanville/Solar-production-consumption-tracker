@@ -43,10 +43,21 @@ const entryLookupOverrides = {
 const bootstrap = window.SOLAR_BOOTSTRAP || {};
 const sampleEntries = Array.isArray(bootstrap.sample_entries) ? bootstrap.sample_entries : [];
 const defaultConfig = bootstrap.default_config || {};
+const aiBootstrapStatus = bootstrap.ai_status || {};
+const historicalUsageBootstrap = bootstrap.historical_usage || {};
+const monthlyBillBootstrap = bootstrap.monthly_bill || {};
 const dashboardCompactModeStorageKey = "solar-dashboard-compact-mode";
 let entriesPageState = {
   entries: [],
   selectedDate: ""
+};
+let dashboardAiState = {
+  entries: [],
+  config: defaultConfig,
+  metrics: null,
+  openaiConfigured: Boolean(aiBootstrapStatus.openai_configured),
+  historicalUsage: historicalUsageBootstrap,
+  monthlyBill: monthlyBillBootstrap
 };
 
 function getPageName() {
@@ -397,6 +408,220 @@ function formatCurrency(value) {
   return `$${formatNumber(value, 0, 0)}`;
 }
 
+function buildAiPanelHtml(openaiConfigured) {
+  const prompts = Array.isArray(aiBootstrapStatus.suggested_prompts) && aiBootstrapStatus.suggested_prompts.length
+    ? aiBootstrapStatus.suggested_prompts
+    : [
+      "Am I on track to hit my guarantee?",
+      "What caused today's low production?",
+      "Compare this month to last month.",
+      "Estimate next month's production."
+    ];
+  return `
+    <section class="card tracker-card mb-4 ai-panel">
+      <div class="card-body">
+        <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
+          <div>
+            <p class="eyebrow mb-2">AI Solar Analyst</p>
+            <h2 class="h5 mb-1">Ask questions about your production, savings, and guarantee trend</h2>
+            <p class="text-muted mb-0">This phase includes grounded dashboard answers, forecasts, and anomaly checks. OpenAI enhancement is optional.</p>
+          </div>
+          <div class="d-flex flex-wrap gap-2 align-items-center">
+            <span class="ai-status-pill ${openaiConfigured ? "ai-status-pill-success" : ""}" id="ai-provider-pill">
+              ${openaiConfigured ? "OpenAI Ready" : "Rules Mode"}
+            </span>
+            <button type="button" class="btn btn-contract btn-sm ai-collapse-toggle" data-bs-toggle="collapse" data-bs-target="#ai-panel-collapse" aria-expanded="false" aria-controls="ai-panel-collapse" id="ai-panel-toggle">Show AI Tools</button>
+          </div>
+        </div>
+        <p class="text-muted small mb-3">AI tools are collapsed by default. Use the button on the right to open or hide them.</p>
+        <div class="collapse" id="ai-panel-collapse">
+          <div class="ai-prompt-list mb-3" id="ai-prompt-list">
+            ${prompts.map((prompt) => `<button type="button" class="btn btn-contract btn-sm ai-prompt-chip" data-ai-prompt="${escapeHtml(prompt)}">${escapeHtml(prompt)}</button>`).join("")}
+          </div>
+          <form id="ai-ask-form" class="ai-ask-form">
+            <div class="row g-3 align-items-end">
+              <div class="col-lg-9">
+                <label for="ai-question-input" class="form-label">Ask a question</label>
+                <textarea id="ai-question-input" class="form-control ai-question-input" rows="3" placeholder="Example: Am I on track to hit my guarantee?"></textarea>
+              </div>
+              <div class="col-lg-3">
+                <div class="d-grid gap-2">
+                  <button type="submit" class="btn btn-sun" id="ai-ask-button">Ask AI</button>
+                  <button type="button" class="btn btn-contract" id="ai-reset-button">Reset</button>
+                </div>
+              </div>
+            </div>
+          </form>
+          <div class="ai-answer-panel mt-3" id="ai-answer-panel">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+              <strong id="ai-answer-title">AI Solar Analyst</strong>
+              <span class="ai-answer-meta" id="ai-answer-meta">${openaiConfigured ? "OpenAI enhancement available" : "Grounded local analysis"}</span>
+            </div>
+            <p class="mb-2" id="ai-answer-text">Ask a question or tap one of the prompt chips to generate a grounded solar analysis.</p>
+            <ul class="mb-2 ai-answer-list" id="ai-answer-list">
+              <li>Track guarantee pace against current annual projection.</li>
+              <li>Explain lower production days from irradiance, weather, and recent trend data.</li>
+              <li>Estimate tomorrow, next month, and annual savings from current dashboard data.</li>
+            </ul>
+            <small class="text-muted" id="ai-answer-disclaimer">This phase uses the current dashboard dataset and does not yet include inverter-level telemetry or external forecast APIs.</small>
+          </div>
+        </div>
+      </div>
+    </section>
+  `;
+}
+
+function buildHistoricalUsagePanelHtml(historicalUsage, config) {
+  const workbookHref = isStaticSite() ? "NYSEG%20Bill/NYSEG%20Bill.xlsx" : "/documents/nyseg-bill/view";
+  if (!historicalUsage?.available) {
+    return `
+      <section class="row g-3 mb-4">
+        <div class="col-12">
+          <div class="card tracker-card">
+            <div class="card-body">
+              <p class="eyebrow mb-2">Historic NYSEG Baseline</p>
+              <h2 class="h5 mb-2">Pre-solar usage workbook analysis</h2>
+              <div class="tracker-modal-note">No historical workbook source is currently loaded.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+    `;
+  }
+
+  const varianceDirection = Number(historicalUsage.versus_expected_annual_kwh || 0) >= 0 ? "high" : "low";
+  return `
+    <section class="row g-3 mb-4">
+      <div class="col-lg-7">
+        <div class="card tracker-card h-100">
+          <div class="card-body">
+            <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
+              <div>
+                <p class="eyebrow mb-2">Historic NYSEG Baseline</p>
+                <h2 class="h5 mb-1">Pre-solar usage workbook analysis</h2>
+                <p class="text-muted mb-0">This section uses your uploaded NYSEG bill workbook as a baseline source for judging the effectiveness of the solar system.</p>
+              </div>
+              <div class="d-flex flex-wrap gap-2 align-items-center">
+                <span class="ai-status-pill ai-status-pill-success">Workbook Loaded</span>
+                <a class="btn btn-contract btn-sm" href="${workbookHref}">View Spreadsheet</a>
+              </div>
+            </div>
+            <div class="info-grid mb-3">
+              <div><span>History Window</span><strong>${escapeHtml(historicalUsage.start_date)} to ${escapeHtml(historicalUsage.end_date)}</strong></div>
+              <div><span>Monthly Records</span><strong>${formatNumber(historicalUsage.record_count, 0, 0)}</strong></div>
+              <div><span>Avg Monthly Usage</span><strong>${formatNumber(historicalUsage.average_monthly_kwh, 0, 0)} kWh</strong></div>
+              <div><span>Annualized Baseline</span><strong>${formatNumber(historicalUsage.annualized_kwh, 0, 0)} kWh</strong></div>
+              <div><span>Expected Annual Usage</span><strong>${formatNumber(config.annual_home_usage_kwh, 0, 0)} kWh</strong></div>
+              <div><span>Variance vs Expected</span><strong>${formatNumber(Math.abs(historicalUsage.versus_expected_annual_kwh || 0), 0, 0)} kWh ${varianceDirection}</strong></div>
+              <div><span>Highest Monthly Read</span><strong>${formatNumber(historicalUsage.maximum_kwh, 0, 0)} kWh</strong></div>
+              <div><span>Lowest Monthly Read</span><strong>${formatNumber(historicalUsage.minimum_kwh, 0, 0)} kWh</strong></div>
+            </div>
+            <div class="tracker-modal-note">
+              Meter ${escapeHtml(historicalUsage.meter_label || "source")} includes ${formatNumber(historicalUsage.actual_read_count, 0, 0)} NYSEG reads and ${formatNumber(historicalUsage.calculated_read_count, 0, 0)} calculated reads. Use this as the pre-solar baseline when comparing grid dependence and estimated solar offset.
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-5">
+        <div class="card tracker-card h-100">
+          <div class="card-body">
+            <h2 class="h5 mb-3">Baseline Effectiveness Notes</h2>
+            <div class="tracker-modal-math">
+              <div class="tracker-modal-step">
+                <strong>1. Baseline Context</strong>
+                <p>The workbook annualizes to roughly ${formatNumber(historicalUsage.annualized_kwh, 0, 0)} kWh/year before solar activation on ${escapeHtml(config.activation_date || "")}.</p>
+              </div>
+              <div class="tracker-modal-step">
+                <strong>2. Compare to Contract Assumption</strong>
+                <p>Sunrun planning assumed ${formatNumber(config.annual_home_usage_kwh, 0, 0)} kWh/year, so this workbook is ${Number(historicalUsage.versus_expected_annual_kwh || 0) >= 0 ? `about ${formatNumber(historicalUsage.versus_expected_annual_kwh, 0, 0)} kWh higher` : `about ${formatNumber(Math.abs(historicalUsage.versus_expected_annual_kwh || 0), 0, 0)} kWh lower`}.</p>
+              </div>
+              <div class="tracker-modal-step">
+                <strong>3. Use in Solar Analysis</strong>
+                <p>This gives the dashboard and AI analyst a historical benchmark for judging whether current solar offset and import behavior look effective versus pre-solar usage.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  `;
+}
+
+function buildMonthlyBillPanelHtml(monthlyBill) {
+  const billHref = isStaticSite() ? "NYSEG%20Bill/July%202027.pdf" : "/documents/nyseg-monthly-bill/view";
+  if (!monthlyBill?.available) {
+    return `
+      <section class="row g-3 mb-4">
+        <div class="col-12">
+          <div class="card tracker-card">
+            <div class="card-body">
+              <p class="eyebrow mb-2">Monthly Bill Reference</p>
+              <h2 class="h5 mb-2">Integrated NYSEG bill context</h2>
+              <div class="tracker-modal-note">No monthly bill reference is currently loaded.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+    `;
+  }
+
+  return `
+    <section class="row g-3 mb-4">
+      <div class="col-lg-7">
+        <div class="card tracker-card h-100">
+          <div class="card-body">
+            <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
+              <div>
+                <p class="eyebrow mb-2">Monthly Bill Reference</p>
+                <h2 class="h5 mb-1">Integrated NYSEG bill context</h2>
+                <p class="text-muted mb-0">Use this bill reference to compare billed utility behavior against the solar-era dashboard and the historic workbook baseline.</p>
+              </div>
+              <div class="d-flex flex-wrap gap-2 align-items-center">
+                <span class="ai-status-pill ai-status-pill-success">Bill Loaded</span>
+                <a class="btn btn-contract btn-sm" href="${billHref}">View Bill</a>
+              </div>
+            </div>
+            <div class="info-grid mb-3">
+              <div><span>Statement Date</span><strong>${escapeHtml(monthlyBill.statement_date || "")}</strong></div>
+              <div><span>Billing Period</span><strong>${escapeHtml(monthlyBill.billing_start_date || "")} to ${escapeHtml(monthlyBill.billing_end_date || "")}</strong></div>
+              <div><span>Amount Due</span><strong>${formatCurrency(monthlyBill.amount_due)}</strong></div>
+              <div><span>Energy Charges</span><strong>${formatCurrency(monthlyBill.total_energy_charges)}</strong></div>
+              <div><span>Current Usage</span><strong>${formatNumber(monthlyBill.current_usage_kwh, 0, 0)} kWh</strong></div>
+              <div><span>Avg Daily Use</span><strong>${formatNumber(monthlyBill.average_daily_use_kwh, 0, 0)} kWh/day</strong></div>
+              <div><span>Prior Year Daily Use</span><strong>${formatNumber(monthlyBill.prior_year_average_daily_use_kwh, 0, 0)} kWh/day</strong></div>
+              <div><span>Budget Billing</span><strong>${formatCurrency(monthlyBill.budget_billing_amount)}</strong></div>
+            </div>
+            <div class="tracker-modal-note">
+              The file name says July 2027, but the bill content shows a statement date of ${escapeHtml(monthlyBill.statement_date || "")}. The app uses the statement date as the source of truth for context.
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-5">
+        <div class="card tracker-card h-100">
+          <div class="card-body">
+            <h2 class="h5 mb-3">Bill Context Notes</h2>
+            <div class="tracker-modal-math">
+              <div class="tracker-modal-step">
+                <strong>1. Low Utility Usage During Solar Era</strong>
+                <p>The bill shows ${formatNumber(monthlyBill.current_usage_kwh, 0, 0)} kWh over ${formatNumber(monthlyBill.days_in_period, 0, 0)} days, versus a prior-year daily average of ${formatNumber(monthlyBill.prior_year_average_daily_use_kwh, 0, 0)} kWh/day.</p>
+              </div>
+              <div class="tracker-modal-step">
+                <strong>2. Billing Structure Still Matters</strong>
+                <p>The amount due is driven mostly by budget billing and agreement structure, not only the energy-charge subtotal of ${formatCurrency(monthlyBill.total_energy_charges)}.</p>
+              </div>
+              <div class="tracker-modal-step">
+                <strong>3. Use With Solar Dashboard</strong>
+                <p>This bill adds practical billing context around why low imported usage does not always translate directly into a low amount due.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  `;
+}
+
 function isDashboardCompactModeEnabled() {
   return window.localStorage?.getItem(dashboardCompactModeStorageKey) === "true";
 }
@@ -443,6 +668,319 @@ function setupDashboardViewToggle() {
   applyDashboardCompactMode(isDashboardCompactModeEnabled());
 }
 
+function setAiAnswerDisplay(result, isLoading = false) {
+  const panel = document.getElementById("ai-answer-panel");
+  const title = document.getElementById("ai-answer-title");
+  const meta = document.getElementById("ai-answer-meta");
+  const text = document.getElementById("ai-answer-text");
+  const list = document.getElementById("ai-answer-list");
+  const disclaimer = document.getElementById("ai-answer-disclaimer");
+  const providerPill = document.getElementById("ai-provider-pill");
+  if (!panel || !title || !meta || !text || !list || !disclaimer) return;
+
+  panel.classList.toggle("ai-answer-loading", isLoading);
+  if (!result) return;
+
+  title.textContent = result.title || "AI Solar Analyst";
+  meta.textContent = result.provider === "openai"
+    ? "OpenAI-enhanced grounded answer"
+    : "Grounded dashboard analysis";
+  text.textContent = result.answer || "";
+  list.innerHTML = (result.bullets || []).map((bullet) => `<li>${escapeHtml(bullet)}</li>`).join("");
+  disclaimer.textContent = result.disclaimer || "";
+
+  if (providerPill) {
+    const ready = Boolean(result.openai_configured || result.provider === "openai");
+    providerPill.textContent = result.provider === "openai" ? "OpenAI Answer" : (ready ? "OpenAI Ready" : "Rules Mode");
+    providerPill.classList.toggle("ai-status-pill-success", ready);
+  }
+}
+
+function buildLocalAiAnswer(question) {
+  const normalized = String(question || "").trim().toLowerCase();
+  const entries = dashboardAiState.entries || [];
+  const metrics = dashboardAiState.metrics || {};
+  const latest = entries.length ? entries[entries.length - 1] : null;
+  const monthlyBill = dashboardAiState.monthlyBill || {};
+  const rollingAverage = entries.length
+    ? mean(entries.slice(-7).map((entry) => Number(entry.production_kwh || 0)))
+    : 0;
+  const rollingIrradiance = entries.length
+    ? mean(entries.slice(-7).map((entry) => Number(entry.irradiance_peak_wm2 || 0)))
+    : 0;
+
+  if (normalized.includes("inverter")) {
+    return {
+      title: "Inverter Check",
+      answer: "I cannot reliably determine inverter underperformance yet.",
+      bullets: [
+        "The current dataset is system-level only.",
+        "There is no inverter-by-inverter production feed connected yet.",
+        "SolarEdge inverter telemetry would unlock a real underperformance comparison."
+      ],
+      provider: "rules",
+      disclaimer: "This local fallback uses only the dashboard data already loaded in the browser.",
+      openai_configured: dashboardAiState.openaiConfigured
+    };
+  }
+
+  if (normalized.includes("tomorrow")) {
+    const irradianceFactor = rollingIrradiance > 0 && latest
+      ? Math.min(1.15, Math.max(0.7, Number(latest.irradiance_peak_wm2 || 0) / rollingIrradiance))
+      : 1;
+    const forecast = ((rollingAverage * 0.65) + (Number(metrics.today_production || 0) * 0.35)) * irradianceFactor;
+    return {
+      title: "Tomorrow Forecast",
+      answer: `My best short-term estimate for tomorrow is about ${formatNumber(forecast, 1, 1)} kWh.`,
+      bullets: [
+        `Recent 7-day production average: ${formatNumber(rollingAverage, 1, 1)} kWh.`,
+        `Latest irradiance: ${formatNumber(latest?.irradiance_peak_wm2 || 0, 0, 0)} W/m².`,
+        "This is a trend-based forecast, not a true external weather forecast."
+      ],
+      provider: "rules",
+      disclaimer: "This local fallback uses only the dashboard data already loaded in the browser.",
+      openai_configured: dashboardAiState.openaiConfigured
+    };
+  }
+
+  if (normalized.includes("next month")) {
+    const estimate = rollingAverage * 30;
+    return {
+      title: "Next Month Estimate",
+      answer: `My current estimate for next month is about ${formatNumber(estimate, 0, 0)} kWh.`,
+      bullets: [
+        `That is based on a recent daily run rate of ${formatNumber(rollingAverage, 1, 1)} kWh.`,
+        "This estimate is lightweight and should improve as more history accumulates.",
+        "It does not yet include external weather forecast data."
+      ],
+      provider: "rules",
+      disclaimer: "This local fallback uses only the dashboard data already loaded in the browser.",
+      openai_configured: dashboardAiState.openaiConfigured
+    };
+  }
+
+  if (normalized.includes("compare") && normalized.includes("month")) {
+    return {
+      title: "Month Comparison",
+      answer: `Year-to-date production is ${formatNumber(metrics.ytd_production || 0, 1, 1)} kWh.`,
+      bullets: [
+        `Current monthly average: ${formatNumber(metrics.monthly_average || 0, 1, 1)} kWh/day.`,
+        `Recent 7-day average: ${formatNumber(metrics.weekly_average || 0, 1, 1)} kWh/day.`,
+        "For a richer month-over-month comparison, use the local Flask app where the AI route adds more contextual reasoning."
+      ],
+      provider: "rules",
+      disclaimer: "This local fallback uses only the dashboard data already loaded in the browser.",
+      openai_configured: dashboardAiState.openaiConfigured
+    };
+  }
+
+  if (normalized.includes("saving")) {
+    return {
+      title: "Savings Outlook",
+      answer: `The current estimated annual savings are ${formatCurrency(metrics.annual_savings || 0)}.`,
+      bullets: [
+        `Estimated monthly savings: ${formatCurrency(metrics.monthly_savings || 0)}.`,
+        `Estimated solar offset: ${formatNumber(metrics.solar_offset_pct || 0, 1, 1)}%.`,
+        "This includes the current rate, fixed charges, lease payment, and estimated self-consumption logic."
+      ],
+      provider: "rules",
+      disclaimer: "This local fallback uses only the dashboard data already loaded in the browser.",
+      openai_configured: dashboardAiState.openaiConfigured
+    };
+  }
+
+  if (normalized.includes("bill") || normalized.includes("amount due") || normalized.includes("budget billing") || normalized.includes("payment agreement")) {
+    if (!monthlyBill.available) {
+      return {
+        title: "Bill Reference",
+        answer: "I do not have a monthly bill reference loaded yet.",
+        bullets: [
+          "Add a monthly bill PDF to compare billed behavior against solar production and grid imports."
+        ],
+        provider: "rules",
+        disclaimer: "This local fallback uses only the dashboard data already loaded in the browser.",
+        openai_configured: dashboardAiState.openaiConfigured
+      };
+    }
+    return {
+      title: "Bill Reference",
+      answer: `The current bill reference shows an amount due of ${formatCurrency(monthlyBill.amount_due)} even though the energy charges subtotal is only ${formatCurrency(monthlyBill.total_energy_charges)}.`,
+      bullets: [
+        `Budget billing amount: ${formatCurrency(monthlyBill.budget_billing_amount)}.`,
+        `Payment agreement amount: ${formatCurrency(monthlyBill.payment_agreement_amount)}.`,
+        `Current usage during the billing period: ${formatNumber(monthlyBill.current_usage_kwh, 0, 0)} kWh over ${formatNumber(monthlyBill.days_in_period, 0, 0)} days.`
+      ],
+      provider: "rules",
+      disclaimer: "This local fallback combines the bill reference with the current dashboard data already in the browser.",
+      openai_configured: dashboardAiState.openaiConfigured
+    };
+  }
+
+  if (normalized.includes("cause") || normalized.includes("why") || normalized.includes("low production")) {
+    return {
+      title: "Low Production Analysis",
+      answer: "Here is my best explanation for the lower production day.",
+      bullets: [
+        `Today's production is ${formatNumber(metrics.today_production || 0, 1, 1)} kWh versus a recent average of ${formatNumber(rollingAverage, 1, 1)} kWh.`,
+        `Today's irradiance is ${formatNumber(metrics.today_irradiance || 0, 0, 0)} W/m² versus a recent average of ${formatNumber(rollingIrradiance, 0, 0)} W/m².`,
+        `Recorded weather: ${latest?.weather || "Unknown"}.`
+      ],
+      provider: "rules",
+      disclaimer: "This local fallback uses only the dashboard data already loaded in the browser.",
+      openai_configured: dashboardAiState.openaiConfigured
+    };
+  }
+
+  if (normalized.includes("anomal") || normalized.includes("issue") || normalized.includes("alert")) {
+    return {
+      title: "Anomaly Scan",
+      answer: "I checked the recent production and grid-flow pattern for anomalies.",
+      bullets: [
+        `Current projection: ${formatNumber(metrics.annual_projection || 0, 0, 0)} kWh.`,
+        `Consecutive poor days: ${metrics.consecutive_poor_days || 0}.`,
+        `Today's export/import: ${formatNumber(metrics.today_export || 0, 1, 1)} / ${formatNumber(metrics.today_import || 0, 1, 1)} kWh.`
+      ],
+      provider: "rules",
+      disclaimer: "This local fallback uses only the dashboard data already loaded in the browser.",
+      openai_configured: dashboardAiState.openaiConfigured
+    };
+  }
+
+  if (normalized.includes("effective") || normalized.includes("effectiveness") || normalized.includes("baseline") || normalized.includes("historical") || normalized.includes("pre-solar")) {
+    const historicalUsage = dashboardAiState.historicalUsage || {};
+    if (!historicalUsage.available) {
+      return {
+        title: "Historic Baseline Analysis",
+        answer: "I do not have a historical NYSEG workbook loaded yet for a pre-solar baseline comparison.",
+        bullets: [
+          "Add the historic usage workbook so the AI can compare solar-era behavior against pre-solar consumption."
+        ],
+        provider: "rules",
+        disclaimer: "This local fallback uses only the dashboard data already loaded in the browser.",
+        openai_configured: dashboardAiState.openaiConfigured
+      };
+    }
+    return {
+      title: "Historic Baseline Analysis",
+      answer: `The historical NYSEG workbook suggests a pre-solar annualized usage baseline of about ${formatNumber(historicalUsage.annualized_kwh, 0, 0)} kWh, which is close to the contract-era expectation.`,
+      bullets: [
+        `Historical average monthly usage: ${formatNumber(historicalUsage.average_monthly_kwh, 0, 0)} kWh.`,
+        `Historical annualized usage: ${formatNumber(historicalUsage.annualized_kwh, 0, 0)} kWh.`,
+        `Current estimated solar offset: ${formatNumber(metrics.solar_offset_pct || 0, 1, 1)}%.`
+      ],
+      provider: "rules",
+      disclaimer: "This local fallback combines the loaded workbook baseline with the current dashboard data already in the browser.",
+      openai_configured: dashboardAiState.openaiConfigured
+    };
+  }
+
+  return {
+    title: "Guarantee Check",
+    answer: (metrics.projection_vs_guarantee_kwh || 0) >= 0
+      ? `Yes, the current run rate is ahead of the contract guarantee by about ${formatNumber(Math.abs(metrics.projection_vs_guarantee_kwh || 0), 0, 0)} kWh.`
+      : `Right now the run rate is behind the contract guarantee by about ${formatNumber(Math.abs(metrics.projection_vs_guarantee_kwh || 0), 0, 0)} kWh.`,
+    bullets: [
+      `Annual projection: ${formatNumber(metrics.annual_projection || 0, 0, 0)} kWh.`,
+      `Guarantee progress: ${formatNumber(metrics.guarantee_progress_pct || 0, 1, 1)}%.`,
+      `Estimated annual savings: ${formatCurrency(metrics.annual_savings || 0)}.`
+    ],
+    provider: "rules",
+    disclaimer: "This local fallback uses only the dashboard data already loaded in the browser.",
+    openai_configured: dashboardAiState.openaiConfigured
+  };
+}
+
+async function askDashboardAi(question) {
+  if (!question.trim()) {
+    return;
+  }
+
+  setAiAnswerDisplay({
+    title: "AI Solar Analyst",
+    answer: "Working on your solar analysis...",
+    bullets: ["Reviewing production, irradiance, grid flow, and guarantee metrics."],
+    provider: "rules",
+    disclaimer: "Please wait while the dashboard analyzes the current dataset.",
+    openai_configured: dashboardAiState.openaiConfigured
+  }, true);
+
+  if (!isStaticSite()) {
+    try {
+      const response = await fetch("/api/ai/ask", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          question,
+          entries: dashboardAiState.entries,
+          config: dashboardAiState.config
+        })
+      });
+      if (response.ok) {
+        const result = await response.json();
+        setAiAnswerDisplay(result, false);
+        return;
+      }
+    } catch (error) {
+      // Fall back to browser rules below.
+    }
+  }
+
+  setAiAnswerDisplay(buildLocalAiAnswer(question), false);
+}
+
+function setupAiAssistant() {
+  if (getPageName() !== "dashboard") return;
+  const form = document.getElementById("ai-ask-form");
+  const input = document.getElementById("ai-question-input");
+  const resetButton = document.getElementById("ai-reset-button");
+  const collapseElement = document.getElementById("ai-panel-collapse");
+  const toggleButton = document.getElementById("ai-panel-toggle");
+  if (!form || !input) return;
+
+  if (collapseElement && toggleButton && !collapseElement.dataset.boundCollapse) {
+    collapseElement.dataset.boundCollapse = "true";
+    collapseElement.addEventListener("show.bs.collapse", () => {
+      toggleButton.textContent = "Hide AI";
+      toggleButton.setAttribute("aria-expanded", "true");
+    });
+    collapseElement.addEventListener("hide.bs.collapse", () => {
+      toggleButton.textContent = "Show AI Tools";
+      toggleButton.setAttribute("aria-expanded", "false");
+    });
+    toggleButton.textContent = collapseElement.classList.contains("show") ? "Hide AI" : "Show AI Tools";
+  }
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    await askDashboardAi(input.value);
+  });
+
+  document.querySelectorAll("[data-ai-prompt]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      input.value = button.dataset.aiPrompt || "";
+      await askDashboardAi(input.value);
+    });
+  });
+
+  if (resetButton) {
+    resetButton.addEventListener("click", () => {
+      input.value = "";
+      setAiAnswerDisplay({
+        title: "AI Solar Analyst",
+        answer: "Ask a question or tap one of the prompt chips to generate a grounded solar analysis.",
+        bullets: [
+          "Track guarantee pace against current annual projection.",
+          "Explain lower production days from irradiance, weather, and recent trend data.",
+          "Estimate tomorrow, next month, and annual savings from current dashboard data."
+        ],
+        provider: "rules",
+        disclaimer: "This phase uses the current dashboard dataset and does not yet include inverter-level telemetry or external forecast APIs.",
+        openai_configured: dashboardAiState.openaiConfigured
+      }, false);
+    });
+  }
+}
+
 function renderDashboardHtmlClient(entries, metrics, config, firebaseStatus, alerts) {
   const recentEntries = [...entries].slice(-10).reverse();
   const summaryHref = isStaticSite() ? "contract-summary.html" : "/contract-summary";
@@ -484,6 +1022,7 @@ function renderDashboardHtmlClient(entries, metrics, config, firebaseStatus, ale
         </section>
         ${firebaseStatus?.message ? `<section class="mb-4"><div class="status-banner ${firebaseStatus.kind === "success" ? "status-banner-success" : ""}"><div><p class="status-title mb-1">${firebaseStatus.kind === "success" ? "Firebase connected" : "Firestore connection issue"}</p><p class="mb-0">${firebaseStatus.message}</p></div>${firebaseStatus.using_demo_data ? '<span class="status-pill">Showing demo data</span>' : ""}</div></section>` : ""}
         ${alerts.length ? `<section class="mb-4"><div class="card tracker-card"><div class="card-body"><h2 class="h5 mb-3">Alerts</h2><div class="d-flex flex-wrap gap-2">${alerts.map((alert) => `<span class="badge text-bg-warning p-2">${alert}</span>`).join("")}</div></div></div></section>` : ""}
+        ${buildAiPanelHtml(dashboardAiState.openaiConfigured)}
         <section class="row g-3 mb-4">
           <div class="col-md-6 col-xl-3"><div class="metric-card sun"><span>Today's Production</span><strong>${formatNumber(metrics.today_production, 1, 1)} kWh</strong><small>Yesterday: ${formatNumber(metrics.yesterday_production, 1, 1)} kWh</small></div></div>
           <div class="col-md-6 col-xl-3"><div class="metric-card export"><span>Today's Export</span><strong>${formatNumber(metrics.today_export, 1, 1)} kWh</strong><small>Import: ${formatNumber(metrics.today_import, 1, 1)} kWh</small></div></div>
@@ -498,6 +1037,8 @@ function renderDashboardHtmlClient(entries, metrics, config, firebaseStatus, ale
           <div class="col-lg-6"><div class="card tracker-card h-100"><div class="card-body"><h2 class="h5 mb-3">Grid Flow and Virtual Consumption Monitor</h2><div id="flow-chart" class="dashboard-chart"></div></div></div></div>
           <div class="col-lg-6"><div class="card tracker-card h-100"><div class="card-body"><h2 class="h5 mb-3">Solar Offset Snapshot</h2><div class="info-grid"><div><span>Estimated Self Consumption</span><strong>${formatNumber(metrics.estimated_self_consumption, 1, 1)} kWh</strong></div><div><span>Total Home Consumption</span><strong>${formatNumber(metrics.total_home_consumption, 1, 1)} kWh</strong></div><div><span>Solar Offset</span><strong>${formatNumber(metrics.solar_offset_pct, 1, 1)}%</strong></div><div><span>Expected Offset</span><strong>${formatNumber(config.expected_offset_pct, 1, 1)}%</strong></div><div><span>Electricity Value Produced</span><strong>${formatCurrency(metrics.electricity_value_produced)}</strong></div><div><span>Grid Cost</span><strong>${formatCurrency(metrics.grid_cost)}</strong></div><div><span>Lease Cost</span><strong>${formatCurrency(metrics.lease_cost)}</strong></div><div><span>Lifetime Savings</span><strong>${formatCurrency(metrics.lifetime_savings)}</strong></div><div><span>Tree Removal Payback</span><strong>${metrics.tree_payback_months ? `${formatNumber(metrics.tree_payback_months, 1, 1)} months` : "N/A"}</strong></div></div></div></div></div>
         </section>
+        ${buildHistoricalUsagePanelHtml(dashboardAiState.historicalUsage, config)}
+        ${buildMonthlyBillPanelHtml(dashboardAiState.monthlyBill)}
         <section class="row g-3 mb-4">
           <div class="col-lg-4"><div class="card tracker-card h-100"><div class="card-body"><div id="irradiance-chart" class="dashboard-chart"></div></div></div></div>
           <div class="col-lg-4"><div class="card tracker-card h-100"><div class="card-body"><div id="weather-chart" class="dashboard-chart"></div></div></div></div>
@@ -574,14 +1115,19 @@ function renderDashboardChartsClient(entries) {
 }
 
 async function renderDashboard(entries, config, firebaseStatus) {
+  const aiEntries = buildComputedEntries(entries, config);
+  dashboardAiState.entries = aiEntries;
+  dashboardAiState.config = config;
+  dashboardAiState.metrics = calculateDashboardMetricsClient(aiEntries, config);
   if (isStaticSite()) {
-    const computedEntries = buildComputedEntries(entries, config);
-    const metrics = calculateDashboardMetricsClient(computedEntries, config);
+    const computedEntries = aiEntries;
+    const metrics = dashboardAiState.metrics;
     const alerts = buildAlertsClient(computedEntries, config);
     const target = document.getElementById("dashboard-root");
     if (target) {
       target.innerHTML = renderDashboardHtmlClient(computedEntries, metrics, config, firebaseStatus, alerts);
       setupDashboardViewToggle();
+      setupAiAssistant();
       renderDashboardChartsClient(computedEntries);
     }
     return;
@@ -601,6 +1147,10 @@ async function renderDashboard(entries, config, firebaseStatus) {
     target.innerHTML = payload.html;
     activateInjectedScripts(target);
     setupDashboardViewToggle();
+    dashboardAiState.openaiConfigured = Boolean(payload.ai_status?.openai_configured ?? dashboardAiState.openaiConfigured);
+    dashboardAiState.historicalUsage = payload.historical_usage || dashboardAiState.historicalUsage;
+    dashboardAiState.monthlyBill = payload.monthly_bill || dashboardAiState.monthlyBill;
+    setupAiAssistant();
   }
 }
 

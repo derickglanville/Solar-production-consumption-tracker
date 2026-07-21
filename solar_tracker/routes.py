@@ -5,8 +5,11 @@ from io import StringIO
 import pandas as pd
 from flask import Blueprint, Response, jsonify, render_template, request, send_from_directory
 
+from .ai import answer_question, get_ai_status
 from .analytics import build_alerts, build_chart_bundle, build_dataframe, calculate_metrics
 from .firestore import AppConfig, DailySolarEntry
+from .historical_usage import historical_usage_to_dict, load_historical_usage_summary
+from .monthly_bill import load_monthly_bill_summary, monthly_bill_to_dict
 from .seed import build_sample_entries
 
 
@@ -42,10 +45,17 @@ def config_to_dict(config):
 def build_bootstrap_data():
     sample_entries = build_sample_entries()
     config = AppConfig()
+    historical_usage = load_historical_usage_summary(
+        expected_annual_home_usage_kwh=config.annual_home_usage_kwh
+    )
+    monthly_bill = load_monthly_bill_summary()
     return {
         "sample_entries": [entry_to_dict(entry) for entry in sample_entries],
         "default_config": config_to_dict(config),
         "weather_options": WEATHER_OPTIONS,
+        "ai_status": get_ai_status(),
+        "historical_usage": historical_usage_to_dict(historical_usage),
+        "monthly_bill": monthly_bill_to_dict(monthly_bill),
     }
 
 
@@ -133,6 +143,80 @@ def build_contract_summary():
     }
 
 
+def build_billing_outlook(config, metrics, monthly_bill):
+    contract_year_one_payment = 153.19
+    annual_escalator_rate = (config.sunrun_escalator_pct or 0.0) / 100.0
+    years_since_activation = max(0, date.today().year - config.activation_date.year)
+    sunrun_current_monthly = contract_year_one_payment * ((1 + annual_escalator_rate) ** years_since_activation)
+    sunrun_next_year_monthly = sunrun_current_monthly * (1 + annual_escalator_rate)
+
+    contract_expected_grid_monthly_kwh = (
+        (config.expected_grid_usage_kwh or 0.0) / 12.0
+    )
+    contract_expected_nyseg_monthly = (
+        contract_expected_grid_monthly_kwh * config.current_electric_rate
+    ) + config.monthly_fixed_charges
+
+    july_true_up_nyseg_monthly = (
+        monthly_bill.total_energy_charges + config.monthly_fixed_charges
+        if monthly_bill.available
+        else contract_expected_nyseg_monthly
+    )
+    july_total_usage_based_combined = july_true_up_nyseg_monthly + sunrun_current_monthly
+    contract_expected_combined = contract_expected_nyseg_monthly + sunrun_current_monthly
+    budget_billing_total = (
+        monthly_bill.budget_billing_amount
+        + monthly_bill.payment_agreement_amount
+        + sunrun_current_monthly
+        if monthly_bill.available
+        else None
+    )
+
+    return {
+        "sunrun_current_monthly": sunrun_current_monthly,
+        "sunrun_next_year_monthly": sunrun_next_year_monthly,
+        "sunrun_escalator_pct": config.sunrun_escalator_pct,
+        "nyseg_contract_expected_monthly_kwh": contract_expected_grid_monthly_kwh,
+        "nyseg_contract_expected_monthly_charge": contract_expected_nyseg_monthly,
+        "nyseg_july_usage_based_monthly_charge": july_true_up_nyseg_monthly,
+        "combined_usage_based_monthly_charge": july_total_usage_based_combined,
+        "combined_contract_expected_monthly_charge": contract_expected_combined,
+        "budget_billing_total_with_sunrun": budget_billing_total,
+        "budget_billing_still_active": bool(monthly_bill.available and monthly_bill.budget_billing_amount > 0),
+        "guarantee_daily_kwh": (config.production_guarantee_kwh or 0.0) / 365.0,
+        "projected_daily_kwh": metrics.average_daily_production,
+        "production_ahead_of_guarantee": metrics.annual_projection >= config.production_guarantee_kwh,
+    }
+
+
+def build_historical_spreadsheet_pricing(spreadsheet_summary, monthly_bill_summary):
+    spreadsheet = historical_usage_to_dict(spreadsheet_summary)
+    monthly_bill = monthly_bill_to_dict(monthly_bill_summary)
+    effective_rate_per_kwh = 0.0
+    if monthly_bill_summary.available and monthly_bill_summary.current_usage_kwh > 0:
+        effective_rate_per_kwh = (
+            monthly_bill_summary.total_energy_charges / monthly_bill_summary.current_usage_kwh
+        )
+
+    enriched_rows = []
+    estimated_total = 0.0
+    for row in spreadsheet.get("monthly_records", []):
+        estimated_charge = float(row.get("kwh", 0.0)) * effective_rate_per_kwh
+        estimated_total += estimated_charge
+        enriched_row = dict(row)
+        enriched_row["effective_rate_per_kwh"] = effective_rate_per_kwh
+        enriched_row["estimated_charge"] = estimated_charge
+        enriched_rows.append(enriched_row)
+
+    spreadsheet["monthly_records"] = enriched_rows
+    spreadsheet["effective_rate_per_kwh"] = effective_rate_per_kwh
+    spreadsheet["estimated_total_energy_charges"] = estimated_total
+    spreadsheet["rate_source_statement_date"] = monthly_bill.get("statement_date")
+    spreadsheet["rate_source_energy_charges"] = monthly_bill.get("total_energy_charges", 0.0)
+    spreadsheet["rate_source_usage_kwh"] = monthly_bill.get("current_usage_kwh", 0.0)
+    return spreadsheet
+
+
 def hydrate_entries(items):
     hydrated = []
     for item in items or []:
@@ -185,6 +269,11 @@ def render_dashboard(entries, config, firebase_status):
     alerts = build_alerts(df, config)
     charts = build_chart_bundle(df)
     recent_entries = list(reversed(entries[-10:]))
+    historical_usage = load_historical_usage_summary(
+        expected_annual_home_usage_kwh=config.annual_home_usage_kwh
+    )
+    monthly_bill = load_monthly_bill_summary()
+    billing_outlook = build_billing_outlook(config, metrics, monthly_bill)
     return render_template(
         "dashboard_content.html",
         metrics=metrics,
@@ -193,6 +282,10 @@ def render_dashboard(entries, config, firebase_status):
         recent_entries=recent_entries,
         config=config,
         firebase_status=firebase_status,
+        bootstrap_data=build_bootstrap_data(),
+        historical_usage=historical_usage_to_dict(historical_usage),
+        monthly_bill=monthly_bill_to_dict(monthly_bill),
+        billing_outlook=billing_outlook,
     )
 
 
@@ -200,6 +293,12 @@ def render_dashboard(entries, config, firebase_status):
 def dashboard():
     entries = build_sample_entries()
     config = AppConfig()
+    historical_usage = load_historical_usage_summary(
+        expected_annual_home_usage_kwh=config.annual_home_usage_kwh
+    )
+    monthly_bill = load_monthly_bill_summary()
+    metrics = calculate_metrics(build_dataframe(entries, config), config)
+    billing_outlook = build_billing_outlook(config, metrics, monthly_bill)
     firebase_status = {
         "message": "Loading live Firebase data in the browser. Demo data is shown until the connection completes.",
         "kind": "warning",
@@ -209,12 +308,15 @@ def dashboard():
         "dashboard.html",
         page_name="dashboard",
         bootstrap_data=build_bootstrap_data(),
-        metrics=calculate_metrics(build_dataframe(entries, config), config),
+        metrics=metrics,
         alerts=build_alerts(build_dataframe(entries, config), config),
         charts=build_chart_bundle(build_dataframe(entries, config)),
         recent_entries=list(reversed(entries[-10:])),
         config=config,
         firebase_status=firebase_status,
+        historical_usage=historical_usage_to_dict(historical_usage),
+        monthly_bill=monthly_bill_to_dict(monthly_bill),
+        billing_outlook=billing_outlook,
     )
 
 
@@ -255,8 +357,40 @@ def render_dashboard_api():
     entries = hydrate_entries(payload.get("entries", []))
     config = hydrate_config(payload.get("config", {}))
     firebase_status = payload.get("firebase_status", {})
+    historical_usage = load_historical_usage_summary(
+        expected_annual_home_usage_kwh=config.annual_home_usage_kwh
+    )
+    monthly_bill = load_monthly_bill_summary()
     html = render_dashboard(entries, config, firebase_status)
-    return jsonify({"html": html})
+    return jsonify(
+        {
+            "html": html,
+            "ai_status": get_ai_status(),
+            "historical_usage": historical_usage_to_dict(historical_usage),
+            "monthly_bill": monthly_bill_to_dict(monthly_bill),
+        }
+    )
+
+
+@main_blueprint.route("/api/ai/ask", methods=["POST"])
+def ai_ask():
+    payload = request.get_json(force=True)
+    question = str(payload.get("question", "")).strip()
+    entries = hydrate_entries(payload.get("entries", []))
+    config = hydrate_config(payload.get("config", {}))
+
+    if not question:
+        return jsonify(
+            {
+                "title": "AI Solar Analyst",
+                "answer": "Ask a question about production, guarantee tracking, savings, anomalies, or forecasts.",
+                "bullets": get_ai_status()["suggested_prompts"],
+                "provider": "rules",
+                "openai_configured": get_ai_status()["openai_configured"],
+            }
+        )
+
+    return jsonify(answer_question(question, entries, config))
 
 
 @main_blueprint.route("/export/csv")
@@ -279,4 +413,51 @@ def contract_document():
         "C:\\Software Developement\\ChatGPT Codex\\Solar Energy - SunRun\\Documents",
         "SunRun Solar Contract.pdf",
         as_attachment=False,
+    )
+
+
+@main_blueprint.route("/documents/nyseg-bill")
+def nyseg_bill_document():
+    return send_from_directory(
+        "C:\\Software Developement\\ChatGPT Codex\\Solar Energy - SunRun\\NYSEG Bill",
+        "NYSEG Bill.xlsx",
+        as_attachment=True,
+    )
+
+
+@main_blueprint.route("/documents/nyseg-bill/view")
+def nyseg_bill_viewer():
+    historical_usage = load_historical_usage_summary(
+        expected_annual_home_usage_kwh=AppConfig().annual_home_usage_kwh
+    )
+    monthly_bill = load_monthly_bill_summary()
+    return render_template(
+        "document_viewer_spreadsheet.html",
+        page_name="document-viewer",
+        bootstrap_data=build_bootstrap_data(),
+        title="NYSEG Historic Spreadsheet",
+        subtitle="Historic monthly NYSEG usage workbook integrated into the solar tracker baseline analysis.",
+        spreadsheet=build_historical_spreadsheet_pricing(historical_usage, monthly_bill),
+    )
+
+
+@main_blueprint.route("/documents/nyseg-monthly-bill/file")
+def nyseg_monthly_bill_document():
+    return send_from_directory(
+        "C:\\Software Developement\\ChatGPT Codex\\Solar Energy - SunRun\\NYSEG Bill",
+        "July 2027.pdf",
+        as_attachment=False,
+    )
+
+
+@main_blueprint.route("/documents/nyseg-monthly-bill/view")
+def nyseg_monthly_bill_viewer():
+    return render_template(
+        "document_viewer_pdf.html",
+        page_name="document-viewer",
+        bootstrap_data=build_bootstrap_data(),
+        title="NYSEG Monthly Bill Reference",
+        subtitle="Monthly bill reference integrated for billing context alongside solar production and usage analysis.",
+        pdf_url="/documents/nyseg-monthly-bill/file",
+        bill=monthly_bill_to_dict(load_monthly_bill_summary()),
     )

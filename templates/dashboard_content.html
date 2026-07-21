@@ -118,6 +118,77 @@
     </section>
     {% endif %}
 
+    <section class="card tracker-card mb-4 ai-panel">
+      <div class="card-body">
+        <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
+          <div>
+            <p class="eyebrow mb-2">AI Solar Analyst</p>
+            <h2 class="h5 mb-1">Ask questions about your production, savings, and guarantee trend</h2>
+            <p class="text-muted mb-0">This phase includes grounded dashboard answers, forecasts, and anomaly checks. OpenAI enhancement is optional.</p>
+          </div>
+          <div class="d-flex flex-wrap gap-2 align-items-center">
+            <span class="ai-status-pill {% if bootstrap_data.ai_status.openai_configured %}ai-status-pill-success{% endif %}" id="ai-provider-pill">
+              {% if bootstrap_data.ai_status.openai_configured %}
+              OpenAI Ready
+              {% else %}
+              Rules Mode
+              {% endif %}
+            </span>
+            <button
+              type="button"
+              class="btn btn-contract btn-sm ai-collapse-toggle"
+              data-bs-toggle="collapse"
+              data-bs-target="#ai-panel-collapse"
+              aria-expanded="false"
+              aria-controls="ai-panel-collapse"
+              id="ai-panel-toggle"
+            >Show AI Tools</button>
+          </div>
+        </div>
+        <p class="text-muted small mb-3">AI tools are collapsed by default. Use the button on the right to open or hide them.</p>
+        <div class="collapse" id="ai-panel-collapse">
+          <div class="ai-prompt-list mb-3" id="ai-prompt-list">
+            {% for prompt in bootstrap_data.ai_status.suggested_prompts %}
+            <button type="button" class="btn btn-contract btn-sm ai-prompt-chip" data-ai-prompt="{{ prompt }}">{{ prompt }}</button>
+            {% endfor %}
+          </div>
+          <form id="ai-ask-form" class="ai-ask-form">
+            <div class="row g-3 align-items-end">
+              <div class="col-lg-9">
+                <label for="ai-question-input" class="form-label">Ask a question</label>
+                <textarea id="ai-question-input" class="form-control ai-question-input" rows="3" placeholder="Example: Am I on track to hit my guarantee?"></textarea>
+              </div>
+              <div class="col-lg-3">
+                <div class="d-grid gap-2">
+                  <button type="submit" class="btn btn-sun" id="ai-ask-button">Ask AI</button>
+                  <button type="button" class="btn btn-contract" id="ai-reset-button">Reset</button>
+                </div>
+              </div>
+            </div>
+          </form>
+          <div class="ai-answer-panel mt-3" id="ai-answer-panel">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+              <strong id="ai-answer-title">AI Solar Analyst</strong>
+              <span class="ai-answer-meta" id="ai-answer-meta">
+                {% if bootstrap_data.ai_status.openai_configured %}
+                OpenAI enhancement available
+                {% else %}
+                Grounded local analysis
+                {% endif %}
+              </span>
+            </div>
+            <p class="mb-2" id="ai-answer-text">Ask a question or tap one of the prompt chips to generate a grounded solar analysis.</p>
+            <ul class="mb-2 ai-answer-list" id="ai-answer-list">
+              <li>Track guarantee pace against current annual projection.</li>
+              <li>Explain lower production days from irradiance, weather, and recent trend data.</li>
+              <li>Estimate tomorrow, next month, and annual savings from current dashboard data.</li>
+            </ul>
+            <small class="text-muted" id="ai-answer-disclaimer">This phase uses the current dashboard dataset and does not yet include inverter-level telemetry or external forecast APIs.</small>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <section class="row g-3 mb-4">
       <div class="col-md-6 col-xl-3">
         <div class="metric-card sun">
@@ -282,6 +353,214 @@
               <div><span>Lifetime Savings</span><strong>${{ "{:,.0f}".format(metrics.lifetime_savings) }}</strong></div>
               <div><span>Tree Removal Payback</span><strong>{% if metrics.tree_payback_months %}{{ "%.1f"|format(metrics.tree_payback_months) }} months{% else %}N/A{% endif %}</strong></div>
             </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="row g-3 mb-4">
+      <div class="col-lg-7">
+        <div class="card tracker-card h-100">
+          <div class="card-body">
+            <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
+              <div>
+                <p class="eyebrow mb-2">Forward Billing Outlook</p>
+                <h2 class="h5 mb-1">What your monthly bills should look like going forward</h2>
+                <p class="text-muted mb-0">This combines the July NYSEG bill behavior with the Sunrun contract terms and your current production pace.</p>
+              </div>
+              <span class="ai-status-pill {% if billing_outlook.production_ahead_of_guarantee %}ai-status-pill-success{% endif %}">
+                {% if billing_outlook.production_ahead_of_guarantee %}
+                Production pacing ahead of guarantee
+                {% else %}
+                Production pacing below guarantee
+                {% endif %}
+              </span>
+            </div>
+            <div class="info-grid mb-3">
+              <div><span>Expected NYSEG Grid Use</span><strong>{{ "{:,.0f}".format(billing_outlook.nyseg_contract_expected_monthly_kwh) }} kWh/month</strong></div>
+              <div><span>NYSEG Usage-Based July Pattern</span><strong>${{ "{:,.2f}".format(billing_outlook.nyseg_july_usage_based_monthly_charge) }}/month</strong></div>
+              <div><span>NYSEG Contract-Based Average</span><strong>${{ "{:,.2f}".format(billing_outlook.nyseg_contract_expected_monthly_charge) }}/month</strong></div>
+              <div><span>Sunrun Current Monthly</span><strong>${{ "{:,.2f}".format(billing_outlook.sunrun_current_monthly) }}</strong></div>
+              <div><span>Sunrun Next Year Est.</span><strong>${{ "{:,.2f}".format(billing_outlook.sunrun_next_year_monthly) }}</strong></div>
+              <div><span>Combined Typical Range</span><strong>${{ "{:,.0f}".format(billing_outlook.combined_usage_based_monthly_charge) }} to ${{ "{:,.0f}".format(billing_outlook.combined_contract_expected_monthly_charge) }}/month</strong></div>
+            </div>
+            <div class="tracker-modal-math">
+              <div class="tracker-modal-step">
+                <strong>NYSEG going forward</strong>
+                <p>If budget billing is ignored and you just look at underlying usage, the July bill suggests NYSEG may often land around ${{ "{:,.0f}".format(billing_outlook.nyseg_july_usage_based_monthly_charge) }}/month during strong solar periods. Using the contract's expected post-solar grid usage of {{ "{:,.0f}".format(config.expected_grid_usage_kwh) }} kWh/year, a more normal all-season average is about ${{ "{:,.0f}".format(billing_outlook.nyseg_contract_expected_monthly_charge) }}/month.</p>
+              </div>
+              <div class="tracker-modal-step">
+                <strong>Sunrun going forward</strong>
+                <p>The contract summary shows a year 1 Sunrun lease payment of $153.19/month with ACH discount. The dashboard projects about ${{ "{:,.2f}".format(billing_outlook.sunrun_current_monthly) }}/month now, increasing to roughly ${{ "{:,.2f}".format(billing_outlook.sunrun_next_year_monthly) }}/month next year with the {{ "%.2f"|format(billing_outlook.sunrun_escalator_pct) }}% escalator.</p>
+              </div>
+              <div class="tracker-modal-step">
+                <strong>Combined expectation</strong>
+                <p>That puts the likely ongoing combined monthly burden near ${{ "{:,.0f}".format(billing_outlook.combined_usage_based_monthly_charge) }} in very favorable low-import months and around ${{ "{:,.0f}".format(billing_outlook.combined_contract_expected_monthly_charge) }} as a contract-based average across the year.</p>
+              </div>
+              {% if billing_outlook.budget_billing_still_active %}
+              <div class="tracker-modal-step">
+                <strong>Why the current NYSEG amount due can still look high</strong>
+                <p>Your July bill still includes budget billing and payment-plan structure. As long as that remains active, the visible NYSEG amount due can stay closer to ${{ "{:,.2f}".format(monthly_bill.budget_billing_amount + monthly_bill.payment_agreement_amount) }} before Sunrun is added, even if actual solar-era usage is much lower.</p>
+              </div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-5">
+        <div class="card tracker-card h-100">
+          <div class="card-body">
+            <h2 class="h5 mb-3">Billing Interpretation</h2>
+            <div class="tracker-modal-math">
+              <div class="tracker-modal-step">
+                <strong>Production guarantee context</strong>
+                <p>The contract guarantee averages about {{ "%.1f"|format(billing_outlook.guarantee_daily_kwh) }} kWh/day. Your current observed pace is {{ "%.1f"|format(billing_outlook.projected_daily_kwh) }} kWh/day, which supports the lower-usage NYSEG outlook if this production trend holds.</p>
+              </div>
+              <div class="tracker-modal-step">
+                <strong>What should improve first</strong>
+                <p>During sunny months, the NYSEG energy-charge portion should usually be the first thing to shrink. The fixed service charges and the Sunrun lease remain, so the utility bill may not drop to zero even when production is strong.</p>
+              </div>
+              <div class="tracker-modal-step">
+                <strong>Best planning number</strong>
+                <p>For budgeting, it is reasonable to plan around about ${{ "{:,.0f}".format(billing_outlook.combined_contract_expected_monthly_charge) }}/month combined on average, while recognizing that solar-heavy months can be lower and winter or cloudy stretches can run higher.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="row g-3 mb-4">
+      <div class="col-lg-7">
+        <div class="card tracker-card h-100">
+          <div class="card-body">
+            <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
+              <div>
+                <p class="eyebrow mb-2">Historic NYSEG Baseline</p>
+                <h2 class="h5 mb-1">Pre-solar usage workbook analysis</h2>
+                <p class="text-muted mb-0">This section uses your uploaded NYSEG bill workbook as a baseline source for judging the effectiveness of the solar system.</p>
+              </div>
+              <div class="d-flex flex-wrap gap-2 align-items-center">
+                {% if historical_usage.available %}
+                <span class="ai-status-pill ai-status-pill-success">Workbook Loaded</span>
+                <a class="btn btn-contract btn-sm" href="{{ url_for('main.nyseg_bill_viewer') }}">View Spreadsheet</a>
+                {% else %}
+                <span class="ai-status-pill">No Workbook</span>
+                {% endif %}
+              </div>
+            </div>
+            {% if historical_usage.available %}
+            <div class="info-grid mb-3">
+              <div><span>History Window</span><strong>{{ historical_usage.start_date }} to {{ historical_usage.end_date }}</strong></div>
+              <div><span>Monthly Records</span><strong>{{ historical_usage.record_count }}</strong></div>
+              <div><span>Avg Monthly Usage</span><strong>{{ "{:,.0f}".format(historical_usage.average_monthly_kwh) }} kWh</strong></div>
+              <div><span>Annualized Baseline</span><strong>{{ "{:,.0f}".format(historical_usage.annualized_kwh) }} kWh</strong></div>
+              <div><span>Expected Annual Usage</span><strong>{{ "{:,.0f}".format(config.annual_home_usage_kwh) }} kWh</strong></div>
+              <div><span>Variance vs Expected</span><strong>{{ "{:,.0f}".format(historical_usage.versus_expected_annual_kwh|abs) }} kWh {% if historical_usage.versus_expected_annual_kwh >= 0 %}high{% else %}low{% endif %}</strong></div>
+              <div><span>Highest Monthly Read</span><strong>{{ "{:,.0f}".format(historical_usage.maximum_kwh) }} kWh</strong></div>
+              <div><span>Lowest Monthly Read</span><strong>{{ "{:,.0f}".format(historical_usage.minimum_kwh) }} kWh</strong></div>
+            </div>
+            <div class="tracker-modal-note">
+              Meter {{ historical_usage.meter_label or "source" }} includes {{ historical_usage.actual_read_count }} NYSEG reads and {{ historical_usage.calculated_read_count }} calculated reads. Use this as the pre-solar baseline when comparing grid dependence and estimated solar offset.
+            </div>
+            {% else %}
+            <div class="tracker-modal-note">
+              No historical workbook source is currently loaded.
+            </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-5">
+        <div class="card tracker-card h-100">
+          <div class="card-body">
+            <h2 class="h5 mb-3">Baseline Effectiveness Notes</h2>
+            {% if historical_usage.available %}
+            <div class="tracker-modal-math">
+              <div class="tracker-modal-step">
+                <strong>1. Baseline Context</strong>
+                <p>The workbook annualizes to roughly {{ "{:,.0f}".format(historical_usage.annualized_kwh) }} kWh/year before solar activation on {{ config.activation_date.isoformat() }}.</p>
+              </div>
+              <div class="tracker-modal-step">
+                <strong>2. Compare to Contract Assumption</strong>
+                <p>Sunrun planning assumed {{ "{:,.0f}".format(config.annual_home_usage_kwh) }} kWh/year, so this workbook is {% if historical_usage.versus_expected_annual_kwh >= 0 %}about {{ "{:,.0f}".format(historical_usage.versus_expected_annual_kwh) }} kWh higher{% else %}about {{ "{:,.0f}".format(historical_usage.versus_expected_annual_kwh|abs) }} kWh lower{% endif %}.</p>
+              </div>
+              <div class="tracker-modal-step">
+                <strong>3. Use in Solar Analysis</strong>
+                <p>This gives the dashboard and AI analyst a historical benchmark for judging whether current solar offset and import behavior look effective versus pre-solar usage.</p>
+              </div>
+            </div>
+            {% else %}
+            <p class="text-muted mb-0">Upload or connect a historical NYSEG workbook to enable pre-solar baseline analysis.</p>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="row g-3 mb-4">
+      <div class="col-lg-7">
+        <div class="card tracker-card h-100">
+          <div class="card-body">
+            <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
+              <div>
+                <p class="eyebrow mb-2">Monthly Bill Reference</p>
+                <h2 class="h5 mb-1">Integrated NYSEG bill context</h2>
+                <p class="text-muted mb-0">Use this bill reference to compare billed utility behavior against the solar-era dashboard and the historic workbook baseline.</p>
+              </div>
+              <div class="d-flex flex-wrap gap-2 align-items-center">
+                {% if monthly_bill.available %}
+                <span class="ai-status-pill ai-status-pill-success">Bill Loaded</span>
+                <a class="btn btn-contract btn-sm" href="{{ url_for('main.nyseg_monthly_bill_viewer') }}">View Bill</a>
+                {% else %}
+                <span class="ai-status-pill">No Bill</span>
+                {% endif %}
+              </div>
+            </div>
+            {% if monthly_bill.available %}
+            <div class="info-grid mb-3">
+              <div><span>Statement Date</span><strong>{{ monthly_bill.statement_date }}</strong></div>
+              <div><span>Billing Period</span><strong>{{ monthly_bill.billing_start_date }} to {{ monthly_bill.billing_end_date }}</strong></div>
+              <div><span>Amount Due</span><strong>${{ "{:,.2f}".format(monthly_bill.amount_due) }}</strong></div>
+              <div><span>Energy Charges</span><strong>${{ "{:,.2f}".format(monthly_bill.total_energy_charges) }}</strong></div>
+              <div><span>Current Usage</span><strong>{{ "{:,.0f}".format(monthly_bill.current_usage_kwh) }} kWh</strong></div>
+              <div><span>Avg Daily Use</span><strong>{{ "{:,.0f}".format(monthly_bill.average_daily_use_kwh) }} kWh/day</strong></div>
+              <div><span>Prior Year Daily Use</span><strong>{{ "{:,.0f}".format(monthly_bill.prior_year_average_daily_use_kwh) }} kWh/day</strong></div>
+              <div><span>Budget Billing</span><strong>${{ "{:,.2f}".format(monthly_bill.budget_billing_amount) }}</strong></div>
+            </div>
+            <div class="tracker-modal-note">
+              The bill file name says July 2027, but the bill content shows a statement date of {{ monthly_bill.statement_date }}. The app uses the statement date as the source of truth for analysis context.
+            </div>
+            {% else %}
+            <div class="tracker-modal-note">
+              No monthly bill reference is currently loaded.
+            </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-5">
+        <div class="card tracker-card h-100">
+          <div class="card-body">
+            <h2 class="h5 mb-3">Bill Context Notes</h2>
+            {% if monthly_bill.available %}
+            <div class="tracker-modal-math">
+              <div class="tracker-modal-step">
+                <strong>1. Low Utility Usage During Solar Era</strong>
+                <p>The bill shows {{ "{:,.0f}".format(monthly_bill.current_usage_kwh) }} kWh over {{ monthly_bill.days_in_period }} days, versus a prior-year daily average of {{ "{:,.0f}".format(monthly_bill.prior_year_average_daily_use_kwh) }} kWh/day.</p>
+              </div>
+              <div class="tracker-modal-step">
+                <strong>2. Billing Structure Still Matters</strong>
+                <p>The amount due is driven mostly by budget billing and agreement structure, not only the energy-charge subtotal of ${{ "{:,.2f}".format(monthly_bill.total_energy_charges) }}.</p>
+              </div>
+              <div class="tracker-modal-step">
+                <strong>3. Use With Solar Dashboard</strong>
+                <p>This bill adds practical billing context around why low imported usage does not always translate directly into a low amount due.</p>
+              </div>
+            </div>
+            {% else %}
+            <p class="text-muted mb-0">Add a bill PDF to enable in-app bill context and viewing.</p>
+            {% endif %}
           </div>
         </div>
       </div>

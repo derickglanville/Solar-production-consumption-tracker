@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="hero-panel mb-4">
+  <p class="eyebrow mb-2">Document Viewer</p>
+  <h1 class="hero-title mb-2">{{ title }}</h1>
+  <p class="text-muted mb-0">{{ subtitle }}</p>
+</section>
+
+<section class="row g-3 mb-4">
+  <div class="col-lg-4">
+    <div class="card tracker-card h-100">
+      <div class="card-body">
+        <div class="d-flex flex-wrap gap-2 justify-content-between align-items-start mb-3">
+          <h2 class="h5 mb-0">Bill Summary</h2>
+          <a class="btn btn-contract btn-sm" href="{{ pdf_url }}" target="_blank" rel="noopener noreferrer">Open PDF</a>
+        </div>
+        {% if bill.available %}
+        <div class="info-grid mb-3">
+          <div><span>Statement Date</span><strong>{{ bill.statement_date }}</strong></div>
+          <div><span>Billing Period</span><strong>{{ bill.billing_start_date }} to {{ bill.billing_end_date }}</strong></div>
+          <div><span>Amount Due</span><strong>${{ "{:,.2f}".format(bill.amount_due) }}</strong></div>
+          <div><span>Energy Charges</span><strong>${{ "{:,.2f}".format(bill.total_energy_charges) }}</strong></div>
+          <div><span>Current Usage</span><strong>{{ "{:,.0f}".format(bill.current_usage_kwh) }} kWh</strong></div>
+          <div><span>Avg Daily Use</span><strong>{{ "{:,.0f}".format(bill.average_daily_use_kwh) }} kWh/day</strong></div>
+          <div><span>Prior Year Daily Use</span><strong>{{ "{:,.0f}".format(bill.prior_year_average_daily_use_kwh) }} kWh/day</strong></div>
+          <div><span>Budget Billing</span><strong>${{ "{:,.2f}".format(bill.budget_billing_amount) }}</strong></div>
+        </div>
+        <div class="tracker-modal-math">
+          {% for note in bill.notes %}
+          <div class="tracker-modal-step">
+            <p class="mb-0">{{ note }}</p>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-muted mb-0">The monthly bill PDF could not be loaded.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-8">
+    <div class="card tracker-card h-100">
+      <div class="card-body p-0">
+        <iframe
+          src="{{ pdf_url }}"
+          title="NYSEG Monthly Bill PDF Viewer"
+          class="document-pdf-frame"
+        ></iframe>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

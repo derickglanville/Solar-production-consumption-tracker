@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="hero-panel mb-4">
+  <p class="eyebrow mb-2">Document Viewer</p>
+  <h1 class="hero-title mb-2">{{ title }}</h1>
+  <p class="text-muted mb-0">{{ subtitle }}</p>
+</section>
+
+<section class="row g-3 mb-4">
+  <div class="col-lg-4">
+    <div class="card tracker-card h-100">
+      <div class="card-body">
+        <div class="d-flex flex-wrap gap-2 justify-content-between align-items-start mb-3">
+          <h2 class="h5 mb-0">Workbook Summary</h2>
+          <a class="btn btn-contract btn-sm" href="{{ url_for('main.nyseg_bill_document') }}">Download XLSX</a>
+        </div>
+        {% if spreadsheet.available %}
+        <div class="info-grid">
+          <div><span>History Window</span><strong>{{ spreadsheet.start_date }} to {{ spreadsheet.end_date }}</strong></div>
+          <div><span>Meter</span><strong>{{ spreadsheet.meter_label or "N/A" }}</strong></div>
+          <div><span>Records</span><strong>{{ spreadsheet.record_count }}</strong></div>
+          <div><span>Avg Monthly Usage</span><strong>{{ "{:,.0f}".format(spreadsheet.average_monthly_kwh) }} kWh</strong></div>
+          <div><span>Annualized Baseline</span><strong>{{ "{:,.0f}".format(spreadsheet.annualized_kwh) }} kWh</strong></div>
+          <div><span>Highest Read</span><strong>{{ "{:,.0f}".format(spreadsheet.maximum_kwh) }} kWh</strong></div>
+          <div><span>Bill Rate Used</span><strong>${{ "{:,.4f}".format(spreadsheet.effective_rate_per_kwh) }}/kWh</strong></div>
+          <div><span>Est. Historic Energy Total</span><strong>${{ "{:,.2f}".format(spreadsheet.estimated_total_energy_charges) }}</strong></div>
+        </div>
+        <p class="text-muted small mt-3 mb-0">
+          Estimated charges use the {{ spreadsheet.rate_source_statement_date }} bill energy-charge rate:
+          ${{ "{:,.2f}".format(spreadsheet.rate_source_energy_charges) }} divided by
+          {{ "{:,.0f}".format(spreadsheet.rate_source_usage_kwh) }} kWh
+          = ${{ "{:,.4f}".format(spreadsheet.effective_rate_per_kwh) }}/kWh.
+        </p>
+        {% else %}
+        <p class="text-muted mb-0">The workbook could not be loaded.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-8">
+    <div class="card tracker-card h-100">
+      <div class="card-body">
+        <h2 class="h5 mb-3">Historic Usage Rows</h2>
+        <div class="table-responsive">
+          <table class="table align-middle">
+            <thead>
+              <tr>
+                <th>Read Date</th>
+                <th>Read Type</th>
+                <th>KWH</th>
+                <th class="text-end">Rate / kWh</th>
+                <th class="text-end">Estimated</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in spreadsheet.monthly_records %}
+              <tr>
+                <td>{{ row.read_date }}</td>
+                <td>{{ row.read_type }}</td>
+                <td>{{ "{:,.0f}".format(row.kwh) }}</td>
+                <td class="text-end">${{ "{:,.4f}".format(row.effective_rate_per_kwh) }}</td>
+                <td class="text-end">${{ "{:,.2f}".format(row.estimated_charge) }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+            <tfoot>
+              <tr>
+                <th colspan="2">Total</th>
+                <th>{{ "{:,.0f}".format(spreadsheet.total_kwh) }}</th>
+                <th></th>
+                <th class="text-end">${{ "{:,.2f}".format(spreadsheet.estimated_total_energy_charges) }}</th>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

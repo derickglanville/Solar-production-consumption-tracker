@@ -106,5 +106,94 @@ window.SOLAR_BOOTSTRAP = {
     "Extreme Heat",
     "Wind",
     "Unknown"
-  ]
+  ],
+  ai_status: {
+    openai_configured: false,
+    model: "gpt-5",
+    suggested_prompts: [
+      "Am I on track to hit my guarantee?",
+      "What caused today's low production?",
+      "Compare this month to last month.",
+      "Estimate next month's production.",
+      "Predict annual savings.",
+      "Predict tomorrow's production.",
+      "Show anomalies in my recent data.",
+      "How effective is the solar usage versus the historic NYSEG baseline?",
+      "Why is the bill still high if usage is low?",
+      "Is one inverter underperforming?"
+    ]
+  },
+  monthly_bill: {
+    available: true,
+    source_path: "NYSEG Bill/July 2027.pdf",
+    display_name: "July 2027.pdf",
+    statement_date: "2026-07-07",
+    billing_start_date: "2026-06-05",
+    billing_end_date: "2026-07-01",
+    days_in_period: 27,
+    amount_due: 516.90,
+    total_energy_charges: 45.76,
+    total_electricity_cost: 45.76,
+    current_usage_kwh: 118.0,
+    average_daily_use_kwh: 4.0,
+    prior_year_average_daily_use_kwh: 35.0,
+    budget_billing_amount: 507.00,
+    payment_agreement_amount: 10.00,
+    balance_forward: -1.05,
+    total_adjustments: -1151.52,
+    miscellaneous_charges: 0.95,
+    notes: [
+      "The PDF filename says July 2027, but the bill content shows a statement date of July 07, 2026.",
+      "This bill is being used as a monthly bill reference source for dashboard context.",
+      "The bill shows only 118 kWh over a 27-day period, which is much lower than the same period one year earlier and should be interpreted carefully alongside solar production and export data."
+    ]
+  },
+  historical_usage: {
+    available: true,
+    source_path: "NYSEG Bill/NYSEG Bill.xlsx",
+    meter_label: "00265645",
+    record_count: 23,
+    start_date: "2024-09-03",
+    end_date: "2026-07-01",
+    total_kwh: 35243.0,
+    average_monthly_kwh: 1532.304347826087,
+    annualized_kwh: 18387.652173913044,
+    actual_read_count: 12,
+    calculated_read_count: 11,
+    minimum_kwh: 24.0,
+    maximum_kwh: 3865.0,
+    latest_kwh: 118.0,
+    versus_expected_annual_kwh: 420.65217391304395,
+    versus_expected_annual_pct: 2.3412488112263814,
+    notes: [
+      "Source includes 23 monthly-style NYSEG history rows from 2024-09-03 through 2026-07-01.",
+      "12 reads are marked NYSEG and 11 are marked CALCULATED.",
+      "This baseline can be used to compare historic utility consumption against the solar-era dashboard estimates and contract assumptions."
+    ],
+    monthly_records: [
+      { read_date: "2024-09-03", read_type: "NYSEG", kwh: 1602.0 },
+      { read_date: "2024-10-03", read_type: "CALCULATED", kwh: 875.0 },
+      { read_date: "2024-11-04", read_type: "NYSEG", kwh: 24.0 },
+      { read_date: "2024-12-05", read_type: "CALCULATED", kwh: 1778.0 },
+      { read_date: "2025-01-06", read_type: "NYSEG", kwh: 2936.0 },
+      { read_date: "2025-02-05", read_type: "CALCULATED", kwh: 561.0 },
+      { read_date: "2025-03-03", read_type: "NYSEG", kwh: 2110.0 },
+      { read_date: "2025-04-03", read_type: "CALCULATED", kwh: 1380.0 },
+      { read_date: "2025-05-05", read_type: "NYSEG", kwh: 3865.0 },
+      { read_date: "2025-06-04", read_type: "CALCULATED", kwh: 1077.0 },
+      { read_date: "2025-07-03", read_type: "NYSEG", kwh: 1005.0 },
+      { read_date: "2025-08-05", read_type: "CALCULATED", kwh: 1087.0 },
+      { read_date: "2025-09-03", read_type: "NYSEG", kwh: 1210.0 },
+      { read_date: "2025-10-06", read_type: "CALCULATED", kwh: 1002.0 },
+      { read_date: "2025-11-04", read_type: "NYSEG", kwh: 523.0 },
+      { read_date: "2025-12-05", read_type: "CALCULATED", kwh: 2296.0 },
+      { read_date: "2026-01-06", read_type: "NYSEG", kwh: 1955.0 },
+      { read_date: "2026-02-04", read_type: "CALCULATED", kwh: 1419.0 },
+      { read_date: "2026-03-03", read_type: "NYSEG", kwh: 3160.0 },
+      { read_date: "2026-04-06", read_type: "CALCULATED", kwh: 1874.0 },
+      { read_date: "2026-05-05", read_type: "NYSEG", kwh: 1473.0 },
+      { read_date: "2026-06-04", read_type: "CALCULATED", kwh: 1913.0 },
+      { read_date: "2026-07-01", read_type: "NYSEG", kwh: 118.0 }
+    ]
+  }
 };
