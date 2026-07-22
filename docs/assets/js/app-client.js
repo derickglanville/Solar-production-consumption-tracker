@@ -219,12 +219,12 @@ async function fetchOpenMeteoLookupValues(entryDate) {
   return {
     irradiance_peak_wm2: peakIrradiance,
     weather: pickDominantWeatherLabel(weatherLabels),
-    temperature_f: averageNumericValues(temperatureValues),
-    temperature_high_f: maxNumericValue(temperatureValues),
-    temperature_low_f: minNumericValue(temperatureValues),
-    humidity_pct: averageNumericValues(humidityValues),
-    cloud_cover_pct: averageNumericValues(cloudValues),
-    wind_mph: maxNumericValue(windValues),
+    temperature_f: roundToStep(averageNumericValues(temperatureValues), 1),
+    temperature_high_f: roundToStep(maxNumericValue(temperatureValues), 1),
+    temperature_low_f: roundToStep(minNumericValue(temperatureValues), 1),
+    humidity_pct: roundToStep(averageNumericValues(humidityValues), 1),
+    cloud_cover_pct: roundToStep(averageNumericValues(cloudValues), 1),
+    wind_mph: roundToStep(maxNumericValue(windValues), 1),
     lookup_source: `open-meteo-${isPastIsoDate(entryDate) ? "historical" : "forecast"}`,
     notes: `Auto-filled from Open-Meteo ${sourceKind} data for ${yorktownHeightsLocation.label}. Irradiance is the day's peak hourly shortwave radiation.`
   };
@@ -251,6 +251,34 @@ function parseOptionalNumber(value) {
   if (typeof value === "string" && value.trim() === "") return null;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : null;
+}
+
+function roundToStep(value, decimals = 1) {
+  const parsed = parseOptionalNumber(value);
+  if (parsed === null) return null;
+  return Number(parsed.toFixed(decimals));
+}
+
+function formatFormFieldValue(key, value) {
+  if (value === null || value === undefined) return "";
+  if (
+    [
+      "irradiance_peak_wm2",
+      "production_kwh",
+      "meter_01_import_reading",
+      "meter_02_export_reading",
+      "temperature_f",
+      "temperature_high_f",
+      "temperature_low_f",
+      "humidity_pct",
+      "cloud_cover_pct",
+      "wind_mph"
+    ].includes(key)
+  ) {
+    const rounded = roundToStep(value, 1);
+    return rounded ?? "";
+  }
+  return value;
 }
 
 function normalizeEntry(entry) {
@@ -510,6 +538,7 @@ function buildComputedEntries(entries, config = defaultConfig) {
     return {
       ...entry,
       currentDate,
+      estimated: Boolean(entry.estimated),
       daily_import_kwh: dailyImport,
       daily_export_kwh: dailyExport,
       estimated_daytime_house_usage_kwh: estimatedDaytimeHouseUsage,
@@ -550,7 +579,11 @@ function calculateDashboardMetricsClient(entries, config) {
       monthly_savings: 0,
       annual_savings: 0,
       lifetime_savings: 0,
-      tree_payback_months: null
+      tree_payback_months: null,
+      confirmed_entry_count: 0,
+      estimated_entry_count: 0,
+      projection_uses_estimated: false,
+      latest_production_estimated: false
     };
   }
 
@@ -559,7 +592,9 @@ function calculateDashboardMetricsClient(entries, config) {
   const currentMonth = today.currentDate.getMonth();
   const trailingWeek = entries.slice(-7);
   const monthlyEntries = entries.filter((entry) => entry.currentDate.getMonth() === currentMonth);
-  const avgDaily = mean(entries.map((entry) => Number(entry.production_kwh || 0)));
+  const confirmedEntries = entries.filter((entry) => !entry.estimated);
+  const projectionEntries = confirmedEntries.length ? confirmedEntries : entries;
+  const avgDaily = mean(projectionEntries.map((entry) => Number(entry.production_kwh || 0)));
   const annualProjection = avgDaily * 365;
   const guarantee = Number(config.production_guarantee_kwh || 0);
   const guaranteeProgress = guarantee ? (annualProjection / guarantee) * 100 : 0;
@@ -609,7 +644,11 @@ function calculateDashboardMetricsClient(entries, config) {
     monthly_savings: monthlySavings,
     annual_savings: annualSavings,
     lifetime_savings: lifetimeSavings,
-    tree_payback_months: treePaybackMonths
+    tree_payback_months: treePaybackMonths,
+    confirmed_entry_count: confirmedEntries.length,
+    estimated_entry_count: entries.filter((entry) => entry.estimated).length,
+    projection_uses_estimated: confirmedEntries.length === 0,
+    latest_production_estimated: Boolean(today.estimated)
   };
 }
 
@@ -1289,7 +1328,7 @@ function renderDashboardHtmlClient(entries, metrics, config, firebaseStatus, ale
           <div class="col-md-6 col-xl-3"><div class="metric-card money"><div class="d-flex justify-content-between align-items-start gap-2"><span>Monthly Savings</span><button type="button" class="metric-info-button" data-bs-toggle="modal" data-bs-target="#monthlySavingsModal">?</button></div><strong>${formatCurrency(metrics.monthly_savings)}</strong><small>Annual: ${formatCurrency(metrics.annual_savings)}</small></div></div>
         </section>
         <section class="row g-3 mb-4">
-          <div class="col-lg-8"><div class="card tracker-card h-100"><div class="card-body"><h2 class="h5 mb-3">Production Overview</h2><div id="daily-chart" class="dashboard-chart"></div><div class="energy-impact-panel mt-3"><div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3"><div><h3 class="h6 mb-1">What This Energy Could Do</h3><p class="text-muted mb-0">A quick real-world translation of your solar output using your historic household baseline and a typical EV efficiency.</p></div><span class="energy-impact-assumption">${formatNumber(energyImpact.averageHomeDayKwh, 1, 1)} kWh/day home use • ${formatNumber(energyImpact.evKwhPerMile, 2, 2)} kWh/EV mile</span></div><div class="info-grid energy-impact-grid"><div><span>Today's Output</span><strong>${formatNumber(metrics.today_production, 1, 1)} kWh</strong><small>Enough for about ${formatNumber(energyImpact.averageHomeHoursSupported, 0, 0)} hours of whole-home usage at your historic average.</small></div><div><span>House Coverage</span><strong>${formatNumber(energyImpact.todayHouseDays, 2, 2)} days</strong><small>Based on your pre-solar average of ${formatNumber(energyImpact.averageHomeDayKwh, 1, 1)} kWh per day.</small></div><div><span>EV Range Equivalent</span><strong>${formatNumber(energyImpact.todayEvMiles, 0, 0)} miles</strong><small>Approximate EV driving range that one day of solar production could provide.</small></div><div><span>Year-To-Date Impact</span><strong>${formatNumber(energyImpact.ytdHouseDays, 1, 1)} home-days</strong><small>That same production is roughly equal to ${formatNumber(energyImpact.ytdEvMiles, 0, 0)} EV miles so far.</small></div><div><span>Total Energy To Date</span><strong>${formatNumber(metrics.ytd_production, 1, 1)} kWh</strong><small>Enough cumulative solar energy to cover about ${formatNumber(energyImpact.ytdHouseDays, 1, 1)} full home-days or roughly ${formatNumber(energyImpact.ytdEvMiles, 0, 0)} EV miles.</small></div></div></div></div></div></div>
+          <div class="col-lg-8"><div class="card tracker-card h-100"><div class="card-body"><div class="d-flex justify-content-between align-items-start gap-2 mb-2"><h2 class="h5 mb-0">Production Overview</h2><button type="button" class="metric-info-button" data-bs-toggle="modal" data-bs-target="#productionOverviewModal" aria-label="Explain production overview">?</button></div>${metrics.estimated_entry_count ? `<div class="tracker-inline-warning mb-3">${metrics.latest_production_estimated ? "Today's production is currently estimated." : "Some production rows are estimated."} Estimated bars are hatched, and annual projection uses confirmed rows by default${metrics.projection_uses_estimated ? " because no confirmed production rows exist yet." : ""}.</div>` : ""}<div id="daily-chart" class="dashboard-chart"></div><div class="energy-impact-panel mt-3"><div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3"><div><h3 class="h6 mb-1">What This Energy Could Do</h3><p class="text-muted mb-0">A quick real-world translation of your solar output using your historic household baseline and a typical EV efficiency.</p></div><span class="energy-impact-assumption">${formatNumber(energyImpact.averageHomeDayKwh, 1, 1)} kWh/day home use • ${formatNumber(energyImpact.evKwhPerMile, 2, 2)} kWh/EV mile</span></div><div class="info-grid energy-impact-grid"><div><span>Today's Output</span><strong>${formatNumber(metrics.today_production, 1, 1)} kWh</strong><small>Enough for about ${formatNumber(energyImpact.averageHomeHoursSupported, 0, 0)} hours of whole-home usage at your historic average.</small></div><div><span>House Coverage</span><strong>${formatNumber(energyImpact.todayHouseDays, 2, 2)} days</strong><small>Based on your pre-solar average of ${formatNumber(energyImpact.averageHomeDayKwh, 1, 1)} kWh per day.</small></div><div><span>EV Range Equivalent</span><strong>${formatNumber(energyImpact.todayEvMiles, 0, 0)} miles</strong><small>Approximate EV driving range that one day of solar production could provide.</small></div><div><span>Year-To-Date Impact</span><strong>${formatNumber(energyImpact.ytdHouseDays, 1, 1)} home-days</strong><small>That same production is roughly equal to ${formatNumber(energyImpact.ytdEvMiles, 0, 0)} EV miles so far.</small></div><div><span>Total Energy To Date</span><strong>${formatNumber(metrics.ytd_production, 1, 1)} kWh</strong><small>Enough cumulative solar energy to cover about ${formatNumber(energyImpact.ytdHouseDays, 1, 1)} full home-days or roughly ${formatNumber(energyImpact.ytdEvMiles, 0, 0)} EV miles.</small></div></div></div></div></div></div>
           <div class="col-lg-4"><div class="card tracker-card h-100"><div class="card-body"><div class="d-flex justify-content-between align-items-start gap-3 mb-3"><h2 class="h5 mb-0">Contract Progress</h2><div class="d-flex flex-wrap gap-2 justify-content-end"><a class="btn btn-contract btn-sm" href="${summaryHref}">Summary</a><a class="btn btn-contract btn-sm" href="${contractHref}" target="_blank" rel="noopener noreferrer">PDF</a></div></div><div class="progress tracker-progress mb-3"><div class="progress-bar" role="progressbar" style="width: ${Math.min(metrics.guarantee_progress_pct, 100)}%"></div></div><div class="info-grid"><div><span>Guarantee</span><strong>${formatNumber(config.production_guarantee_kwh, 0, 0)} kWh</strong></div><div><span>Progress</span><strong>${formatNumber(metrics.guarantee_progress_pct, 1, 1)}%</strong></div><div><span>YTD Production</span><strong>${formatNumber(metrics.ytd_production, 1, 1)} kWh</strong></div><div><span>Avg Daily</span><strong>${formatNumber(metrics.average_daily_production, 1, 1)} kWh</strong></div><div><span>Best Day</span><strong>${formatNumber(metrics.highest_production_day, 1, 1)} kWh</strong></div><div><span>Lowest Day</span><strong>${formatNumber(metrics.lowest_production_day, 1, 1)} kWh</strong></div><div><span>Consecutive Poor Days</span><strong>${metrics.consecutive_poor_days}</strong></div><div><span>Monthly Avg</span><strong>${formatNumber(metrics.monthly_average, 1, 1)} kWh</strong></div></div></div></div></div>
         </section>
         <section class="row g-3 mb-4">
@@ -1316,7 +1355,9 @@ function renderDashboardHtmlClient(entries, metrics, config, firebaseStatus, ale
         </div>
       </aside>
     </div>
-    <div class="modal fade" id="annualProjectionModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content tracker-modal"><div class="modal-header border-0 pb-0"><div><p class="eyebrow mb-2">Projection Help</p><h2 class="modal-title h4 mb-0">How Annual Projection Is Calculated</h2></div><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body pt-3"><div class="info-grid mb-4"><div><span>Average Daily Production</span><strong>${formatNumber(metrics.average_daily_production, 1, 1)} kWh/day</strong></div><div><span>Projected Annual Output</span><strong>${formatNumber(metrics.annual_projection, 0, 0)} kWh/year</strong></div><div><span>Contract Guarantee</span><strong>${formatNumber(config.production_guarantee_kwh, 0, 0)} kWh/year</strong></div><div><span>Difference</span><strong>${metrics.projection_vs_guarantee_kwh >= 0 ? "Ahead" : "Behind"} ${formatNumber(Math.abs(metrics.projection_vs_guarantee_kwh), 0, 0)} kWh</strong></div></div><div class="tracker-modal-math"><div class="tracker-modal-step"><strong>1. Find the current daily run rate</strong><p>The app averages the production entries you have recorded so far.</p><code>${formatNumber(metrics.average_daily_production, 1, 1)} kWh/day</code></div><div class="tracker-modal-step"><strong>2. Project that run rate across a full year</strong><p>Annual Projection = Average Daily Production × 365 days.</p><code>${formatNumber(metrics.average_daily_production, 1, 1)} × 365 = ${formatNumber(metrics.annual_projection, 0, 0)} kWh</code></div><div class="tracker-modal-step"><strong>3. Compare it to the Sunrun guarantee</strong><p>The projected annual output is compared against your contract guarantee of ${formatNumber(config.production_guarantee_kwh, 0, 0)} kWh/year.</p><code>${metrics.projection_vs_guarantee_kwh >= 0 ? "Ahead" : "Behind"} ${formatNumber(Math.abs(metrics.projection_vs_guarantee_kwh), 0, 0)} kWh (${formatNumber(Math.abs(metrics.projection_vs_guarantee_pct), 1, 1)}%)</code></div></div><p class="text-muted small mt-3 mb-0">This is a running projection based on the data recorded so far. It is useful for trend tracking, but it is not weather-normalized and will become more reliable as more days are recorded.</p></div></div></div></div>
+    <div class="modal fade" id="annualProjectionModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content tracker-modal"><div class="modal-header border-0 pb-0"><div><p class="eyebrow mb-2">Projection Help</p><h2 class="modal-title h4 mb-0">How Annual Projection Is Calculated</h2></div><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body pt-3"><div class="info-grid mb-4"><div><span>Average Daily Production</span><strong>${formatNumber(metrics.average_daily_production, 1, 1)} kWh/day</strong></div><div><span>Projected Annual Output</span><strong>${formatNumber(metrics.annual_projection, 0, 0)} kWh/year</strong></div><div><span>Contract Guarantee</span><strong>${formatNumber(config.production_guarantee_kwh, 0, 0)} kWh/year</strong></div><div><span>Difference</span><strong>${metrics.projection_vs_guarantee_kwh >= 0 ? "Ahead" : "Behind"} ${formatNumber(Math.abs(metrics.projection_vs_guarantee_kwh), 0, 0)} kWh</strong></div></div><div class="tracker-modal-math"><div class="tracker-modal-step"><strong>1. Find the current daily run rate</strong><p>The app averages confirmed production entries first and only falls back to estimated rows if no confirmed rows exist yet.</p><code>${formatNumber(metrics.average_daily_production, 1, 1)} kWh/day from ${metrics.confirmed_entry_count || metrics.estimated_entry_count} ${metrics.confirmed_entry_count ? "confirmed" : "estimated"} row(s)</code></div><div class="tracker-modal-step"><strong>2. Project that run rate across a full year</strong><p>Annual Projection = Average Daily Production × 365 days.</p><code>${formatNumber(metrics.average_daily_production, 1, 1)} × 365 = ${formatNumber(metrics.annual_projection, 0, 0)} kWh</code></div><div class="tracker-modal-step"><strong>3. Compare it to the Sunrun guarantee</strong><p>The projected annual output is compared against your contract guarantee of ${formatNumber(config.production_guarantee_kwh, 0, 0)} kWh/year.</p><code>${metrics.projection_vs_guarantee_kwh >= 0 ? "Ahead" : "Behind"} ${formatNumber(Math.abs(metrics.projection_vs_guarantee_kwh), 0, 0)} kWh (${formatNumber(Math.abs(metrics.projection_vs_guarantee_pct), 1, 1)}%)</code></div></div><p class="text-muted small mt-3 mb-0">This is a running projection based on the data recorded so far. Confirmed production rows are used by default so placeholder days do not distort contract tracking.</p></div></div></div></div>
+    <div class="modal fade" id="productionOverviewModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content tracker-modal"><div class="modal-header border-0 pb-0"><div><p class="eyebrow mb-2">Chart Help</p><h2 class="modal-title h4 mb-0">How Production Overview Works</h2></div><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body pt-3"><div class="tracker-modal-math"><div class="tracker-modal-step"><strong>Confirmed vs Estimated bars</strong><p>Solid gold bars are confirmed production values. Hatched lighter bars are estimated placeholder values that should be replaced with actual Sunrun production when available.</p></div><div class="tracker-modal-step"><strong>Why Wednesday, July 22, 2026 can look lower than Tuesday, July 21, 2026</strong><p>Weather labels like rainy or sunny come from Open-Meteo, but estimated production rows still come from the app's placeholder logic, not from Sunrun. That means a rainy day can appear more productive than the next day if one or both rows are still estimated.</p></div><div class="tracker-modal-step"><strong>What the blue line means</strong><p>The blue line is the rolling 7-day average. It smooths the bars so you can see the broader trend instead of reacting to one day by itself.</p></div><div class="tracker-modal-step"><strong>How contract tracking stays grounded</strong><p>Annual projection and guarantee pace use confirmed production rows by default. Estimated rows remain visible for context, but they do not drive contract conclusions unless no confirmed rows exist yet.</p></div></div><p class="text-muted small mt-3 mb-0">Best practice: replace each estimated day with the real Sunrun production as soon as it is available. That makes the chart, warnings, and contract projection much more trustworthy.</p></div></div></div></div>
+    <div class="modal fade" id="annualProjectionModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content tracker-modal"><div class="modal-header border-0 pb-0"><div><p class="eyebrow mb-2">Projection Help</p><h2 class="modal-title h4 mb-0">How Annual Projection Is Calculated</h2></div><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body pt-3"><div class="info-grid mb-4"><div><span>Average Daily Production</span><strong>${formatNumber(metrics.average_daily_production, 1, 1)} kWh/day</strong></div><div><span>Projected Annual Output</span><strong>${formatNumber(metrics.annual_projection, 0, 0)} kWh/year</strong></div><div><span>Contract Guarantee</span><strong>${formatNumber(config.production_guarantee_kwh, 0, 0)} kWh/year</strong></div><div><span>Difference</span><strong>${metrics.projection_vs_guarantee_kwh >= 0 ? "Ahead" : "Behind"} ${formatNumber(Math.abs(metrics.projection_vs_guarantee_kwh), 0, 0)} kWh</strong></div></div><div class="tracker-modal-math"><div class="tracker-modal-step"><strong>1. Find the current daily run rate</strong><p>The app averages confirmed production entries first and only falls back to estimated rows if no confirmed rows exist yet.</p><code>${formatNumber(metrics.average_daily_production, 1, 1)} kWh/day from ${metrics.confirmed_entry_count || metrics.estimated_entry_count} ${metrics.confirmed_entry_count ? "confirmed" : "estimated"} row(s)</code></div><div class="tracker-modal-step"><strong>2. Project that run rate across a full year</strong><p>Annual Projection = Average Daily Production × 365 days.</p><code>${formatNumber(metrics.average_daily_production, 1, 1)} × 365 = ${formatNumber(metrics.annual_projection, 0, 0)} kWh</code></div><div class="tracker-modal-step"><strong>3. Compare it to the Sunrun guarantee</strong><p>The projected annual output is compared against your contract guarantee of ${formatNumber(config.production_guarantee_kwh, 0, 0)} kWh/year.</p><code>${metrics.projection_vs_guarantee_kwh >= 0 ? "Ahead" : "Behind"} ${formatNumber(Math.abs(metrics.projection_vs_guarantee_kwh), 0, 0)} kWh (${formatNumber(Math.abs(metrics.projection_vs_guarantee_pct), 1, 1)}%)</code></div></div><p class="text-muted small mt-3 mb-0">This is a running projection based on the data recorded so far. Confirmed production rows are used by default so placeholder days do not distort contract tracking.</p></div></div></div></div>
     <div class="modal fade" id="dashboardIntroModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content tracker-modal"><div class="modal-header border-0 pb-0"><div><p class="eyebrow mb-2">Dashboard Overview</p><h2 class="modal-title h4 mb-0">What this dashboard is tracking</h2></div><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body pt-3"><div class="tracker-modal-math"><div class="tracker-modal-step"><strong>Production and Grid Flow</strong><p>Tracks daily production, import, export, and rolling averages so you can see how the system is behaving day to day.</p></div><div class="tracker-modal-step"><strong>Virtual Consumption Estimate</strong><p>Because there are no consumption CTs installed, the app estimates self-consumption and home usage from production, grid readings, seasonality, and weather.</p></div><div class="tracker-modal-step"><strong>Contract Tracking</strong><p>Compares observed average production against the Sunrun production guarantee and shows whether your current pace is ahead or behind.</p></div><div class="tracker-modal-step"><strong>Financial View</strong><p>Estimates electricity value, grid cost, lease cost, and monthly or annual savings using the current settings saved in the app.</p></div></div></div></div></div></div>
     <div class="modal fade" id="monthlySavingsModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content tracker-modal"><div class="modal-header border-0 pb-0"><div><p class="eyebrow mb-2">Financial Breakdown</p><h2 class="modal-title h4 mb-0">How Monthly Savings Is Calculated</h2></div><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body pt-3"><div class="info-grid mb-4"><div><span>Observed Months</span><strong>${metrics.observed_months}</strong></div><div><span>Electric Rate</span><strong>$${formatNumber(config.current_electric_rate,2,2)}/kWh</strong></div><div><span>Monthly Fixed Charges</span><strong>$${formatNumber(config.monthly_fixed_charges,2,2)}</strong></div><div><span>Monthly Lease Payment</span><strong>$${formatNumber(config.monthly_lease_payment,2,2)}</strong></div></div><div class="tracker-modal-math"><div class="tracker-modal-step"><strong>1. Electricity Value Produced</strong><p>Total solar production × electric rate</p><code>${formatCurrency(metrics.electricity_value_produced)}</code></div><div class="tracker-modal-step"><strong>2. Grid Cost</strong><p>(Total imported kWh × electric rate) + (monthly fixed charges × observed months)</p><code>${formatCurrency(metrics.grid_cost)}</code></div><div class="tracker-modal-step"><strong>3. Lease Cost</strong><p>Monthly lease payment × observed months</p><code>${formatCurrency(metrics.lease_cost)}</code></div><div class="tracker-modal-step"><strong>4. Monthly Savings</strong><p>(Electricity value produced - grid cost - lease cost) ÷ observed months</p><code>${formatCurrency(metrics.monthly_savings)}</code></div><div class="tracker-modal-step"><strong>5. Annual Savings</strong><p>Monthly savings × 12</p><code>${formatCurrency(metrics.annual_savings)}</code></div></div></div></div></div></div>
   `;
@@ -1329,16 +1370,19 @@ function renderDashboardChartsClient(entries) {
   const chartHeight = compactMode ? 210 : 320;
   const baseLayout = { margin: { l: 20, r: 20, t: 48, b: 32 }, template: "plotly_white", height: chartHeight };
 
+  const plotConfig = { responsive: true, displayModeBar: false };
+
   Plotly.newPlot("daily-chart", [
-    { type: "bar", x: dates, y: entries.map((entry) => entry.production_kwh), name: "Production (kWh)", marker: { color: "#e3a008" } },
+    { type: "bar", x: dates, y: entries.map((entry) => entry.estimated ? null : entry.production_kwh), name: "Confirmed Production (kWh)", marker: { color: "#e3a008" } },
+    { type: "bar", x: dates, y: entries.map((entry) => entry.estimated ? entry.production_kwh : null), name: "Estimated Production (kWh)", marker: { color: "#f6c86a", pattern: { shape: "/" } } },
     { type: "scatter", x: dates, y: entries.map((entry) => entry.rolling_7_day_prod), name: "7-Day Average", line: { color: "#0f4c81", width: 3 } }
-  ], { ...baseLayout, title: { text: "Daily Production" } }, { responsive: true });
+  ], { ...baseLayout, title: { text: "Daily Production" }, bargap: 0.12, barmode: "overlay" }, plotConfig);
 
   Plotly.newPlot("flow-chart", [
     { type: "scatter", x: dates, y: entries.map((entry) => entry.daily_import_kwh), name: "Import", line: { color: "#b42318" } },
     { type: "scatter", x: dates, y: entries.map((entry) => entry.daily_export_kwh), name: "Export", line: { color: "#157f3b" } },
     { type: "scatter", x: dates, y: entries.map((entry) => entry.estimated_self_consumption_kwh), name: "Estimated Self Consumption", line: { color: "#0f4c81", dash: "dot" } }
-  ], { ...baseLayout, title: { text: "Grid Flow and Estimated Self Consumption" } }, { responsive: true });
+  ], { ...baseLayout, title: { text: "Grid Flow and Estimated Self Consumption" } }, plotConfig);
 
   Plotly.newPlot("irradiance-chart", [{
     type: "scatter",
@@ -1346,7 +1390,7 @@ function renderDashboardChartsClient(entries) {
     x: entries.map((entry) => entry.irradiance_peak_wm2),
     y: entries.map((entry) => entry.production_kwh),
     marker: { size: 10, color: "#0f4c81" }
-  }], { ...baseLayout, title: { text: "Production vs Irradiance" }, xaxis: { title: "Peak Irradiance (W/m²)" }, yaxis: { title: "Production (kWh)" } }, { responsive: true });
+  }], { ...baseLayout, title: { text: "Production vs Irradiance" }, xaxis: { title: "Peak Irradiance (W/m²)" }, yaxis: { title: "Production (kWh)" } }, plotConfig);
 
   const weatherGroups = Object.entries(entries.reduce((accumulator, entry) => {
     const key = entry.weather || "Unknown";
@@ -1359,7 +1403,7 @@ function renderDashboardChartsClient(entries) {
     x: weatherGroups.map(([weather]) => weather),
     y: weatherGroups.map(([, values]) => mean(values)),
     marker: { color: "#3b82f6" }
-  }], { ...baseLayout, title: { text: "Average Production by Weather" } }, { responsive: true });
+  }], { ...baseLayout, title: { text: "Average Production by Weather" } }, plotConfig);
 
   const monthTotals = Object.entries(entries.reduce((accumulator, entry) => {
     const monthKey = entry.entry_date.slice(0, 7);
@@ -1371,7 +1415,7 @@ function renderDashboardChartsClient(entries) {
     x: monthTotals.map(([month]) => month),
     y: monthTotals.map(([, total]) => total),
     marker: { color: "#157f3b" }
-  }], { ...baseLayout, title: { text: "Monthly Production" } }, { responsive: true });
+  }], { ...baseLayout, title: { text: "Monthly Production" } }, plotConfig);
 }
 
 async function renderDashboard(entries, config, firebaseStatus) {
@@ -1594,7 +1638,7 @@ function fillEntryForm(entry = null) {
   Object.entries(payload).forEach(([key, value]) => {
     const field = form.elements.namedItem(key);
     if (field) {
-      field.value = value ?? "";
+      field.value = formatFormFieldValue(key, value);
     }
   });
 
@@ -1626,7 +1670,7 @@ function populateEntriesTable(entries) {
       <td>${formatTemperatureCellValue(entry.temperature_high_f)}</td>
       <td>${formatTemperatureCellValue(entry.temperature_low_f)}</td>
       <td>${renderNotesCell(entry.notes)}</td>
-      <td>${entry.estimated ? '<span class="entry-estimated-pill">Estimated</span>' : '<span class="entry-confirmed-pill">Confirmed</span>'}</td>
+      <td>${entry.estimated ? '<span class="entry-estimated-pill">Estimated</span>' : '<span class="entry-confirmed-pill">Actual</span>'}</td>
       <td><button type="button" class="btn btn-contract btn-sm entry-edit-button" data-entry-date="${entry.entry_date}">Edit</button></td>
     </tr>
   `).join("");

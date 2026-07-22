@@ -102,7 +102,7 @@
                 <th>High</th>
                 <th>Low</th>
                 <th>Notes</th>
-                <th>Status</th>
+                <th>Actual / Estimated</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -118,7 +118,7 @@
                 <td>{% if entry.temperature_high_f is not none %}{{ "%.0f"|format(entry.temperature_high_f) }}°F{% else %}<span class="text-muted">-</span>{% endif %}</td>
                 <td>{% if entry.temperature_low_f is not none %}{{ "%.0f"|format(entry.temperature_low_f) }}°F{% else %}<span class="text-muted">-</span>{% endif %}</td>
                 <td><span class="entry-note-preview" title="{{ entry.notes }}">{{ entry.notes }}</span></td>
-                <td><span class="entry-confirmed-pill">Confirmed</span></td>
+                <td>{% if entry.estimated %}<span class="entry-estimated-pill">Estimated</span>{% else %}<span class="entry-confirmed-pill">Actual</span>{% endif %}</td>
                 <td><button type="button" class="btn btn-contract btn-sm" disabled>Edit</button></td>
               </tr>
               {% endfor %}

@@ -94,8 +94,8 @@
             <div class="tracker-modal-math">
               <div class="tracker-modal-step">
                 <strong>1. Find the current daily run rate</strong>
-                <p>The app averages the production entries you have recorded so far.</p>
-                <code>{{ "%.1f"|format(metrics.average_daily_production) }} kWh/day</code>
+                <p>The app averages confirmed production entries first and only falls back to estimated rows if no confirmed rows exist yet.</p>
+                <code>{{ "%.1f"|format(metrics.average_daily_production) }} kWh/day from {{ metrics.confirmed_entry_count if metrics.confirmed_entry_count else metrics.estimated_entry_count }} {% if metrics.confirmed_entry_count %}confirmed{% else %}estimated{% endif %} row(s)</code>
               </div>
               <div class="tracker-modal-step">
                 <strong>2. Project that run rate across a full year</strong>
@@ -108,7 +108,7 @@
                 <code>{% if metrics.projection_vs_guarantee_kwh >= 0 %}Ahead{% else %}Behind{% endif %} {{ "{:,.0f}".format(metrics.projection_vs_guarantee_kwh|abs) }} kWh ({{ "%.1f"|format(metrics.projection_vs_guarantee_pct|abs) }}%)</code>
               </div>
             </div>
-            <p class="text-muted small mt-3 mb-0">This is a running projection based on the data recorded so far. It is useful for trend tracking, but it is not weather-normalized and will become more reliable as more days are recorded.</p>
+            <p class="text-muted small mt-3 mb-0">This is a running projection based on the data recorded so far. Confirmed production rows are used by default so placeholder days do not distort contract tracking.</p>
           </div>
         </div>
       </div>
@@ -337,11 +337,65 @@
       </div>
     </div>
 
+    <div class="modal fade" id="productionOverviewModal" tabindex="-1" aria-labelledby="productionOverviewModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content tracker-modal">
+          <div class="modal-header border-0 pb-0">
+            <div>
+              <p class="eyebrow mb-2">Chart Help</p>
+              <h2 class="modal-title h4 mb-0" id="productionOverviewModalLabel">How Production Overview Works</h2>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body pt-3">
+            <div class="tracker-modal-math">
+              <div class="tracker-modal-step">
+                <strong>Confirmed vs Estimated bars</strong>
+                <p>Solid gold bars are confirmed production values. Hatched lighter bars are estimated placeholder values that should be replaced with actual Sunrun production when available.</p>
+              </div>
+              <div class="tracker-modal-step">
+                <strong>Why Wednesday, July 22, 2026 can look lower than Tuesday, July 21, 2026</strong>
+                <p>Weather labels like rainy or sunny come from Open-Meteo, but estimated production rows still come from the app's placeholder logic, not from Sunrun. That means a rainy day can appear more productive than the next day if one or both rows are still estimated.</p>
+              </div>
+              <div class="tracker-modal-step">
+                <strong>What the blue line means</strong>
+                <p>The blue line is the rolling 7-day average. It smooths the bars so you can see the broader trend instead of reacting to one day by itself.</p>
+              </div>
+              <div class="tracker-modal-step">
+                <strong>How contract tracking stays grounded</strong>
+                <p>Annual projection and guarantee pace use confirmed production rows by default. Estimated rows remain visible for context, but they do not drive contract conclusions unless no confirmed rows exist yet.</p>
+              </div>
+            </div>
+            <p class="text-muted small mt-3 mb-0">Best practice: replace each estimated day with the real Sunrun production as soon as it is available. That makes the chart, warnings, and contract projection much more trustworthy.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <section class="row g-3 mb-4">
       <div class="col-lg-8">
           <div class="card tracker-card h-100">
           <div class="card-body">
-            <h2 class="h5 mb-3">Production Overview</h2>
+            <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+              <h2 class="h5 mb-0">Production Overview</h2>
+              <button
+                type="button"
+                class="metric-info-button"
+                data-bs-toggle="modal"
+                data-bs-target="#productionOverviewModal"
+                aria-label="Explain production overview"
+              >?</button>
+            </div>
+            {% if metrics.estimated_entry_count %}
+            <div class="tracker-inline-warning mb-3">
+              {% if metrics.latest_production_estimated %}
+              Today's production is currently estimated.
+              {% else %}
+              Some production rows are estimated.
+              {% endif %}
+              Estimated bars are hatched, and annual projection uses confirmed rows by default{% if metrics.projection_uses_estimated %} because no confirmed production rows exist yet.{% else %}.{% endif %}
+            </div>
+            {% endif %}
             <div class="dashboard-chart dashboard-chart-embedded">
               {{ charts.daily_chart|safe }}
             </div>

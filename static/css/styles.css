@@ -569,6 +569,15 @@ body[data-page="dashboard"].dashboard-compact-mode .container {
   min-width: 170px;
 }
 
+.tracker-inline-warning {
+  padding: 0.8rem 0.95rem;
+  border-radius: 14px;
+  background: rgba(217, 164, 65, 0.12);
+  border: 1px solid rgba(217, 164, 65, 0.24);
+  color: #6c5312;
+  font-size: 0.92rem;
+}
+
 .entries-history-table {
   table-layout: auto;
   width: max-content;

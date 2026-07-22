@@ -259,6 +259,8 @@ def hydrate_entries(items):
                 cloud_cover_pct=float(item["cloud_cover_pct"]) if item.get("cloud_cover_pct") is not None else None,
                 wind_mph=float(item["wind_mph"]) if item.get("wind_mph") is not None else None,
                 notes=item.get("notes", ""),
+                estimated=bool(item.get("estimated", False)),
+                lookup_source=item.get("lookup_source", ""),
                 created_at=item.get("created_at"),
                 updated_at=item.get("updated_at"),
             )

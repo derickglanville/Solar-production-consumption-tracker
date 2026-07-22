@@ -50,6 +50,10 @@ class DashboardMetrics:
     annual_savings: float
     lifetime_savings: float
     tree_payback_months: float | None
+    confirmed_entry_count: int
+    estimated_entry_count: int
+    projection_uses_estimated: bool
+    latest_production_estimated: bool
 
 
 def build_dataframe(entries, config=None):
@@ -62,6 +66,7 @@ def build_dataframe(entries, config=None):
                 "meter_01_import_reading",
                 "meter_02_export_reading",
                 "weather",
+                "estimated",
             ]
         )
 
@@ -75,6 +80,7 @@ def build_dataframe(entries, config=None):
                 "meter_01_import_reading": entry.meter_01_import_reading,
                 "meter_02_export_reading": entry.meter_02_export_reading,
                 "weather": entry.weather,
+                "estimated": bool(getattr(entry, "estimated", False)),
             }
         )
 
@@ -141,6 +147,10 @@ def calculate_metrics(df, config):
             annual_savings=0.0,
             lifetime_savings=0.0,
             tree_payback_months=None,
+            confirmed_entry_count=0,
+            estimated_entry_count=0,
+            projection_uses_estimated=False,
+            latest_production_estimated=False,
         )
 
     today = df.iloc[-1]
@@ -149,7 +159,9 @@ def calculate_metrics(df, config):
     current_month = today["entry_date"].month
     monthly_df = df[df["entry_date"].dt.month == current_month]
 
-    avg_daily = float(df["production_kwh"].mean())
+    confirmed_df = df[~df["estimated"].fillna(False)]
+    projection_df = confirmed_df if not confirmed_df.empty else df
+    avg_daily = float(projection_df["production_kwh"].mean())
     annual_projection = avg_daily * 365.0
     guarantee_progress_pct = (
         (annual_projection / config.production_guarantee_kwh) * 100
@@ -216,6 +228,10 @@ def calculate_metrics(df, config):
         annual_savings=float(annual_savings),
         lifetime_savings=float(lifetime_savings),
         tree_payback_months=float(tree_payback_months) if tree_payback_months else None,
+        confirmed_entry_count=int((~df["estimated"].fillna(False)).sum()),
+        estimated_entry_count=int(df["estimated"].fillna(False).sum()),
+        projection_uses_estimated=confirmed_df.empty,
+        latest_production_estimated=bool(today["estimated"]),
     )
 
 
@@ -229,6 +245,8 @@ def build_alerts(df, config):
 
     if latest["production_kwh"] < guaranteed_daily:
         alerts.append("Production below expected daily guarantee.")
+    if bool(latest["estimated"]):
+        alerts.append("Latest production row is estimated. Replace it with actual Sunrun production before drawing conclusions.")
     if latest["daily_import_kwh"] > mean(df["daily_import_kwh"].tail(7).tolist()) * 1.5:
         alerts.append("Large import increase detected versus recent average.")
     if latest["weather"] == "Sunny" and latest["daily_export_kwh"] <= 0:
@@ -243,7 +261,10 @@ def build_alerts(df, config):
     if poor_days >= 5:
         alerts.append("Five consecutive low-production days.")
 
-    projection = df["production_kwh"].mean() * 365.0
+    projection_df = df[~df["estimated"].fillna(False)]
+    if projection_df.empty:
+        projection_df = df
+    projection = projection_df["production_kwh"].mean() * 365.0
     if projection < config.production_guarantee_kwh:
         alerts.append("Annual projection is below contract guarantee.")
 
@@ -345,9 +366,18 @@ def build_chart_bundle(df, config=None):
     daily_chart.add_trace(
         go.Bar(
             x=df["entry_date"],
-            y=df["production_kwh"],
-            name="Production (kWh)",
+            y=df["production_kwh"].where(~df["estimated"].fillna(False), None),
+            name="Confirmed Production (kWh)",
             marker_color="#e3a008",
+        )
+    )
+    daily_chart.add_trace(
+        go.Bar(
+            x=df["entry_date"],
+            y=df["production_kwh"].where(df["estimated"].fillna(False), None),
+            name="Estimated Production (kWh)",
+            marker_color="#f6c86a",
+            marker_pattern_shape="/",
         )
     )
     daily_chart.add_trace(
@@ -362,6 +392,8 @@ def build_chart_bundle(df, config=None):
         title="Daily Production",
         margin={"l": 20, "r": 20, "t": 50, "b": 20},
         template="plotly_white",
+        bargap=0.12,
+        barmode="overlay",
     )
 
     flow_chart = make_subplots(specs=[[{"secondary_y": True}]])
@@ -452,15 +484,17 @@ def build_chart_bundle(df, config=None):
         template="plotly_white",
     )
 
+    chart_config = {"displayModeBar": False, "responsive": True}
+
     return {
         "running_totals_chart": running_totals_chart.to_html(
-            full_html=False, include_plotlyjs="cdn"
+            full_html=False, include_plotlyjs="cdn", config=chart_config
         ),
-        "daily_chart": daily_chart.to_html(full_html=False, include_plotlyjs="cdn"),
-        "flow_chart": flow_chart.to_html(full_html=False, include_plotlyjs=False),
+        "daily_chart": daily_chart.to_html(full_html=False, include_plotlyjs="cdn", config=chart_config),
+        "flow_chart": flow_chart.to_html(full_html=False, include_plotlyjs=False, config=chart_config),
         "irradiance_chart": irradiance_chart.to_html(
-            full_html=False, include_plotlyjs=False
+            full_html=False, include_plotlyjs=False, config=chart_config
         ),
-        "weather_chart": weather_chart.to_html(full_html=False, include_plotlyjs=False),
-        "monthly_chart": monthly_chart.to_html(full_html=False, include_plotlyjs=False),
+        "weather_chart": weather_chart.to_html(full_html=False, include_plotlyjs=False, config=chart_config),
+        "monthly_chart": monthly_chart.to_html(full_html=False, include_plotlyjs=False, config=chart_config),
     }
