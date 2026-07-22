@@ -512,6 +512,26 @@ function calculateDashboardMetricsClient(entries, config) {
   };
 }
 
+function buildEnergyImpactSummaryClient(metrics, config) {
+  const averageHomeDayKwh = Number(config.annual_home_usage_kwh || 0) / 365 || 0;
+  const todayHouseDays = averageHomeDayKwh ? Number(metrics.today_production || 0) / averageHomeDayKwh : 0;
+  const ytdHouseDays = averageHomeDayKwh ? Number(metrics.ytd_production || 0) / averageHomeDayKwh : 0;
+  const evKwhPerMile = 0.30;
+  const todayEvMiles = evKwhPerMile ? Number(metrics.today_production || 0) / evKwhPerMile : 0;
+  const ytdEvMiles = evKwhPerMile ? Number(metrics.ytd_production || 0) / evKwhPerMile : 0;
+  const averageHomeHoursSupported = todayHouseDays * 24;
+
+  return {
+    averageHomeDayKwh,
+    todayHouseDays,
+    ytdHouseDays,
+    todayEvMiles,
+    ytdEvMiles,
+    averageHomeHoursSupported,
+    evKwhPerMile
+  };
+}
+
 function buildAlertsClient(entries, config) {
   if (!entries.length) return [];
   const latest = entries[entries.length - 1];
@@ -1117,6 +1137,7 @@ function setupAiAssistant() {
 
 function renderDashboardHtmlClient(entries, metrics, config, firebaseStatus, alerts) {
   const recentEntries = [...entries].slice(-10).reverse();
+  const energyImpact = buildEnergyImpactSummaryClient(metrics, config);
   const summaryHref = isStaticSite() ? "contract-summary.html" : "/contract-summary";
   const contractHref = isStaticSite() ? "Documents/SunRun Solar Contract.pdf" : "/documents/sunrun-contract";
   const entriesHref = isStaticSite() ? "entries.html?autocreate=1" : "/entries?autocreate=1";
@@ -1164,7 +1185,7 @@ function renderDashboardHtmlClient(entries, metrics, config, firebaseStatus, ale
           <div class="col-md-6 col-xl-3"><div class="metric-card money"><div class="d-flex justify-content-between align-items-start gap-2"><span>Monthly Savings</span><button type="button" class="metric-info-button" data-bs-toggle="modal" data-bs-target="#monthlySavingsModal">?</button></div><strong>${formatCurrency(metrics.monthly_savings)}</strong><small>Annual: ${formatCurrency(metrics.annual_savings)}</small></div></div>
         </section>
         <section class="row g-3 mb-4">
-          <div class="col-lg-8"><div class="card tracker-card h-100"><div class="card-body"><h2 class="h5 mb-3">Production Overview</h2><div id="daily-chart" class="dashboard-chart"></div></div></div></div>
+          <div class="col-lg-8"><div class="card tracker-card h-100"><div class="card-body"><h2 class="h5 mb-3">Production Overview</h2><div id="daily-chart" class="dashboard-chart"></div><div class="energy-impact-panel mt-3"><div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3"><div><h3 class="h6 mb-1">What This Energy Could Do</h3><p class="text-muted mb-0">A quick real-world translation of your solar output using your historic household baseline and a typical EV efficiency.</p></div><span class="energy-impact-assumption">${formatNumber(energyImpact.averageHomeDayKwh, 1, 1)} kWh/day home use • ${formatNumber(energyImpact.evKwhPerMile, 2, 2)} kWh/EV mile</span></div><div class="info-grid energy-impact-grid"><div><span>Today's Output</span><strong>${formatNumber(metrics.today_production, 1, 1)} kWh</strong><small>Enough for about ${formatNumber(energyImpact.averageHomeHoursSupported, 0, 0)} hours of whole-home usage at your historic average.</small></div><div><span>House Coverage</span><strong>${formatNumber(energyImpact.todayHouseDays, 2, 2)} days</strong><small>Based on your pre-solar average of ${formatNumber(energyImpact.averageHomeDayKwh, 1, 1)} kWh per day.</small></div><div><span>EV Range Equivalent</span><strong>${formatNumber(energyImpact.todayEvMiles, 0, 0)} miles</strong><small>Approximate EV driving range that one day of solar production could provide.</small></div><div><span>Year-To-Date Impact</span><strong>${formatNumber(energyImpact.ytdHouseDays, 1, 1)} home-days</strong><small>That same production is roughly equal to ${formatNumber(energyImpact.ytdEvMiles, 0, 0)} EV miles so far.</small></div><div><span>Total Energy To Date</span><strong>${formatNumber(metrics.ytd_production, 1, 1)} kWh</strong><small>Enough cumulative solar energy to cover about ${formatNumber(energyImpact.ytdHouseDays, 1, 1)} full home-days or roughly ${formatNumber(energyImpact.ytdEvMiles, 0, 0)} EV miles.</small></div></div></div></div></div></div>
           <div class="col-lg-4"><div class="card tracker-card h-100"><div class="card-body"><div class="d-flex justify-content-between align-items-start gap-3 mb-3"><h2 class="h5 mb-0">Contract Progress</h2><div class="d-flex flex-wrap gap-2 justify-content-end"><a class="btn btn-contract btn-sm" href="${summaryHref}">Summary</a><a class="btn btn-contract btn-sm" href="${contractHref}" target="_blank" rel="noopener noreferrer">PDF</a></div></div><div class="progress tracker-progress mb-3"><div class="progress-bar" role="progressbar" style="width: ${Math.min(metrics.guarantee_progress_pct, 100)}%"></div></div><div class="info-grid"><div><span>Guarantee</span><strong>${formatNumber(config.production_guarantee_kwh, 0, 0)} kWh</strong></div><div><span>Progress</span><strong>${formatNumber(metrics.guarantee_progress_pct, 1, 1)}%</strong></div><div><span>YTD Production</span><strong>${formatNumber(metrics.ytd_production, 1, 1)} kWh</strong></div><div><span>Avg Daily</span><strong>${formatNumber(metrics.average_daily_production, 1, 1)} kWh</strong></div><div><span>Best Day</span><strong>${formatNumber(metrics.highest_production_day, 1, 1)} kWh</strong></div><div><span>Lowest Day</span><strong>${formatNumber(metrics.lowest_production_day, 1, 1)} kWh</strong></div><div><span>Consecutive Poor Days</span><strong>${metrics.consecutive_poor_days}</strong></div><div><span>Monthly Avg</span><strong>${formatNumber(metrics.monthly_average, 1, 1)} kWh</strong></div></div></div></div></div>
         </section>
         <section class="row g-3 mb-4">
