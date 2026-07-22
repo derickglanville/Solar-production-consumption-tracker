@@ -605,16 +605,26 @@ body[data-page="dashboard"].dashboard-compact-mode .container {
 
 .entries-history-table th:nth-child(7),
 .entries-history-table td:nth-child(7) {
-  width: 420px;
+  width: 78px;
 }
 
 .entries-history-table th:nth-child(8),
 .entries-history-table td:nth-child(8) {
-  width: 120px;
+  width: 78px;
 }
 
 .entries-history-table th:nth-child(9),
 .entries-history-table td:nth-child(9) {
+  width: 420px;
+}
+
+.entries-history-table th:nth-child(10),
+.entries-history-table td:nth-child(10) {
+  width: 120px;
+}
+
+.entries-history-table th:nth-child(11),
+.entries-history-table td:nth-child(11) {
   width: 100px;
 }
 

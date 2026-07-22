@@ -253,6 +253,8 @@ def hydrate_entries(items):
                 meter_02_export_reading=float(item.get("meter_02_export_reading", 0.0)),
                 weather=item.get("weather", "Unknown"),
                 temperature_f=float(item["temperature_f"]) if item.get("temperature_f") is not None else None,
+                temperature_high_f=float(item["temperature_high_f"]) if item.get("temperature_high_f") is not None else None,
+                temperature_low_f=float(item["temperature_low_f"]) if item.get("temperature_low_f") is not None else None,
                 humidity_pct=float(item["humidity_pct"]) if item.get("humidity_pct") is not None else None,
                 cloud_cover_pct=float(item["cloud_cover_pct"]) if item.get("cloud_cover_pct") is not None else None,
                 wind_mph=float(item["wind_mph"]) if item.get("wind_mph") is not None else None,

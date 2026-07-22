@@ -14,8 +14,10 @@ const dashboardRenderUrl = "/api/render/dashboard";
 const entryCollectionName = "solar_daily_entries";
 const configCollectionName = "solar_tracker_config";
 const configDocumentId = "primary";
-const dailyAutoCreateHour = 9;
+const dailyAutoCreateHour = 7;
 const dailyAutoCreateMinute = 30;
+const oneTimeManualAutoCreateDate = "2026-07-22";
+const oneTimeManualAutoCreateStorageKey = "solar-one-time-autocreate-2026-07-22";
 const yorktownHeightsLocation = {
   latitude: 41.2706,
   longitude: -73.7774,
@@ -39,6 +41,8 @@ const entryLookupOverrides = {
     production_kwh: 36.5,
     weather: "Overcast",
     temperature_f: 77,
+    temperature_high_f: 77,
+    temperature_low_f: 68,
     humidity_pct: 72,
     cloud_cover_pct: 85,
     wind_mph: 12,
@@ -96,6 +100,25 @@ function isAtOrAfterAutoCreateTime(now = new Date()) {
   return hours > dailyAutoCreateHour || (hours === dailyAutoCreateHour && minutes >= dailyAutoCreateMinute);
 }
 
+function shouldRunOneTimeManualAutoCreate(entryDate = getTodayIsoDate()) {
+  if (String(entryDate) !== oneTimeManualAutoCreateDate) {
+    return false;
+  }
+  try {
+    return window.localStorage.getItem(oneTimeManualAutoCreateStorageKey) !== "done";
+  } catch (error) {
+    return true;
+  }
+}
+
+function markOneTimeManualAutoCreateComplete() {
+  try {
+    window.localStorage.setItem(oneTimeManualAutoCreateStorageKey, "done");
+  } catch (error) {
+    // Ignore storage failures and allow the normal schedule to continue.
+  }
+}
+
 function isPastIsoDate(entryDate) {
   return String(entryDate) < String(getTodayIsoDate());
 }
@@ -118,6 +141,11 @@ function averageNumericValues(values) {
 function maxNumericValue(values) {
   const valid = values.filter((value) => Number.isFinite(Number(value)));
   return valid.length ? Math.max(...valid.map((value) => Number(value))) : null;
+}
+
+function minNumericValue(values) {
+  const valid = values.filter((value) => Number.isFinite(Number(value)));
+  return valid.length ? Math.min(...valid.map((value) => Number(value))) : null;
 }
 
 function pickDominantWeatherLabel(labels) {
@@ -191,7 +219,9 @@ async function fetchOpenMeteoLookupValues(entryDate) {
   return {
     irradiance_peak_wm2: peakIrradiance,
     weather: pickDominantWeatherLabel(weatherLabels),
-    temperature_f: maxNumericValue(temperatureValues),
+    temperature_f: averageNumericValues(temperatureValues),
+    temperature_high_f: maxNumericValue(temperatureValues),
+    temperature_low_f: minNumericValue(temperatureValues),
     humidity_pct: averageNumericValues(humidityValues),
     cloud_cover_pct: averageNumericValues(cloudValues),
     wind_mph: maxNumericValue(windValues),
@@ -216,6 +246,13 @@ function mergeConfig(config = {}) {
   return { ...defaultConfig, ...config };
 }
 
+function parseOptionalNumber(value) {
+  if (value === null || value === undefined) return null;
+  if (typeof value === "string" && value.trim() === "") return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 function normalizeEntry(entry) {
   return {
     entry_date: entry.entry_date,
@@ -224,10 +261,12 @@ function normalizeEntry(entry) {
     meter_01_import_reading: Number(entry.meter_01_import_reading || 0),
     meter_02_export_reading: Number(entry.meter_02_export_reading || 0),
     weather: entry.weather || "Unknown",
-    temperature_f: entry.temperature_f ?? null,
-    humidity_pct: entry.humidity_pct ?? null,
-    cloud_cover_pct: entry.cloud_cover_pct ?? null,
-    wind_mph: entry.wind_mph ?? null,
+    temperature_f: parseOptionalNumber(entry.temperature_f),
+    temperature_high_f: parseOptionalNumber(entry.temperature_high_f),
+    temperature_low_f: parseOptionalNumber(entry.temperature_low_f),
+    humidity_pct: parseOptionalNumber(entry.humidity_pct),
+    cloud_cover_pct: parseOptionalNumber(entry.cloud_cover_pct),
+    wind_mph: parseOptionalNumber(entry.wind_mph),
     notes: entry.notes || "",
     estimated: Boolean(entry.estimated),
     lookup_source: entry.lookup_source || "",
@@ -255,6 +294,8 @@ function buildFallbackLookupValues(entryDate, entries) {
       production_kwh: 42,
       weather: "Unknown",
       temperature_f: null,
+      temperature_high_f: null,
+      temperature_low_f: null,
       humidity_pct: null,
       cloud_cover_pct: null,
       wind_mph: null,
@@ -268,6 +309,8 @@ function buildFallbackLookupValues(entryDate, entries) {
     production_kwh: Number((Number(previousEntry.production_kwh || 0) * 0.8).toFixed(1)),
     weather: previousEntry.weather || "Unknown",
     temperature_f: previousEntry.temperature_f ?? null,
+    temperature_high_f: previousEntry.temperature_high_f ?? previousEntry.temperature_f ?? null,
+    temperature_low_f: previousEntry.temperature_low_f ?? previousEntry.temperature_f ?? null,
     humidity_pct: previousEntry.humidity_pct ?? null,
     cloud_cover_pct: previousEntry.cloud_cover_pct ?? null,
     wind_mph: previousEntry.wind_mph ?? null,
@@ -327,6 +370,13 @@ function getFirebaseAppContext() {
   return { app, db };
 }
 
+function entryNeedsTemperatureBackfill(entry) {
+  return (
+    parseOptionalNumber(entry?.temperature_high_f) === null ||
+    parseOptionalNumber(entry?.temperature_low_f) === null
+  );
+}
+
 async function loadFirestoreState(db) {
   const configSnapshot = await getDoc(doc(db, configCollectionName, configDocumentId));
   const config = configSnapshot.exists() ? mergeConfig(configSnapshot.data()) : mergeConfig();
@@ -341,6 +391,57 @@ async function loadFirestoreState(db) {
   return {
     config,
     entries: sortEntries(entries)
+  };
+}
+
+async function backfillMissingTemperatureRanges(db, entries) {
+  const candidates = sortEntries(entries).filter((entry) => entryNeedsTemperatureBackfill(entry));
+  if (!candidates.length) {
+    return { entries, updated: false, count: 0 };
+  }
+
+  const updatedEntries = new Map(entries.map((entry) => [entry.entry_date, normalizeEntry(entry)]));
+  let changedCount = 0;
+
+  for (const entry of candidates) {
+    try {
+      const lookupValues = await buildEstimatedLookupValues(entry.entry_date, [...updatedEntries.values()]);
+      const high = parseOptionalNumber(lookupValues.temperature_high_f);
+      const low = parseOptionalNumber(lookupValues.temperature_low_f);
+      const avg = parseOptionalNumber(lookupValues.temperature_f);
+
+      if (high === null && low === null && avg === null) {
+        continue;
+      }
+
+      const mergedEntry = normalizeEntry({
+        ...entry,
+        temperature_f: avg ?? entry.temperature_f ?? null,
+        temperature_high_f: high ?? entry.temperature_high_f ?? entry.temperature_f ?? null,
+        temperature_low_f: low ?? entry.temperature_low_f ?? entry.temperature_f ?? null,
+        humidity_pct: lookupValues.humidity_pct ?? entry.humidity_pct ?? null,
+        cloud_cover_pct: lookupValues.cloud_cover_pct ?? entry.cloud_cover_pct ?? null,
+        wind_mph: lookupValues.wind_mph ?? entry.wind_mph ?? null,
+        lookup_source: lookupValues.lookup_source || entry.lookup_source || "manual",
+        updated_at: new Date().toISOString()
+      });
+
+      await setDoc(doc(db, entryCollectionName, entry.entry_date), mergedEntry, { merge: true });
+      updatedEntries.set(entry.entry_date, mergedEntry);
+      changedCount += 1;
+    } catch (error) {
+      // Leave rows untouched if the weather lookup is temporarily unavailable.
+    }
+  }
+
+  if (!changedCount) {
+    return { entries, updated: false, count: 0 };
+  }
+
+  return {
+    entries: sortEntries([...updatedEntries.values()]),
+    updated: true,
+    count: changedCount
   };
 }
 
@@ -1167,7 +1268,10 @@ function renderDashboardHtmlClient(entries, metrics, config, firebaseStatus, ale
               </div>
             </div>
             <div class="stat-callout">
-              <span class="small-label">Annual Projection</span>
+              <div class="d-flex justify-content-between align-items-start gap-2">
+                <span class="small-label mb-0">Annual Projection</span>
+                <button type="button" class="metric-info-button" data-bs-toggle="modal" data-bs-target="#annualProjectionModal" aria-label="Explain annual projection calculation">?</button>
+              </div>
               <div class="callout-value">${formatNumber(metrics.annual_projection, 0, 0)} kWh</div>
               <div class="${metrics.projection_vs_guarantee_kwh >= 0 ? "text-success" : "text-danger"}">
                 ${metrics.projection_vs_guarantee_kwh >= 0 ? "Ahead" : "Behind"} ${formatNumber(Math.abs(metrics.projection_vs_guarantee_kwh), 0, 0)} kWh (${formatNumber(Math.abs(metrics.projection_vs_guarantee_pct), 1, 1)}%)
@@ -1199,7 +1303,7 @@ function renderDashboardHtmlClient(entries, metrics, config, firebaseStatus, ale
           <div class="col-lg-4"><div class="card tracker-card h-100"><div class="card-body"><div id="weather-chart" class="dashboard-chart"></div></div></div></div>
           <div class="col-lg-4"><div class="card tracker-card h-100"><div class="card-body"><div id="monthly-chart" class="dashboard-chart"></div></div></div></div>
         </section>
-        <section class="card tracker-card"><div class="card-body"><div class="d-flex justify-content-between align-items-center mb-3"><h2 class="h5 mb-0">Recent Entries</h2><a href="${entriesHref}" class="btn btn-sun btn-sm">Add Daily Entry</a></div><div class="table-responsive"><table class="table align-middle"><thead><tr><th>Date</th><th>Production</th><th>Irradiance</th><th>Meter 01</th><th>Meter 02</th><th>Weather</th></tr></thead><tbody>${recentEntries.map((entry) => `<tr><td>${entry.entry_date}</td><td>${formatNumber(entry.production_kwh, 1, 1)} kWh</td><td>${formatNumber(entry.irradiance_peak_wm2, 0, 0)}</td><td>${formatNumber(entry.meter_01_import_reading, 1, 1)}</td><td>${formatNumber(entry.meter_02_export_reading, 1, 1)}</td><td>${entry.weather}</td></tr>`).join("")}</tbody></table></div></div></section>
+        <section class="card tracker-card"><div class="card-body"><div class="d-flex justify-content-between align-items-center mb-3"><h2 class="h5 mb-0">Recent Entries</h2><a href="${entriesHref}" class="btn btn-sun btn-sm">Add Daily Entry</a></div><div class="table-responsive"><table class="table align-middle"><thead><tr><th>Date</th><th>Production</th><th>Irradiance</th><th>Meter 01</th><th>Meter 02</th><th>Weather</th><th>High</th><th>Low</th></tr></thead><tbody>${recentEntries.map((entry) => `<tr><td>${entry.entry_date}</td><td>${formatNumber(entry.production_kwh, 1, 1)} kWh</td><td>${formatNumber(entry.irradiance_peak_wm2, 0, 0)}</td><td>${formatNumber(entry.meter_01_import_reading, 1, 1)}</td><td>${formatNumber(entry.meter_02_export_reading, 1, 1)}</td><td>${renderWeatherCell(entry)}</td><td>${formatTemperatureCellValue(entry.temperature_high_f)}</td><td>${formatTemperatureCellValue(entry.temperature_low_f)}</td></tr>`).join("")}</tbody></table></div></div></section>
       </div>
       <aside class="dashboard-side-panel">
         <div class="dashboard-side-frame">
@@ -1212,6 +1316,7 @@ function renderDashboardHtmlClient(entries, metrics, config, firebaseStatus, ale
         </div>
       </aside>
     </div>
+    <div class="modal fade" id="annualProjectionModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content tracker-modal"><div class="modal-header border-0 pb-0"><div><p class="eyebrow mb-2">Projection Help</p><h2 class="modal-title h4 mb-0">How Annual Projection Is Calculated</h2></div><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body pt-3"><div class="info-grid mb-4"><div><span>Average Daily Production</span><strong>${formatNumber(metrics.average_daily_production, 1, 1)} kWh/day</strong></div><div><span>Projected Annual Output</span><strong>${formatNumber(metrics.annual_projection, 0, 0)} kWh/year</strong></div><div><span>Contract Guarantee</span><strong>${formatNumber(config.production_guarantee_kwh, 0, 0)} kWh/year</strong></div><div><span>Difference</span><strong>${metrics.projection_vs_guarantee_kwh >= 0 ? "Ahead" : "Behind"} ${formatNumber(Math.abs(metrics.projection_vs_guarantee_kwh), 0, 0)} kWh</strong></div></div><div class="tracker-modal-math"><div class="tracker-modal-step"><strong>1. Find the current daily run rate</strong><p>The app averages the production entries you have recorded so far.</p><code>${formatNumber(metrics.average_daily_production, 1, 1)} kWh/day</code></div><div class="tracker-modal-step"><strong>2. Project that run rate across a full year</strong><p>Annual Projection = Average Daily Production × 365 days.</p><code>${formatNumber(metrics.average_daily_production, 1, 1)} × 365 = ${formatNumber(metrics.annual_projection, 0, 0)} kWh</code></div><div class="tracker-modal-step"><strong>3. Compare it to the Sunrun guarantee</strong><p>The projected annual output is compared against your contract guarantee of ${formatNumber(config.production_guarantee_kwh, 0, 0)} kWh/year.</p><code>${metrics.projection_vs_guarantee_kwh >= 0 ? "Ahead" : "Behind"} ${formatNumber(Math.abs(metrics.projection_vs_guarantee_kwh), 0, 0)} kWh (${formatNumber(Math.abs(metrics.projection_vs_guarantee_pct), 1, 1)}%)</code></div></div><p class="text-muted small mt-3 mb-0">This is a running projection based on the data recorded so far. It is useful for trend tracking, but it is not weather-normalized and will become more reliable as more days are recorded.</p></div></div></div></div>
     <div class="modal fade" id="dashboardIntroModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content tracker-modal"><div class="modal-header border-0 pb-0"><div><p class="eyebrow mb-2">Dashboard Overview</p><h2 class="modal-title h4 mb-0">What this dashboard is tracking</h2></div><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body pt-3"><div class="tracker-modal-math"><div class="tracker-modal-step"><strong>Production and Grid Flow</strong><p>Tracks daily production, import, export, and rolling averages so you can see how the system is behaving day to day.</p></div><div class="tracker-modal-step"><strong>Virtual Consumption Estimate</strong><p>Because there are no consumption CTs installed, the app estimates self-consumption and home usage from production, grid readings, seasonality, and weather.</p></div><div class="tracker-modal-step"><strong>Contract Tracking</strong><p>Compares observed average production against the Sunrun production guarantee and shows whether your current pace is ahead or behind.</p></div><div class="tracker-modal-step"><strong>Financial View</strong><p>Estimates electricity value, grid cost, lease cost, and monthly or annual savings using the current settings saved in the app.</p></div></div></div></div></div></div>
     <div class="modal fade" id="monthlySavingsModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content tracker-modal"><div class="modal-header border-0 pb-0"><div><p class="eyebrow mb-2">Financial Breakdown</p><h2 class="modal-title h4 mb-0">How Monthly Savings Is Calculated</h2></div><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body pt-3"><div class="info-grid mb-4"><div><span>Observed Months</span><strong>${metrics.observed_months}</strong></div><div><span>Electric Rate</span><strong>$${formatNumber(config.current_electric_rate,2,2)}/kWh</strong></div><div><span>Monthly Fixed Charges</span><strong>$${formatNumber(config.monthly_fixed_charges,2,2)}</strong></div><div><span>Monthly Lease Payment</span><strong>$${formatNumber(config.monthly_lease_payment,2,2)}</strong></div></div><div class="tracker-modal-math"><div class="tracker-modal-step"><strong>1. Electricity Value Produced</strong><p>Total solar production × electric rate</p><code>${formatCurrency(metrics.electricity_value_produced)}</code></div><div class="tracker-modal-step"><strong>2. Grid Cost</strong><p>(Total imported kWh × electric rate) + (monthly fixed charges × observed months)</p><code>${formatCurrency(metrics.grid_cost)}</code></div><div class="tracker-modal-step"><strong>3. Lease Cost</strong><p>Monthly lease payment × observed months</p><code>${formatCurrency(metrics.lease_cost)}</code></div><div class="tracker-modal-step"><strong>4. Monthly Savings</strong><p>(Electricity value produced - grid cost - lease cost) ÷ observed months</p><code>${formatCurrency(metrics.monthly_savings)}</code></div><div class="tracker-modal-step"><strong>5. Annual Savings</strong><p>Monthly savings × 12</p><code>${formatCurrency(metrics.annual_savings)}</code></div></div></div></div></div></div>
   `;
@@ -1358,6 +1463,7 @@ async function ensureDailyPlaceholderRecord(db, entries, options = {}) {
     entryDate = getTodayIsoDate(),
     sourceLabel = "Auto-created"
   } = options;
+  const effectiveForceCreate = forceCreate || shouldRunOneTimeManualAutoCreate(entryDate);
 
   const existingEntry = entries.find((entry) => entry.entry_date === entryDate);
   if (existingEntry) {
@@ -1369,17 +1475,26 @@ async function ensureDailyPlaceholderRecord(db, entries, options = {}) {
         updated_at: new Date().toISOString()
       };
       await setDoc(doc(db, entryCollectionName, entryDate), hydratedEntry, { merge: true });
+      if (shouldRunOneTimeManualAutoCreate(entryDate)) {
+        markOneTimeManualAutoCreateComplete();
+      }
       return { entry: normalizeEntry(hydratedEntry), created: false, hydrated: true };
+    }
+    if (shouldRunOneTimeManualAutoCreate(entryDate)) {
+      markOneTimeManualAutoCreateComplete();
     }
     return { entry: existingEntry, created: false };
   }
 
-  if (!forceCreate && !isAtOrAfterAutoCreateTime()) {
+  if (!effectiveForceCreate && !isAtOrAfterAutoCreateTime()) {
     return { entry: null, created: false };
   }
 
   const placeholderEntry = await buildAutoEntry(entries, entryDate, sourceLabel);
   await setDoc(doc(db, entryCollectionName, entryDate), placeholderEntry, { merge: true });
+  if (shouldRunOneTimeManualAutoCreate(entryDate)) {
+    markOneTimeManualAutoCreateComplete();
+  }
   return { entry: placeholderEntry, created: true };
 }
 
@@ -1433,6 +1548,28 @@ function renderNotesCell(noteText) {
   return `<span class="entry-note-preview" title="${safeNote}">${safeNote}</span>`;
 }
 
+function formatTemperatureRange(entry) {
+  const high = parseOptionalNumber(entry?.temperature_high_f);
+  const low = parseOptionalNumber(entry?.temperature_low_f);
+  const single = parseOptionalNumber(entry?.temperature_f);
+  if (high !== null && low !== null) {
+    return `${formatNumber(high, 0, 0)}° / ${formatNumber(low, 0, 0)}°F`;
+  }
+  if (single !== null) {
+    return `${formatNumber(single, 0, 0)}°F`;
+  }
+  return "";
+}
+
+function formatTemperatureCellValue(value) {
+  const parsed = parseOptionalNumber(value);
+  return parsed === null ? '<span class="text-muted">-</span>' : `${formatNumber(parsed, 0, 0)}°F`;
+}
+
+function renderWeatherCell(entry) {
+  return escapeHtml(entry?.weather || "Unknown");
+}
+
 function fillEntryForm(entry = null) {
   const form = document.getElementById("entry-form");
   if (!form) return;
@@ -1445,6 +1582,8 @@ function fillEntryForm(entry = null) {
     meter_02_export_reading: "",
     weather: "Unknown",
     temperature_f: "",
+    temperature_high_f: "",
+    temperature_low_f: "",
     humidity_pct: "",
     cloud_cover_pct: "",
     wind_mph: "",
@@ -1483,7 +1622,9 @@ function populateEntriesTable(entries) {
       <td>${Number(entry.irradiance_peak_wm2 || 0).toFixed(0)}</td>
       <td>${Number(entry.meter_01_import_reading || 0).toFixed(1)}</td>
       <td>${Number(entry.meter_02_export_reading || 0).toFixed(1)}</td>
-      <td>${entry.weather || "Unknown"}</td>
+      <td>${renderWeatherCell(entry)}</td>
+      <td>${formatTemperatureCellValue(entry.temperature_high_f)}</td>
+      <td>${formatTemperatureCellValue(entry.temperature_low_f)}</td>
       <td>${renderNotesCell(entry.notes)}</td>
       <td>${entry.estimated ? '<span class="entry-estimated-pill">Estimated</span>' : '<span class="entry-confirmed-pill">Confirmed</span>'}</td>
       <td><button type="button" class="btn btn-contract btn-sm entry-edit-button" data-entry-date="${entry.entry_date}">Edit</button></td>
@@ -1499,6 +1640,40 @@ function populateEntriesTable(entries) {
       populateEntriesTable(entriesPageState.entries.slice().reverse());
     });
   });
+}
+
+async function refreshEntryLookupFields(db, entryDate) {
+  const state = await loadFirestoreState(db);
+  const existingEntry = state.entries.find((entry) => entry.entry_date === entryDate);
+  const lookupValues = await buildEstimatedLookupValues(entryDate, state.entries);
+  const mergedEntry = normalizeEntry({
+    ...(existingEntry || {
+      entry_date: entryDate,
+      irradiance_peak_wm2: 0,
+      production_kwh: 0,
+      meter_01_import_reading: 0,
+      meter_02_export_reading: 0,
+      weather: "Unknown",
+      notes: "",
+      estimated: true,
+      created_at: new Date().toISOString()
+    }),
+    irradiance_peak_wm2: lookupValues.irradiance_peak_wm2 ?? existingEntry?.irradiance_peak_wm2 ?? 0,
+    weather: lookupValues.weather || existingEntry?.weather || "Unknown",
+    temperature_f: lookupValues.temperature_f ?? existingEntry?.temperature_f ?? null,
+    temperature_high_f: lookupValues.temperature_high_f ?? existingEntry?.temperature_high_f ?? null,
+    temperature_low_f: lookupValues.temperature_low_f ?? existingEntry?.temperature_low_f ?? null,
+    humidity_pct: lookupValues.humidity_pct ?? existingEntry?.humidity_pct ?? null,
+    cloud_cover_pct: lookupValues.cloud_cover_pct ?? existingEntry?.cloud_cover_pct ?? null,
+    wind_mph: lookupValues.wind_mph ?? existingEntry?.wind_mph ?? null,
+    lookup_source: lookupValues.lookup_source || existingEntry?.lookup_source || "manual",
+    notes: lookupValues.notes || existingEntry?.notes || "",
+    estimated: existingEntry?.estimated ?? true,
+    updated_at: new Date().toISOString()
+  });
+
+  await setDoc(doc(db, entryCollectionName, entryDate), mergedEntry, { merge: true });
+  return mergedEntry;
 }
 
 function populateSettingsForm(config) {
@@ -1539,7 +1714,7 @@ async function handleEntryForm(db) {
       const result = await ensureDailyPlaceholderRecord(db, entries, {
         forceCreate,
         entryDate,
-        sourceLabel: forceCreate ? "Add Daily Entry" : "9:30 AM auto-create"
+        sourceLabel: forceCreate ? "Add Daily Entry" : "7:30 AM auto-create"
       });
       if (result.created) {
         const refreshedState = await loadFirestoreState(db);
@@ -1579,6 +1754,8 @@ async function handleEntryForm(db) {
       meter_02_export_reading: Number(formData.get("meter_02_export_reading") || 0),
       weather: formData.get("weather") || "Unknown",
       temperature_f: formData.get("temperature_f") ? Number(formData.get("temperature_f")) : null,
+      temperature_high_f: formData.get("temperature_high_f") ? Number(formData.get("temperature_high_f")) : null,
+      temperature_low_f: formData.get("temperature_low_f") ? Number(formData.get("temperature_low_f")) : null,
       humidity_pct: formData.get("humidity_pct") ? Number(formData.get("humidity_pct")) : null,
       cloud_cover_pct: formData.get("cloud_cover_pct") ? Number(formData.get("cloud_cover_pct")) : null,
       wind_mph: formData.get("wind_mph") ? Number(formData.get("wind_mph")) : null,
@@ -1608,12 +1785,17 @@ async function handleEntryForm(db) {
 
   if (refreshButton) {
     refreshButton.addEventListener("click", async () => {
+      const entryDate = getActiveEntryDate();
       await refreshEntries({
-        showMessage: true,
+        showMessage: false,
         runAutoCreate: true,
         forceCreate: false,
-        entryDate: getActiveEntryDate()
+        entryDate
       });
+      const refreshedEntry = await refreshEntryLookupFields(db, entryDate);
+      await refreshEntries({ showMessage: false });
+      fillEntryForm(refreshedEntry);
+      renderStatusAlert("entries-status", `Refreshed Open-Meteo lookup values for ${entryDate}.`, "success");
     });
   }
 
@@ -1660,12 +1842,20 @@ async function bootDashboard(db) {
     if (backfillResult.backfilled) {
       state = { ...state, entries: backfillResult.entries };
     }
+    const temperatureBackfill = await backfillMissingTemperatureRanges(db, state.entries);
+    if (temperatureBackfill.updated) {
+      state = { ...state, entries: temperatureBackfill.entries };
+    }
     const autoCreateResult = await ensureDailyPlaceholderRecord(db, state.entries, {
       forceCreate: false,
-      sourceLabel: "9:30 AM auto-create"
+      sourceLabel: "7:30 AM auto-create"
     });
     if (autoCreateResult.created) {
       state = await loadFirestoreState(db);
+      const refreshedTemperatureBackfill = await backfillMissingTemperatureRanges(db, state.entries);
+      if (refreshedTemperatureBackfill.updated) {
+        state = { ...state, entries: refreshedTemperatureBackfill.entries };
+      }
     }
     await renderDashboard(
       state.entries.length ? state.entries : sampleEntries,
@@ -1688,10 +1878,19 @@ async function bootDashboard(db) {
 async function bootEntries(db) {
   const entryTools = await handleEntryForm(db);
   try {
-    const state = await loadFirestoreState(db);
+    let state = await loadFirestoreState(db);
     const backfillResult = await backfillStarterEntriesIfNeeded(db, state.entries);
     if (backfillResult.backfilled) {
+      state = { ...state, entries: backfillResult.entries };
+    }
+    const temperatureBackfill = await backfillMissingTemperatureRanges(db, state.entries);
+    if (temperatureBackfill.updated) {
+      state = { ...state, entries: temperatureBackfill.entries };
+    }
+    if (backfillResult.backfilled) {
       renderStatusAlert("entries-status", "Starter history was restored into Firebase, and live entries were refreshed.", "success");
+    } else if (temperatureBackfill.updated) {
+      renderStatusAlert("entries-status", `Filled missing High/Low temperatures for ${temperatureBackfill.count} record${temperatureBackfill.count === 1 ? "" : "s"}.`, "success");
     }
     await entryTools.refreshEntries({ showMessage: false, runAutoCreate: true, forceCreate: false });
     const url = new URL(window.location.href);

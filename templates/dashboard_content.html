@@ -53,7 +53,16 @@
         </div>
         <div class="col-lg-4">
           <div class="stat-callout">
-            <span class="small-label">Annual Projection</span>
+            <div class="d-flex justify-content-between align-items-start gap-2">
+              <span class="small-label mb-0">Annual Projection</span>
+              <button
+                type="button"
+                class="metric-info-button"
+                data-bs-toggle="modal"
+                data-bs-target="#annualProjectionModal"
+                aria-label="Explain annual projection calculation"
+              >?</button>
+            </div>
             <div class="callout-value">{{ "{:,.0f}".format(metrics.annual_projection) }} kWh</div>
             <div class="{% if metrics.projection_vs_guarantee_kwh >= 0 %}text-success{% else %}text-danger{% endif %}">
               {% if metrics.projection_vs_guarantee_kwh >= 0 %}Ahead{% else %}Behind{% endif %}
@@ -64,6 +73,46 @@
         </div>
       </div>
     </section>
+
+    <div class="modal fade" id="annualProjectionModal" tabindex="-1" aria-labelledby="annualProjectionModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content tracker-modal">
+          <div class="modal-header border-0 pb-0">
+            <div>
+              <p class="eyebrow mb-2">Projection Help</p>
+              <h2 class="modal-title h4 mb-0" id="annualProjectionModalLabel">How Annual Projection Is Calculated</h2>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body pt-3">
+            <div class="info-grid mb-4">
+              <div><span>Average Daily Production</span><strong>{{ "%.1f"|format(metrics.average_daily_production) }} kWh/day</strong></div>
+              <div><span>Projected Annual Output</span><strong>{{ "{:,.0f}".format(metrics.annual_projection) }} kWh/year</strong></div>
+              <div><span>Contract Guarantee</span><strong>{{ "{:,.0f}".format(config.production_guarantee_kwh) }} kWh/year</strong></div>
+              <div><span>Difference</span><strong>{% if metrics.projection_vs_guarantee_kwh >= 0 %}Ahead{% else %}Behind{% endif %} {{ "{:,.0f}".format(metrics.projection_vs_guarantee_kwh|abs) }} kWh</strong></div>
+            </div>
+            <div class="tracker-modal-math">
+              <div class="tracker-modal-step">
+                <strong>1. Find the current daily run rate</strong>
+                <p>The app averages the production entries you have recorded so far.</p>
+                <code>{{ "%.1f"|format(metrics.average_daily_production) }} kWh/day</code>
+              </div>
+              <div class="tracker-modal-step">
+                <strong>2. Project that run rate across a full year</strong>
+                <p>Annual Projection = Average Daily Production × 365 days.</p>
+                <code>{{ "%.1f"|format(metrics.average_daily_production) }} × 365 = {{ "{:,.0f}".format(metrics.annual_projection) }} kWh</code>
+              </div>
+              <div class="tracker-modal-step">
+                <strong>3. Compare it to the Sunrun guarantee</strong>
+                <p>The projected annual output is compared against your contract guarantee of {{ "{:,.0f}".format(config.production_guarantee_kwh) }} kWh/year.</p>
+                <code>{% if metrics.projection_vs_guarantee_kwh >= 0 %}Ahead{% else %}Behind{% endif %} {{ "{:,.0f}".format(metrics.projection_vs_guarantee_kwh|abs) }} kWh ({{ "%.1f"|format(metrics.projection_vs_guarantee_pct|abs) }}%)</code>
+              </div>
+            </div>
+            <p class="text-muted small mt-3 mb-0">This is a running projection based on the data recorded so far. It is useful for trend tracking, but it is not weather-normalized and will become more reliable as more days are recorded.</p>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <div class="modal fade" id="dashboardIntroModal" tabindex="-1" aria-labelledby="dashboardIntroModalLabel" aria-hidden="true">
       <div class="modal-dialog modal-lg modal-dialog-centered">
@@ -664,6 +713,8 @@
                 <th>Meter 01</th>
                 <th>Meter 02</th>
                 <th>Weather</th>
+                <th>High</th>
+                <th>Low</th>
               </tr>
             </thead>
             <tbody>
@@ -675,6 +726,8 @@
                 <td>{{ "%.1f"|format(entry.meter_01_import_reading) }}</td>
                 <td>{{ "%.1f"|format(entry.meter_02_export_reading) }}</td>
                 <td>{{ entry.weather }}</td>
+                <td>{% if entry.temperature_high_f is not none %}{{ "%.0f"|format(entry.temperature_high_f) }}°F{% else %}<span class="text-muted">-</span>{% endif %}</td>
+                <td>{% if entry.temperature_low_f is not none %}{{ "%.0f"|format(entry.temperature_low_f) }}°F{% else %}<span class="text-muted">-</span>{% endif %}</td>
               </tr>
               {% endfor %}
             </tbody>

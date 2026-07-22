@@ -28,6 +28,8 @@ class DailySolarEntry:
     meter_02_export_reading: float = 0.0
     weather: str = "Unknown"
     temperature_f: Optional[float] = None
+    temperature_high_f: Optional[float] = None
+    temperature_low_f: Optional[float] = None
     humidity_pct: Optional[float] = None
     cloud_cover_pct: Optional[float] = None
     wind_mph: Optional[float] = None
@@ -190,6 +192,8 @@ class FirestoreRepository:
             meter_02_export_reading=float(payload.get("meter_02_export_reading", 0.0)),
             weather=payload.get("weather", "Unknown"),
             temperature_f=float(payload["temperature_f"]) if payload.get("temperature_f") is not None else None,
+            temperature_high_f=float(payload["temperature_high_f"]) if payload.get("temperature_high_f") is not None else None,
+            temperature_low_f=float(payload["temperature_low_f"]) if payload.get("temperature_low_f") is not None else None,
             humidity_pct=float(payload["humidity_pct"]) if payload.get("humidity_pct") is not None else None,
             cloud_cover_pct=float(payload["cloud_cover_pct"]) if payload.get("cloud_cover_pct") is not None else None,
             wind_mph=float(payload["wind_mph"]) if payload.get("wind_mph") is not None else None,
@@ -209,6 +213,8 @@ class FirestoreRepository:
             "meter_02_export_reading": float(entry.meter_02_export_reading),
             "weather": entry.weather,
             "temperature_f": entry.temperature_f,
+            "temperature_high_f": entry.temperature_high_f,
+            "temperature_low_f": entry.temperature_low_f,
             "humidity_pct": entry.humidity_pct,
             "cloud_cover_pct": entry.cloud_cover_pct,
             "wind_mph": entry.wind_mph,

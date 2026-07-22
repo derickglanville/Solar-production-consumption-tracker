@@ -53,6 +53,14 @@
             <label class="form-label">Temperature (°F)</label>
             <input type="number" step="0.1" name="temperature_f" class="form-control">
           </div>
+          <div class="col-md-6">
+            <label class="form-label">Daily High (°F)</label>
+            <input type="number" step="0.1" name="temperature_high_f" class="form-control">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Daily Low (°F)</label>
+            <input type="number" step="0.1" name="temperature_low_f" class="form-control">
+          </div>
           <div class="col-md-4">
             <label class="form-label">Humidity %</label>
             <input type="number" step="0.1" name="humidity_pct" class="form-control">
@@ -91,6 +99,8 @@
                 <th>M01</th>
                 <th>M02</th>
                 <th>Weather</th>
+                <th>High</th>
+                <th>Low</th>
                 <th>Notes</th>
                 <th>Status</th>
                 <th>Actions</th>
@@ -105,6 +115,8 @@
                 <td>{{ "%.1f"|format(entry.meter_01_import_reading) }}</td>
                 <td>{{ "%.1f"|format(entry.meter_02_export_reading) }}</td>
                 <td>{{ entry.weather }}</td>
+                <td>{% if entry.temperature_high_f is not none %}{{ "%.0f"|format(entry.temperature_high_f) }}°F{% else %}<span class="text-muted">-</span>{% endif %}</td>
+                <td>{% if entry.temperature_low_f is not none %}{{ "%.0f"|format(entry.temperature_low_f) }}°F{% else %}<span class="text-muted">-</span>{% endif %}</td>
                 <td><span class="entry-note-preview" title="{{ entry.notes }}">{{ entry.notes }}</span></td>
                 <td><span class="entry-confirmed-pill">Confirmed</span></td>
                 <td><button type="button" class="btn btn-contract btn-sm" disabled>Edit</button></td>
