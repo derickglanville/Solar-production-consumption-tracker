@@ -295,6 +295,38 @@ body[data-page="dashboard"].dashboard-compact-mode .container {
   font-size: 1.05rem;
 }
 
+.energy-impact-panel {
+  margin-top: 1rem;
+  padding: 1rem 1.05rem;
+  border: 1px solid rgba(109, 149, 171, 0.16);
+  border-radius: 20px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(246, 249, 248, 0.9)),
+    rgba(255, 255, 255, 0.85);
+}
+
+.energy-impact-grid {
+  gap: 1.1rem;
+}
+
+.energy-impact-grid small {
+  display: block;
+  color: var(--muted);
+  margin-top: 0.35rem;
+  line-height: 1.4;
+}
+
+.energy-impact-assumption {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.45rem 0.75rem;
+  border-radius: 999px;
+  background: rgba(109, 149, 171, 0.1);
+  color: #416274;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
 .btn-sun {
   border: 0;
   background: linear-gradient(135deg, #d9a441, #ecd49d);
@@ -505,7 +537,8 @@ body[data-page="dashboard"].dashboard-compact-mode .container {
 }
 
 .entry-estimated-pill,
-.entry-confirmed-pill {
+.entry-confirmed-pill,
+.entry-source-pill {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -527,6 +560,13 @@ body[data-page="dashboard"].dashboard-compact-mode .container {
   background: rgba(110, 151, 128, 0.14);
   color: #3d6c4d;
   border: 1px solid rgba(110, 151, 128, 0.24);
+}
+
+.entry-source-pill {
+  background: rgba(109, 149, 171, 0.14);
+  color: #3f6478;
+  border: 1px solid rgba(109, 149, 171, 0.24);
+  min-width: 170px;
 }
 
 .entries-history-table {

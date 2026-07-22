@@ -537,7 +537,8 @@ body[data-page="dashboard"].dashboard-compact-mode .container {
 }
 
 .entry-estimated-pill,
-.entry-confirmed-pill {
+.entry-confirmed-pill,
+.entry-source-pill {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -559,6 +560,13 @@ body[data-page="dashboard"].dashboard-compact-mode .container {
   background: rgba(110, 151, 128, 0.14);
   color: #3d6c4d;
   border: 1px solid rgba(110, 151, 128, 0.24);
+}
+
+.entry-source-pill {
+  background: rgba(109, 149, 171, 0.14);
+  color: #3f6478;
+  border: 1px solid rgba(109, 149, 171, 0.24);
+  min-width: 170px;
 }
 
 .entries-history-table {

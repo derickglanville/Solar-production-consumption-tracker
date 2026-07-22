@@ -16,6 +16,12 @@ const configCollectionName = "solar_tracker_config";
 const configDocumentId = "primary";
 const dailyAutoCreateHour = 9;
 const dailyAutoCreateMinute = 30;
+const yorktownHeightsLocation = {
+  latitude: 41.2706,
+  longitude: -73.7774,
+  label: "Yorktown Heights, NY",
+  timezone: "America/New_York"
+};
 const WEATHER_FACTORS = {
   Sunny: 1.05,
   Cloudy: 0.82,
@@ -90,6 +96,110 @@ function isAtOrAfterAutoCreateTime(now = new Date()) {
   return hours > dailyAutoCreateHour || (hours === dailyAutoCreateHour && minutes >= dailyAutoCreateMinute);
 }
 
+function isPastIsoDate(entryDate) {
+  return String(entryDate) < String(getTodayIsoDate());
+}
+
+function mapWeatherCodeToLabel(code) {
+  const value = Number(code);
+  if ([0, 1].includes(value)) return "Sunny";
+  if ([2, 3, 45, 48].includes(value)) return "Cloudy";
+  if ([51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82].includes(value)) return "Rain";
+  if ([71, 73, 75, 77, 85, 86].includes(value)) return "Snow";
+  if ([95, 96, 99].includes(value)) return "Wind";
+  return "Unknown";
+}
+
+function averageNumericValues(values) {
+  const valid = values.filter((value) => Number.isFinite(Number(value)));
+  return valid.length ? mean(valid.map((value) => Number(value))) : null;
+}
+
+function maxNumericValue(values) {
+  const valid = values.filter((value) => Number.isFinite(Number(value)));
+  return valid.length ? Math.max(...valid.map((value) => Number(value))) : null;
+}
+
+function pickDominantWeatherLabel(labels) {
+  if (!labels.length) return "Unknown";
+  const counts = new Map();
+  labels.forEach((label) => {
+    counts.set(label, (counts.get(label) || 0) + 1);
+  });
+  return [...counts.entries()].sort((left, right) => right[1] - left[1])[0]?.[0] || "Unknown";
+}
+
+async function fetchOpenMeteoLookupValues(entryDate) {
+  const hourlyFields = [
+    "shortwave_radiation",
+    "temperature_2m",
+    "relative_humidity_2m",
+    "cloud_cover",
+    "wind_speed_10m",
+    "weather_code"
+  ];
+  const baseUrl = isPastIsoDate(entryDate)
+    ? "https://archive-api.open-meteo.com/v1/archive"
+    : "https://api.open-meteo.com/v1/forecast";
+
+  const url = new URL(baseUrl);
+  url.searchParams.set("latitude", String(yorktownHeightsLocation.latitude));
+  url.searchParams.set("longitude", String(yorktownHeightsLocation.longitude));
+  url.searchParams.set("hourly", hourlyFields.join(","));
+  url.searchParams.set("temperature_unit", "fahrenheit");
+  url.searchParams.set("wind_speed_unit", "mph");
+  url.searchParams.set("timezone", yorktownHeightsLocation.timezone);
+
+  if (isPastIsoDate(entryDate)) {
+    url.searchParams.set("start_date", entryDate);
+    url.searchParams.set("end_date", entryDate);
+  } else {
+    url.searchParams.set("forecast_days", "16");
+  }
+
+  const response = await fetch(url.toString());
+  if (!response.ok) {
+    throw new Error(`Open-Meteo request failed with status ${response.status}`);
+  }
+
+  const payload = await response.json();
+  const hourly = payload?.hourly;
+  if (!hourly?.time?.length) {
+    throw new Error("Open-Meteo response did not include hourly data");
+  }
+
+  const dayPrefix = `${entryDate}T`;
+  const matchingIndexes = hourly.time
+    .map((timeValue, index) => (String(timeValue).startsWith(dayPrefix) ? index : -1))
+    .filter((index) => index >= 0);
+
+  if (!matchingIndexes.length) {
+    throw new Error(`Open-Meteo returned no hourly rows for ${entryDate}`);
+  }
+
+  const shortwaveValues = matchingIndexes.map((index) => Number(hourly.shortwave_radiation?.[index] ?? 0));
+  const temperatureValues = matchingIndexes.map((index) => Number(hourly.temperature_2m?.[index]));
+  const humidityValues = matchingIndexes.map((index) => Number(hourly.relative_humidity_2m?.[index]));
+  const cloudValues = matchingIndexes.map((index) => Number(hourly.cloud_cover?.[index]));
+  const windValues = matchingIndexes.map((index) => Number(hourly.wind_speed_10m?.[index]));
+  const daylightIndexes = matchingIndexes.filter((index) => Number(hourly.shortwave_radiation?.[index] ?? 0) > 0);
+  const weatherIndexes = daylightIndexes.length ? daylightIndexes : matchingIndexes;
+  const weatherLabels = weatherIndexes.map((index) => mapWeatherCodeToLabel(hourly.weather_code?.[index]));
+  const peakIrradiance = Math.round(maxNumericValue(shortwaveValues) || 0);
+  const sourceKind = isPastIsoDate(entryDate) ? "historical archive" : "forecast";
+
+  return {
+    irradiance_peak_wm2: peakIrradiance,
+    weather: pickDominantWeatherLabel(weatherLabels),
+    temperature_f: maxNumericValue(temperatureValues),
+    humidity_pct: averageNumericValues(humidityValues),
+    cloud_cover_pct: averageNumericValues(cloudValues),
+    wind_mph: maxNumericValue(windValues),
+    lookup_source: `open-meteo-${isPastIsoDate(entryDate) ? "historical" : "forecast"}`,
+    notes: `Auto-filled from Open-Meteo ${sourceKind} data for ${yorktownHeightsLocation.label}. Irradiance is the day's peak hourly shortwave radiation.`
+  };
+}
+
 function sortEntries(entries) {
   return [...entries].sort((left, right) => String(left.entry_date).localeCompare(String(right.entry_date)));
 }
@@ -120,6 +230,7 @@ function normalizeEntry(entry) {
     wind_mph: entry.wind_mph ?? null,
     notes: entry.notes || "",
     estimated: Boolean(entry.estimated),
+    lookup_source: entry.lookup_source || "",
     created_at: entry.created_at || "",
     updated_at: entry.updated_at || ""
   };
@@ -136,11 +247,7 @@ function isPlaceholderLikeEntry(entry) {
   );
 }
 
-function buildEstimatedLookupValues(entryDate, entries) {
-  if (entryLookupOverrides[entryDate]) {
-    return entryLookupOverrides[entryDate];
-  }
-
+function buildFallbackLookupValues(entryDate, entries) {
   const previousEntry = getMostRecentEntryBefore(entries, entryDate);
   if (!previousEntry) {
     return {
@@ -151,6 +258,7 @@ function buildEstimatedLookupValues(entryDate, entries) {
       humidity_pct: null,
       cloud_cover_pct: null,
       wind_mph: null,
+      lookup_source: "fallback-default",
       notes: "Estimated placeholder created from default lookup values. Update with actual weather and production data."
     };
   }
@@ -163,8 +271,34 @@ function buildEstimatedLookupValues(entryDate, entries) {
     humidity_pct: previousEntry.humidity_pct ?? null,
     cloud_cover_pct: previousEntry.cloud_cover_pct ?? null,
     wind_mph: previousEntry.wind_mph ?? null,
+    lookup_source: "fallback-prior-entry",
     notes: `Estimated placeholder created from the most recent prior entry (${previousEntry.entry_date}). Update with actual values when available.`
   };
+}
+
+async function buildEstimatedLookupValues(entryDate, entries) {
+  const fallbackValues = buildFallbackLookupValues(entryDate, entries);
+
+  try {
+    const liveValues = await fetchOpenMeteoLookupValues(entryDate);
+    return {
+      ...fallbackValues,
+      ...liveValues,
+      production_kwh: fallbackValues.production_kwh
+    };
+  } catch (error) {
+    if (entryLookupOverrides[entryDate]) {
+      return {
+        ...entryLookupOverrides[entryDate],
+        lookup_source: "override"
+      };
+    }
+    return {
+      ...fallbackValues,
+      lookup_source: fallbackValues.lookup_source || "fallback",
+      notes: `${fallbackValues.notes} Open-Meteo auto-fill was unavailable, so fallback estimates were used.`
+    };
+  }
 }
 
 function buildStatus(message, kind = "warning", usingDemoData = false) {
@@ -1175,9 +1309,9 @@ function getMostRecentEntryBefore(entries, entryDate) {
   return priorEntries.length ? priorEntries[priorEntries.length - 1] : null;
 }
 
-function buildAutoEntry(entries, entryDate, sourceLabel = "Auto-created") {
+async function buildAutoEntry(entries, entryDate, sourceLabel = "Auto-created") {
   const previousEntry = getMostRecentEntryBefore(entries, entryDate);
-  const estimatedValues = buildEstimatedLookupValues(entryDate, entries);
+  const estimatedValues = await buildEstimatedLookupValues(entryDate, entries);
   return {
     entry_date: entryDate,
     irradiance_peak_wm2: Number(estimatedValues.irradiance_peak_wm2 || 0),
@@ -1190,6 +1324,7 @@ function buildAutoEntry(entries, entryDate, sourceLabel = "Auto-created") {
     cloud_cover_pct: estimatedValues.cloud_cover_pct ?? null,
     wind_mph: estimatedValues.wind_mph ?? null,
     estimated: true,
+    lookup_source: estimatedValues.lookup_source || "fallback",
     notes: estimatedValues.notes || `${sourceLabel} placeholder for ${entryDate}. Update with the actual production, meter, and weather values.`,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
@@ -1208,7 +1343,7 @@ async function ensureDailyPlaceholderRecord(db, entries, options = {}) {
     if (isPlaceholderLikeEntry(existingEntry)) {
       const hydratedEntry = {
         ...existingEntry,
-        ...buildEstimatedLookupValues(entryDate, entries),
+        ...(await buildEstimatedLookupValues(entryDate, entries)),
         estimated: true,
         updated_at: new Date().toISOString()
       };
@@ -1222,7 +1357,7 @@ async function ensureDailyPlaceholderRecord(db, entries, options = {}) {
     return { entry: null, created: false };
   }
 
-  const placeholderEntry = buildAutoEntry(entries, entryDate, sourceLabel);
+  const placeholderEntry = await buildAutoEntry(entries, entryDate, sourceLabel);
   await setDoc(doc(db, entryCollectionName, entryDate), placeholderEntry, { merge: true });
   return { entry: placeholderEntry, created: true };
 }
@@ -1238,6 +1373,26 @@ function setEstimatedBadgeVisible(isVisible) {
   const badge = document.getElementById("entry-estimated-badge");
   if (!badge) return;
   badge.classList.toggle("d-none", !isVisible);
+}
+
+function formatLookupSourceLabel(sourceValue, estimated = false) {
+  const source = String(sourceValue || "").trim().toLowerCase();
+  if (source === "open-meteo-historical") return "Source: Open-Meteo historical";
+  if (source === "open-meteo-forecast") return "Source: Open-Meteo forecast";
+  if (source === "override") return "Source: App override";
+  if (source === "fallback-default") return "Source: Default fallback";
+  if (source === "fallback-prior-entry") return "Source: Prior-entry fallback";
+  if (source === "fallback") return "Source: Fallback estimate";
+  if (estimated) return "Source: Estimated";
+  return "Source: Manual";
+}
+
+function setEntrySourceBadge(entry = null) {
+  const badge = document.getElementById("entry-source-badge");
+  if (!badge) return;
+  badge.textContent = formatLookupSourceLabel(entry?.lookup_source, Boolean(entry?.estimated));
+  badge.dataset.sourceKind = String(entry?.lookup_source || (entry?.estimated ? "estimated" : "manual"));
+  badge.classList.remove("d-none");
 }
 
 function escapeHtml(value) {
@@ -1272,7 +1427,8 @@ function fillEntryForm(entry = null) {
     humidity_pct: "",
     cloud_cover_pct: "",
     wind_mph: "",
-    notes: ""
+    notes: "",
+    lookup_source: "manual"
   };
 
   Object.entries(payload).forEach(([key, value]) => {
@@ -1286,10 +1442,12 @@ function fillEntryForm(entry = null) {
     entriesPageState.selectedDate = entry.entry_date;
     setEntryFormMode(`Editing record for ${entry.entry_date}.`, "Update Entry");
     setEstimatedBadgeVisible(Boolean(entry.estimated));
+    setEntrySourceBadge(entry);
   } else {
     entriesPageState.selectedDate = "";
     setEntryFormMode("Create or update a daily solar record.", "Save Entry");
     setEstimatedBadgeVisible(false);
+    setEntrySourceBadge({ lookup_source: "manual", estimated: false });
   }
 }
 
@@ -1340,8 +1498,18 @@ async function handleEntryForm(db) {
   const refreshButton = document.getElementById("entry-refresh");
   const autoCreateButton = document.getElementById("entry-auto-create");
 
+  function getActiveEntryDate() {
+    const dateField = form.elements.namedItem("entry_date");
+    return dateField?.value || getTodayIsoDate();
+  }
+
   async function refreshEntries(options = {}) {
-    const { showMessage = true, runAutoCreate = false, forceCreate = false } = options;
+    const {
+      showMessage = true,
+      runAutoCreate = false,
+      forceCreate = false,
+      entryDate = getActiveEntryDate()
+    } = options;
     const state = await loadFirestoreState(db);
     let entries = state.entries;
     let autoCreateMessage = "";
@@ -1349,6 +1517,7 @@ async function handleEntryForm(db) {
     if (runAutoCreate) {
       const result = await ensureDailyPlaceholderRecord(db, entries, {
         forceCreate,
+        entryDate,
         sourceLabel: forceCreate ? "Add Daily Entry" : "9:30 AM auto-create"
       });
       if (result.created) {
@@ -1394,6 +1563,7 @@ async function handleEntryForm(db) {
       wind_mph: formData.get("wind_mph") ? Number(formData.get("wind_mph")) : null,
       notes: formData.get("notes") || "",
       estimated: false,
+      lookup_source: "manual",
       created_at: existingEntry?.created_at || new Date().toISOString(),
       updated_at: new Date().toISOString()
     };
@@ -1417,13 +1587,23 @@ async function handleEntryForm(db) {
 
   if (refreshButton) {
     refreshButton.addEventListener("click", async () => {
-      await refreshEntries({ showMessage: true, runAutoCreate: true, forceCreate: false });
+      await refreshEntries({
+        showMessage: true,
+        runAutoCreate: true,
+        forceCreate: false,
+        entryDate: getActiveEntryDate()
+      });
     });
   }
 
   if (autoCreateButton) {
     autoCreateButton.addEventListener("click", async () => {
-      await refreshEntries({ showMessage: true, runAutoCreate: true, forceCreate: true });
+      await refreshEntries({
+        showMessage: true,
+        runAutoCreate: true,
+        forceCreate: true,
+        entryDate: getActiveEntryDate()
+      });
     });
   }
 
