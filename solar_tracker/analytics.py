@@ -21,6 +21,59 @@ WEATHER_FACTORS = {
 }
 
 
+def _classify_irradiance_points(df: pd.DataFrame) -> pd.DataFrame:
+    if df.empty:
+        result = df.copy()
+        result["anomaly_label"] = []
+        result["anomaly_reason"] = []
+        result["anomaly_text"] = []
+        return result
+
+    result = df.copy()
+    irradiance_median = float(result["irradiance_peak_wm2"].median()) if not result["irradiance_peak_wm2"].empty else 0.0
+    production_median = float(result["production_kwh"].median()) if not result["production_kwh"].empty else 0.0
+    rolling_baseline = result["rolling_7_day_prod"].fillna(result["production_kwh"])
+    labels = []
+    reasons = []
+    texts = []
+
+    for _, row in result.iterrows():
+        label = "Observed"
+        reason = "Production and irradiance look consistent with the recent trend."
+        text = ""
+
+        if bool(row.get("estimated", False)):
+            label = "Estimated"
+            reason = "This point uses placeholder production logic and should be replaced with actual Sunrun production."
+            text = "Estimated"
+        else:
+            irradiance = float(row.get("irradiance_peak_wm2", 0.0) or 0.0)
+            production = float(row.get("production_kwh", 0.0) or 0.0)
+            baseline = float(row.get("rolling_7_day_prod", production) or production or 0.0)
+
+            if irradiance >= max(irradiance_median, 700.0) and baseline > 0 and production <= baseline * 0.55:
+                label = "Likely Underperformance"
+                reason = "Irradiance was strong, but production was much lower than the recent baseline."
+                text = "Likely Underperformance"
+            elif (
+                irradiance >= max(irradiance_median, 650.0)
+                and production_median > 0
+                and production <= production_median * 0.7
+            ):
+                label = "Needs Review"
+                reason = "Irradiance was decent, but production landed well below the typical range."
+                text = "Needs Review"
+
+        labels.append(label)
+        reasons.append(reason)
+        texts.append(text)
+
+    result["anomaly_label"] = labels
+    result["anomaly_reason"] = reasons
+    result["anomaly_text"] = texts
+    return result
+
+
 @dataclass
 class DashboardMetrics:
     today_production: float
@@ -275,6 +328,8 @@ def build_chart_bundle(df, config=None):
     if df.empty:
         return {}
 
+    df = _classify_irradiance_points(df)
+
     electric_rate = (
         float(config.current_electric_rate)
         if config and getattr(config, "current_electric_rate", None) is not None
@@ -436,8 +491,38 @@ def build_chart_bundle(df, config=None):
             x=df["irradiance_peak_wm2"],
             y=df["production_kwh"],
             mode="markers",
-            marker={"size": 11, "color": "#0f4c81"},
-            text=df["entry_date"].dt.strftime("%Y-%m-%d"),
+            marker={
+                "size": 11,
+                "color": df["anomaly_label"].map(
+                    {
+                        "Observed": "#0f4c81",
+                        "Estimated": "#f6c86a",
+                        "Needs Review": "#d97706",
+                        "Likely Underperformance": "#b42318",
+                    }
+                ),
+                "symbol": df["anomaly_label"].map(
+                    {
+                        "Observed": "circle",
+                        "Estimated": "diamond",
+                        "Needs Review": "triangle-up",
+                        "Likely Underperformance": "x",
+                    }
+                ),
+                "line": {"width": 1, "color": "#ffffff"},
+            },
+            customdata=list(
+                zip(
+                    df["entry_date"].dt.strftime("%Y-%m-%d"),
+                    df["anomaly_label"],
+                )
+            ),
+            hovertemplate=(
+                "Date: %{customdata[0]}<br>"
+                "Irradiance: %{x:.0f} W/m²<br>"
+                "Production: %{y:.1f} kWh<br>"
+                "Status: %{customdata[1]}<extra></extra>"
+            ),
             name="Days",
         )
     )
@@ -447,6 +532,11 @@ def build_chart_bundle(df, config=None):
         yaxis_title="Production (kWh)",
         margin={"l": 20, "r": 20, "t": 50, "b": 20},
         template="plotly_white",
+        hoverlabel={
+            "bgcolor": "rgba(255,255,255,0.92)",
+            "bordercolor": "rgba(15,76,129,0.18)",
+            "font": {"color": "#12324d", "size": 12},
+        },
     )
 
     weather_chart = go.Figure()

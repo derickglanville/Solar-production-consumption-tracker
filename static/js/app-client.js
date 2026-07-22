@@ -550,6 +550,44 @@ function buildComputedEntries(entries, config = defaultConfig) {
   });
 }
 
+function classifyIrradiancePointsClient(entries) {
+  if (!entries.length) return [];
+  const irradianceValues = entries.map((entry) => Number(entry.irradiance_peak_wm2 || 0)).sort((a, b) => a - b);
+  const productionValues = entries.map((entry) => Number(entry.production_kwh || 0)).sort((a, b) => a - b);
+  const irradianceMedian = irradianceValues[Math.floor(irradianceValues.length / 2)] || 0;
+  const productionMedian = productionValues[Math.floor(productionValues.length / 2)] || 0;
+
+  return entries.map((entry) => {
+    let anomalyLabel = "Observed";
+    let anomalyReason = "Production and irradiance look consistent with the recent trend.";
+    let anomalyText = "";
+    const irradiance = Number(entry.irradiance_peak_wm2 || 0);
+    const production = Number(entry.production_kwh || 0);
+    const baseline = Number(entry.rolling_7_day_prod || production || 0);
+
+    if (entry.estimated) {
+      anomalyLabel = "Estimated";
+      anomalyReason = "This point uses placeholder production logic and should be replaced with actual Sunrun production.";
+      anomalyText = "Estimated";
+    } else if (irradiance >= Math.max(irradianceMedian, 700) && baseline > 0 && production <= baseline * 0.55) {
+      anomalyLabel = "Likely Underperformance";
+      anomalyReason = "Irradiance was strong, but production was much lower than the recent baseline.";
+      anomalyText = "Likely Underperformance";
+    } else if (irradiance >= Math.max(irradianceMedian, 650) && productionMedian > 0 && production <= productionMedian * 0.7) {
+      anomalyLabel = "Needs Review";
+      anomalyReason = "Irradiance was decent, but production landed well below the typical range.";
+      anomalyText = "Needs Review";
+    }
+
+    return {
+      ...entry,
+      anomaly_label: anomalyLabel,
+      anomaly_reason: anomalyReason,
+      anomaly_text: anomalyText
+    };
+  });
+}
+
 function calculateDashboardMetricsClient(entries, config) {
   if (!entries.length) {
     return {
@@ -1365,7 +1403,8 @@ function renderDashboardHtmlClient(entries, metrics, config, firebaseStatus, ale
 
 function renderDashboardChartsClient(entries) {
   if (typeof Plotly === "undefined" || !entries.length) return;
-  const dates = entries.map((entry) => entry.entry_date);
+  const classifiedEntries = classifyIrradiancePointsClient(entries);
+  const dates = classifiedEntries.map((entry) => entry.entry_date);
   const compactMode = document.body.classList.contains("dashboard-compact-mode");
   const chartHeight = compactMode ? 210 : 320;
   const baseLayout = { margin: { l: 20, r: 20, t: 48, b: 32 }, template: "plotly_white", height: chartHeight };
@@ -1373,24 +1412,51 @@ function renderDashboardChartsClient(entries) {
   const plotConfig = { responsive: true, displayModeBar: false };
 
   Plotly.newPlot("daily-chart", [
-    { type: "bar", x: dates, y: entries.map((entry) => entry.estimated ? null : entry.production_kwh), name: "Confirmed Production (kWh)", marker: { color: "#e3a008" } },
-    { type: "bar", x: dates, y: entries.map((entry) => entry.estimated ? entry.production_kwh : null), name: "Estimated Production (kWh)", marker: { color: "#f6c86a", pattern: { shape: "/" } } },
-    { type: "scatter", x: dates, y: entries.map((entry) => entry.rolling_7_day_prod), name: "7-Day Average", line: { color: "#0f4c81", width: 3 } }
+    { type: "bar", x: dates, y: classifiedEntries.map((entry) => entry.estimated ? null : entry.production_kwh), name: "Confirmed Production (kWh)", marker: { color: "#e3a008" } },
+    { type: "bar", x: dates, y: classifiedEntries.map((entry) => entry.estimated ? entry.production_kwh : null), name: "Estimated Production (kWh)", marker: { color: "#f6c86a", pattern: { shape: "/" } } },
+    { type: "scatter", x: dates, y: classifiedEntries.map((entry) => entry.rolling_7_day_prod), name: "7-Day Average", line: { color: "#0f4c81", width: 3 } }
   ], { ...baseLayout, title: { text: "Daily Production" }, bargap: 0.12, barmode: "overlay" }, plotConfig);
 
   Plotly.newPlot("flow-chart", [
-    { type: "scatter", x: dates, y: entries.map((entry) => entry.daily_import_kwh), name: "Import", line: { color: "#b42318" } },
-    { type: "scatter", x: dates, y: entries.map((entry) => entry.daily_export_kwh), name: "Export", line: { color: "#157f3b" } },
-    { type: "scatter", x: dates, y: entries.map((entry) => entry.estimated_self_consumption_kwh), name: "Estimated Self Consumption", line: { color: "#0f4c81", dash: "dot" } }
+    { type: "scatter", x: dates, y: classifiedEntries.map((entry) => entry.daily_import_kwh), name: "Import", line: { color: "#b42318" } },
+    { type: "scatter", x: dates, y: classifiedEntries.map((entry) => entry.daily_export_kwh), name: "Export", line: { color: "#157f3b" } },
+    { type: "scatter", x: dates, y: classifiedEntries.map((entry) => entry.estimated_self_consumption_kwh), name: "Estimated Self Consumption", line: { color: "#0f4c81", dash: "dot" } }
   ], { ...baseLayout, title: { text: "Grid Flow and Estimated Self Consumption" } }, plotConfig);
 
   Plotly.newPlot("irradiance-chart", [{
     type: "scatter",
     mode: "markers",
-    x: entries.map((entry) => entry.irradiance_peak_wm2),
-    y: entries.map((entry) => entry.production_kwh),
-    marker: { size: 10, color: "#0f4c81" }
-  }], { ...baseLayout, title: { text: "Production vs Irradiance" }, xaxis: { title: "Peak Irradiance (W/m²)" }, yaxis: { title: "Production (kWh)" } }, plotConfig);
+    x: classifiedEntries.map((entry) => entry.irradiance_peak_wm2),
+    y: classifiedEntries.map((entry) => entry.production_kwh),
+    customdata: classifiedEntries.map((entry) => [entry.entry_date, entry.anomaly_label]),
+    hovertemplate: "Date: %{customdata[0]}<br>Irradiance: %{x:.0f} W/m²<br>Production: %{y:.1f} kWh<br>Status: %{customdata[1]}<extra></extra>",
+    marker: {
+      size: 10,
+      color: classifiedEntries.map((entry) => ({
+        Observed: "#0f4c81",
+        Estimated: "#f6c86a",
+        "Needs Review": "#d97706",
+        "Likely Underperformance": "#b42318"
+      }[entry.anomaly_label] || "#0f4c81")),
+      symbol: classifiedEntries.map((entry) => ({
+        Observed: "circle",
+        Estimated: "diamond",
+        "Needs Review": "triangle-up",
+        "Likely Underperformance": "x"
+      }[entry.anomaly_label] || "circle")),
+      line: { width: 1, color: "#ffffff" }
+    }
+  }], {
+    ...baseLayout,
+    title: { text: "Production vs Irradiance" },
+    xaxis: { title: "Peak Irradiance (W/m²)" },
+    yaxis: { title: "Production (kWh)" },
+    hoverlabel: {
+      bgcolor: "rgba(255,255,255,0.92)",
+      bordercolor: "rgba(15,76,129,0.18)",
+      font: { color: "#12324d", size: 12 }
+    }
+  }, plotConfig);
 
   const weatherGroups = Object.entries(entries.reduce((accumulator, entry) => {
     const key = entry.weather || "Unknown";
