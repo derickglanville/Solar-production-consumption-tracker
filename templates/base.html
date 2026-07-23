@@ -17,8 +17,10 @@
       <div class="navbar-nav ms-auto">
         <a class="nav-link" href="{{ url_for('main.dashboard') }}">Dashboard</a>
         <a class="nav-link" href="{{ url_for('main.entries') }}">Daily Entry</a>
+        <a class="nav-link" href="{{ url_for('main.appliances') }}">Appliances</a>
         <a class="nav-link" href="{{ url_for('main.contract_summary') }}">Contract Summary</a>
         <a class="nav-link" href="{{ url_for('main.settings') }}">Settings</a>
+        <a class="nav-link nav-link-button" href="{{ url_for('main.dictionary') }}">Dictionary</a>
         <a class="nav-link" href="{{ url_for('main.export_csv') }}">CSV Export</a>
       </div>
     </div>
@@ -42,5 +44,6 @@
   </script>
   <script src="{{ url_for('static', filename='js/firebase-config.js') }}"></script>
   <script type="module" src="{{ url_for('static', filename='js/app-client.js') }}"></script>
+  {% block extra_scripts %}{% endblock %}
 </body>
 </html>

@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="hero-panel mb-4">
+  <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+    <div>
+      <p class="eyebrow mb-2">Workbook Viewer</p>
+      <h1 class="hero-title mb-2">Appliances & Device Load Viewer</h1>
+      <p class="text-muted mb-0">
+        Review and edit estimated device power so we can see which appliances are likely driving the most electricity use.
+      </p>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+      <button type="button" id="appliances-new" class="btn btn-contract btn-sm">New Record</button>
+      <button type="button" id="appliances-reload" class="btn btn-contract btn-sm">Reload Workbook</button>
+      <button type="button" id="appliances-save" class="btn btn-sun btn-sm">Save to Workbook</button>
+      <a class="btn btn-contract btn-sm" href="{{ url_for('main.appliances_document') }}">Download XLSX</a>
+    </div>
+  </div>
+</section>
+
+<div id="appliances-status"></div>
+
+<section class="row g-3 mb-4">
+  <div class="col-xxl-2 col-xl-4 col-md-6">
+    <div class="metric-card sun">
+      <span>Estimated Monthly Use</span>
+      <strong id="appliance-total-monthly">0 kWh</strong>
+      <small>Total across all listed appliances.</small>
+    </div>
+  </div>
+  <div class="col-xxl-2 col-xl-4 col-md-6">
+    <div class="metric-card sky">
+      <span>Estimated Daily Use</span>
+      <strong id="appliance-total-daily">0 kWh</strong>
+      <small>Typical day from the current assumptions.</small>
+    </div>
+  </div>
+  <div class="col-xxl-2 col-xl-4 col-md-6">
+    <div class="metric-card money">
+      <span>Monthly Estimated Cost</span>
+      <strong id="appliance-monthly-cost">$0</strong>
+      <small id="appliance-monthly-cost-label">At the current electric rate.</small>
+    </div>
+  </div>
+  <div class="col-xxl-2 col-xl-4 col-md-6">
+    <div class="metric-card export">
+      <span>Solar Cost Offset</span>
+      <strong id="appliance-solar-offset">$0</strong>
+      <small id="appliance-solar-offset-label">Value covered by expected solar offset.</small>
+    </div>
+  </div>
+  <div class="col-xxl-2 col-xl-4 col-md-6">
+    <div class="metric-card export">
+      <span>Highest Instant Draw</span>
+      <strong id="appliance-highest-kw">-</strong>
+      <small id="appliance-highest-kw-label">Largest single-device kW estimate.</small>
+    </div>
+  </div>
+  <div class="col-xxl-2 col-xl-4 col-md-6">
+    <div class="metric-card money">
+      <span>Biggest Monthly User</span>
+      <strong id="appliance-highest-monthly">-</strong>
+      <small id="appliance-highest-monthly-label">Most likely monthly energy driver.</small>
+    </div>
+  </div>
+</section>
+
+<section class="row g-3">
+  <div class="col-xxl-3 col-xl-4">
+    <div class="card tracker-card h-100">
+      <div class="card-body">
+        <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+          <h2 class="h5 mb-0">Load Summary</h2>
+          <span class="entry-source-pill">Approximate</span>
+        </div>
+        <p class="text-muted small mb-3">
+          These are planning estimates based on typical residential appliance wattage and your device list. You can edit any value below and save it back into the workbook.
+        </p>
+        <div class="info-grid mb-4">
+          <div><span>Workbook Rows</span><strong id="appliance-record-count">0</strong></div>
+          <div><span>Rooms Covered</span><strong id="appliance-room-count">0</strong></div>
+          <div><span>Top Room Load</span><strong id="appliance-top-room">-</strong></div>
+          <div><span>Download</span><strong>Editable XLSX</strong></div>
+        </div>
+
+        <h3 class="h6 mb-3">Top Estimated Monthly Loads</h3>
+        <div id="appliance-top-list" class="appliance-top-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-xxl-9 col-xl-8">
+    <div class="card tracker-card">
+      <div class="card-body">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+          <div>
+            <h2 class="h5 mb-1">Editable Appliance Table</h2>
+            <p class="text-muted small mb-0">Sort order follows highest estimated monthly energy use first.</p>
+          </div>
+          <div class="d-flex flex-wrap gap-2">
+            <button type="button" id="appliances-popout" class="btn btn-contract btn-sm">Pop Out Table</button>
+          </div>
+        </div>
+        <div id="appliances-table-panel" class="appliances-table-panel">
+        <div class="table-responsive appliances-table-scroll">
+          <table class="table align-middle appliance-table">
+            <thead>
+              <tr>
+                <th>Appliance</th>
+                <th>Room</th>
+                <th class="text-end">Typical kW</th>
+                <th class="text-end">Hours/Day</th>
+                <th class="text-end">Daily kWh</th>
+                <th class="text-end">Monthly kWh</th>
+                <th>Recommendation</th>
+                <th>Source</th>
+                <th>Notes</th>
+                <th>Delete</th>
+              </tr>
+            </thead>
+            <tbody id="appliances-table-body"></tbody>
+          </table>
+        </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div id="appliances-popout-shell" class="appliances-popout-shell d-none" aria-hidden="true">
+  <div class="appliances-popout-backdrop" data-close-popout="true"></div>
+  <div class="appliances-popout-dialog">
+    <div class="d-flex justify-content-between align-items-center gap-2 mb-3">
+      <div>
+        <h2 class="h5 mb-1">Appliance Table Pop-Out</h2>
+        <p class="text-muted small mb-0">Focused reading and editing view.</p>
+      </div>
+      <button type="button" id="appliances-popout-close" class="btn btn-contract btn-sm">Close</button>
+    </div>
+    <div id="appliances-popout-mount"></div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  window.APPLIANCES_BOOTSTRAP = {{ appliances|tojson }};
+</script>
+<script type="module" src="{{ url_for('static', filename='js/appliances.js') }}"></script>
+{% endblock %}

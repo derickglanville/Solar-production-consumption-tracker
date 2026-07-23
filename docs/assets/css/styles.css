@@ -143,6 +143,19 @@ body[data-page="dashboard"].dashboard-compact-mode .container {
   color: #f6ecd3;
 }
 
+.tracker-nav .nav-link-button {
+  margin-left: 0.35rem;
+  padding: 0.45rem 0.9rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.tracker-nav .nav-link-button:hover {
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff7e3;
+}
+
 .hero-panel,
 .tracker-card,
 .metric-card {
@@ -576,6 +589,67 @@ body[data-page="dashboard"].dashboard-compact-mode .container {
   border: 1px solid rgba(217, 164, 65, 0.24);
   color: #6c5312;
   font-size: 0.92rem;
+}
+
+.dictionary-tabs {
+  border-bottom: 1px solid rgba(95, 114, 128, 0.14);
+  gap: 0.45rem;
+}
+
+.dictionary-tabs .nav-link {
+  border: 1px solid transparent;
+  border-radius: 999px;
+  color: var(--muted);
+  font-weight: 600;
+  padding: 0.6rem 1rem;
+  background: rgba(248, 251, 250, 0.74);
+}
+
+.dictionary-tabs .nav-link:hover {
+  border-color: rgba(109, 149, 171, 0.18);
+  color: #31586b;
+}
+
+.dictionary-tabs .nav-link.active {
+  color: #244455;
+  background: linear-gradient(135deg, rgba(217, 164, 65, 0.18), rgba(109, 149, 171, 0.12));
+  border-color: rgba(95, 114, 128, 0.16);
+}
+
+.dictionary-tab-content {
+  min-height: 420px;
+}
+
+.dictionary-article {
+  max-width: 900px;
+}
+
+.dictionary-article p,
+.dictionary-article li {
+  color: var(--text);
+  line-height: 1.7;
+}
+
+.dictionary-list {
+  padding-left: 1.15rem;
+  margin-bottom: 1rem;
+}
+
+.dictionary-term-card {
+  padding: 1rem 1.05rem;
+  border-radius: 18px;
+  border: 1px solid rgba(95, 114, 128, 0.12);
+  background: rgba(248, 251, 250, 0.8);
+  margin-bottom: 0.85rem;
+}
+
+.dictionary-term-card strong {
+  display: block;
+  margin-bottom: 0.3rem;
+}
+
+.dictionary-mini-table th {
+  white-space: nowrap;
 }
 
 .entries-history-table {

@@ -7,6 +7,7 @@ from flask import Blueprint, Response, jsonify, render_template, request, send_f
 
 from .ai import answer_question, get_ai_status
 from .analytics import build_alerts, build_chart_bundle, build_dataframe, calculate_metrics
+from .appliances import APPLIANCE_WORKBOOK_PATH, load_appliance_summary, save_appliance_records
 from .firestore import AppConfig, DailySolarEntry
 from .historical_usage import historical_usage_to_dict, load_historical_usage_summary
 from .monthly_bill import load_monthly_bill_summary, monthly_bill_to_dict
@@ -383,6 +384,25 @@ def contract_summary():
     )
 
 
+@main_blueprint.route("/dictionary")
+def dictionary():
+    return render_template(
+        "dictionary.html",
+        page_name="dictionary",
+        bootstrap_data=build_bootstrap_data(),
+    )
+
+
+@main_blueprint.route("/appliances")
+def appliances():
+    return render_template(
+        "appliances.html",
+        page_name="appliances",
+        bootstrap_data=build_bootstrap_data(),
+        appliances=load_appliance_summary(),
+    )
+
+
 @main_blueprint.route("/api/render/dashboard", methods=["POST"])
 def render_dashboard_api():
     payload = request.get_json(force=True)
@@ -425,6 +445,18 @@ def ai_ask():
     return jsonify(answer_question(question, entries, config))
 
 
+@main_blueprint.route("/api/appliances")
+def appliances_api():
+    return jsonify(load_appliance_summary())
+
+
+@main_blueprint.route("/api/appliances/save", methods=["POST"])
+def appliances_save_api():
+    payload = request.get_json(force=True)
+    records = payload.get("records", [])
+    return jsonify(save_appliance_records(records))
+
+
 @main_blueprint.route("/export/csv")
 def export_csv():
     entries = build_sample_entries()
@@ -453,6 +485,15 @@ def nyseg_bill_document():
     return send_from_directory(
         "C:\\Software Developement\\ChatGPT Codex\\Solar Energy - SunRun\\NYSEG Bill",
         "NYSEG Bill.xlsx",
+        as_attachment=True,
+    )
+
+
+@main_blueprint.route("/documents/appliances")
+def appliances_document():
+    return send_from_directory(
+        str(APPLIANCE_WORKBOOK_PATH.parent),
+        APPLIANCE_WORKBOOK_PATH.name,
         as_attachment=True,
     )
 

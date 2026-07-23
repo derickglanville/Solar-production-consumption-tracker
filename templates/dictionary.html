@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="card tracker-card mb-4">
+  <div class="card-body">
+    <p class="eyebrow mb-2">Reference Guide</p>
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+      <div>
+        <h1 class="h3 mb-2">Solar Dictionary</h1>
+        <p class="text-muted mb-0">A plain-English reference for the core solar, utility, and billing terms used throughout the tracker.</p>
+      </div>
+      <div class="dictionary-launch-meta">
+        <span class="entry-source-pill">Quick reference tabs</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="card tracker-card">
+  <div class="card-body">
+    <ul class="nav nav-tabs dictionary-tabs" id="dictionaryTabs" role="tablist">
+      <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="energy-basics-tab" data-bs-toggle="tab" data-bs-target="#energy-basics" type="button" role="tab" aria-controls="energy-basics" aria-selected="true">Energy Basics</button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="solar-terms-tab" data-bs-toggle="tab" data-bs-target="#solar-terms" type="button" role="tab" aria-controls="solar-terms" aria-selected="false">Solar Terms</button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="billing-terms-tab" data-bs-toggle="tab" data-bs-target="#billing-terms" type="button" role="tab" aria-controls="billing-terms" aria-selected="false">Billing Terms</button>
+      </li>
+    </ul>
+
+    <div class="tab-content dictionary-tab-content pt-4" id="dictionaryTabsContent">
+      <div class="tab-pane fade show active" id="energy-basics" role="tabpanel" aria-labelledby="energy-basics-tab" tabindex="0">
+        <div class="dictionary-article">
+          <h2 class="h4 mb-3">What Is a Kilowatt-Hour (kWh)?</h2>
+          <p>A <strong>kilowatt-hour (kWh)</strong> is a measure of <strong>energy</strong>, not power.</p>
+          <p>The easiest way to think about it is:</p>
+          <ul class="dictionary-list">
+            <li><strong>Kilowatt (kW)</strong> = how fast electricity is being used or produced (like the speed of a car).</li>
+            <li><strong>Kilowatt-hour (kWh)</strong> = the total amount of electricity used or produced over time (like the distance the car travels).</li>
+          </ul>
+
+          <h3 class="h5 mt-4">The definition</h3>
+          <p>A <strong>1 kWh</strong> is the amount of energy used by a <strong>1,000-watt (1 kW)</strong> device running for <strong>1 hour</strong>.</p>
+          <p>Examples:</p>
+          <ul class="dictionary-list">
+            <li>A <strong>1,000-watt microwave</strong> running for 1 hour = <strong>1 kWh</strong></li>
+            <li>A <strong>100-watt light bulb</strong> running for 10 hours = <strong>1 kWh</strong></li>
+            <li>A <strong>2,000-watt space heater</strong> running for 30 minutes = <strong>1 kWh</strong></li>
+          </ul>
+
+          <h3 class="h5 mt-4">Relating it to your solar system</h3>
+          <p>Your system is rated at <strong>18.45 kW</strong>.</p>
+          <p>That means:</p>
+          <p>If it produced its full rated power for <strong>one hour</strong>, it would generate: <strong>18.45 kWh</strong></p>
+          <p>Of course, the sun changes throughout the day, so your system doesn't produce 18.45 kW continuously.</p>
+          <p>For example, on an excellent summer day your system might generate: <strong>75 kWh</strong></p>
+          <p>That doesn't mean it ran at 18.45 kW all day. Instead, it may have produced something like:</p>
+
+          <div class="table-responsive mb-3">
+            <table class="table align-middle dictionary-mini-table">
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th>Approximate Power</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td>7:00 AM</td><td>1 kW</td></tr>
+                <tr><td>9:00 AM</td><td>8 kW</td></tr>
+                <tr><td>11:00 AM</td><td>15 kW</td></tr>
+                <tr><td>1:00 PM</td><td>17 kW</td></tr>
+                <tr><td>3:00 PM</td><td>14 kW</td></tr>
+                <tr><td>5:00 PM</td><td>6 kW</td></tr>
+                <tr><td>7:00 PM</td><td>1 kW</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p>The area under that "power curve" over the course of the day is the <strong>total energy</strong>, about <strong>75 kWh</strong>.</p>
+
+          <h3 class="h5 mt-4">Relating it to your home</h3>
+          <p>Before solar, your annual NYSEG usage was: <strong>17,967 kWh/year</strong></p>
+          <p>That averages to: <strong>49.2 kWh/day</strong></p>
+          <p>Think of it this way:</p>
+          <p>Every day your house uses about <strong>49 "units" of electricity</strong>. Each of those units is one <strong>kWh</strong>.</p>
+
+          <h3 class="h5 mt-4">Why your electric bill is in kWh</h3>
+          <p>NYSEG charges you for <strong>energy</strong>, not power.</p>
+          <p>For example, if electricity costs <strong>$0.30 per kWh</strong>:</p>
+          <ul class="dictionary-list">
+            <li>Using <strong>10 kWh</strong> costs about <strong>$3.00</strong></li>
+            <li>Using <strong>50 kWh</strong> costs about <strong>$15.00</strong></li>
+            <li>Using <strong>1,000 kWh</strong> costs about <strong>$300.00</strong></li>
+          </ul>
+
+          <h3 class="h5 mt-4">A water analogy</h3>
+          <p>Imagine a garden hose:</p>
+          <ul class="dictionary-list">
+            <li><strong>kW</strong> = how fast the water is flowing (gallons per minute).</li>
+            <li><strong>kWh</strong> = how many gallons of water filled the bucket.</li>
+          </ul>
+          <p>The flow rate tells you <strong>how fast</strong> you're filling the bucket. The total gallons tell you <strong>how much water you actually collected</strong>.</p>
+          <p>That's exactly the relationship between <strong>kW</strong> and <strong>kWh</strong>.</p>
+          <p class="mb-0">For your solar system, the <strong>18.45 kW</strong> rating tells you how much power it can produce at any instant under ideal conditions, while the <strong>11,141 kWh/year</strong> guarantee tells you the total amount of electrical energy Sunrun expects it to generate over an entire year.</p>
+        </div>
+      </div>
+
+      <div class="tab-pane fade" id="solar-terms" role="tabpanel" aria-labelledby="solar-terms-tab" tabindex="0">
+        <div class="dictionary-article">
+          <h2 class="h4 mb-3">Solar Terms</h2>
+          <div class="dictionary-term-card">
+            <strong>Production</strong>
+            <p class="mb-0">The total solar energy your system generated over a period, usually shown in kWh.</p>
+          </div>
+          <div class="dictionary-term-card">
+            <strong>Irradiance</strong>
+            <p class="mb-0">How intense the sunlight is at a moment in time, usually shown in watts per square meter (W/m²).</p>
+          </div>
+          <div class="dictionary-term-card">
+            <strong>Export</strong>
+            <p class="mb-0">Solar electricity that your house did not use immediately and sent back out to the grid.</p>
+          </div>
+          <div class="dictionary-term-card">
+            <strong>Self-Consumption</strong>
+            <p class="mb-0">Solar electricity that your home used directly instead of exporting it to the grid.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="tab-pane fade" id="billing-terms" role="tabpanel" aria-labelledby="billing-terms-tab" tabindex="0">
+        <div class="dictionary-article">
+          <h2 class="h4 mb-3">Billing Terms</h2>
+          <div class="dictionary-term-card">
+            <strong>Meter 01 Import</strong>
+            <p class="mb-0">Electricity pulled from NYSEG into your home. Higher import means more grid dependence.</p>
+          </div>
+          <div class="dictionary-term-card">
+            <strong>Meter 02 Export</strong>
+            <p class="mb-0">Electricity pushed from your solar system back to NYSEG when production exceeds your home's immediate usage.</p>
+          </div>
+          <div class="dictionary-term-card">
+            <strong>Fixed Charges</strong>
+            <p class="mb-0">Recurring utility charges that usually remain even when solar production is strong.</p>
+          </div>
+          <div class="dictionary-term-card">
+            <strong>Offset</strong>
+            <p class="mb-0">How much of your home's electricity demand is being covered by solar instead of the grid.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
