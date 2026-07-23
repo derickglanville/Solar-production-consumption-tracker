@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Solar Tracker</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/styles.css?v=20260723b">
+</head>
+<body data-page="appliances">
+  <nav class="navbar navbar-expand-lg tracker-nav">
+    <div class="container">
+      <a class="navbar-brand fw-semibold" href="index.html">Solar Production & Consumption Tracker</a>
+      <div class="navbar-nav ms-auto">
+        <a class="nav-link" href="index.html">Dashboard</a>
+        <a class="nav-link" href="entries.html">Daily Entry</a>
+        <a class="nav-link" href="appliances.html">Appliances</a>
+        <a class="nav-link" href="contract-summary.html">Contract Summary</a>
+        <a class="nav-link" href="settings.html">Settings</a>
+        <a class="nav-link nav-link-button" href="dictionary.html">Dictionary</a>
+        <a class="nav-link" href="solar_tracker_demo_export.csv">CSV Export</a>
+      </div>
+    </div>
+  </nav>
+  <main class="py-4">
+    <div class="container">
+      <section class="hero-panel mb-4">
+        <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+          <div>
+            <p class="eyebrow mb-2">Workbook Viewer</p>
+            <h1 class="hero-title mb-2">Appliances &amp; Device Load Viewer</h1>
+            <p class="text-muted mb-0">
+              Review estimated device power in the static GitHub Pages view. Editing here is browser-only and does not sync back to the workbook.
+            </p>
+          </div>
+          <div class="d-flex flex-wrap gap-2">
+            <button type="button" id="appliances-new" class="btn btn-contract btn-sm">New Record</button>
+            <button type="button" id="appliances-reload" class="btn btn-contract btn-sm">Reload Snapshot</button>
+            <button type="button" id="appliances-save" class="btn btn-sun btn-sm">Save in Browser</button>
+            <a class="btn btn-contract btn-sm" href="../Applicances/Appliances.xlsx">Download XLSX</a>
+          </div>
+        </div>
+      </section>
+
+      <div id="appliances-status"></div>
+
+      <section class="row g-3 mb-4">
+        <div class="col-xxl-2 col-xl-4 col-md-6">
+          <div class="metric-card sun">
+            <span>Estimated Monthly Use</span>
+            <strong id="appliance-total-monthly">0 kWh</strong>
+            <small>Total across all listed appliances.</small>
+          </div>
+        </div>
+        <div class="col-xxl-2 col-xl-4 col-md-6">
+          <div class="metric-card sky">
+            <span>Estimated Daily Use</span>
+            <strong id="appliance-total-daily">0 kWh</strong>
+            <small>Typical day from the current assumptions.</small>
+          </div>
+        </div>
+        <div class="col-xxl-2 col-xl-4 col-md-6">
+          <div class="metric-card money">
+            <span>Monthly Estimated Cost</span>
+            <strong id="appliance-monthly-cost">$0</strong>
+            <small id="appliance-monthly-cost-label">At the current electric rate.</small>
+          </div>
+        </div>
+        <div class="col-xxl-2 col-xl-4 col-md-6">
+          <div class="metric-card export">
+            <span>Solar Cost Offset</span>
+            <strong id="appliance-solar-offset">$0</strong>
+            <small id="appliance-solar-offset-label">Value covered by expected solar offset.</small>
+          </div>
+        </div>
+        <div class="col-xxl-2 col-xl-4 col-md-6">
+          <div class="metric-card export">
+            <span>Highest Instant Draw</span>
+            <strong id="appliance-highest-kw">-</strong>
+            <small id="appliance-highest-kw-label">Largest single-device kW estimate.</small>
+          </div>
+        </div>
+        <div class="col-xxl-2 col-xl-4 col-md-6">
+          <div class="metric-card money">
+            <span>Biggest Monthly User</span>
+            <strong id="appliance-highest-monthly">-</strong>
+            <small id="appliance-highest-monthly-label">Most likely monthly energy driver.</small>
+          </div>
+        </div>
+      </section>
+
+      <section class="row g-3">
+        <div class="col-xxl-3 col-xl-4">
+          <div class="card tracker-card h-100">
+            <div class="card-body">
+              <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+                <h2 class="h5 mb-0">Load Summary</h2>
+                <span class="entry-source-pill">Approximate</span>
+              </div>
+              <p class="text-muted small mb-3">
+                Static snapshot for GitHub Pages. Use the local app for workbook-backed editing and saving.
+              </p>
+              <div class="info-grid mb-4">
+                <div><span>Workbook Rows</span><strong id="appliance-record-count">0</strong></div>
+                <div><span>Rooms Covered</span><strong id="appliance-room-count">0</strong></div>
+                <div><span>Top Room Load</span><strong id="appliance-top-room">-</strong></div>
+                <div><span>Download</span><strong>Editable XLSX</strong></div>
+              </div>
+              <h3 class="h6 mb-3">Top Estimated Monthly Loads</h3>
+              <div id="appliance-top-list" class="appliance-top-list"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-xxl-9 col-xl-8">
+          <div class="card tracker-card">
+            <div class="card-body">
+              <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                <div>
+                  <h2 class="h5 mb-1">Editable Appliance Table</h2>
+                  <p class="text-muted small mb-0">Sort order follows highest estimated monthly energy use first.</p>
+                </div>
+                <div class="d-flex flex-wrap gap-2">
+                  <button type="button" id="appliances-popout" class="btn btn-contract btn-sm">Pop Out Table</button>
+                </div>
+              </div>
+              <div id="appliances-table-panel" class="appliances-table-panel">
+                <div class="table-responsive appliances-table-scroll">
+                  <table class="table align-middle appliance-table">
+                    <thead>
+                      <tr>
+                        <th>Appliance</th>
+                        <th>Room</th>
+                        <th class="text-end">Typical kW</th>
+                        <th class="text-end">Hours/Day</th>
+                        <th class="text-end">Daily kWh</th>
+                        <th class="text-end">Monthly kWh</th>
+                        <th>Recommendation</th>
+                        <th>Source</th>
+                        <th>Notes</th>
+                        <th>Delete</th>
+                      </tr>
+                    </thead>
+                    <tbody id="appliances-table-body"></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <div id="appliances-popout-shell" class="appliances-popout-shell d-none" aria-hidden="true">
+    <div class="appliances-popout-backdrop" data-close-popout="true"></div>
+    <div class="appliances-popout-dialog">
+      <div class="d-flex justify-content-between align-items-center gap-2 mb-3">
+        <div>
+          <h2 class="h5 mb-1">Appliance Table Pop-Out</h2>
+          <p class="text-muted small mb-0">Focused reading and editing view.</p>
+        </div>
+        <button type="button" id="appliances-popout-close" class="btn btn-contract btn-sm">Close</button>
+      </div>
+      <div id="appliances-popout-mount"></div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="assets/js/site-bootstrap.js?v=20260723b"></script>
+  <script src="assets/js/firebase-config.js?v=20260723b"></script>
+  <script>
+    window.APPLIANCES_BOOTSTRAP = {
+      records: [
+        { appliance: "Ductless Air AC 220 volt", room: "Dining room", typical_kw: 1.2, typical_hours_per_day: 8, estimated_daily_kwh: 9.6, estimated_monthly_kwh: 288, recommendation: "Major cooling load. Clean filters and use setback temperatures to reduce runtime.", estimated_source: "Estimated baseline", notes: "Single-zone ductless cooling estimate during active summer use." },
+        { appliance: "Portable AC", room: "Master bedroom", typical_kw: 1.1, typical_hours_per_day: 8, estimated_daily_kwh: 8.8, estimated_monthly_kwh: 264, recommendation: "High summer load. Seal the room, clean the filter, and consider a higher-efficiency cooling option.", estimated_source: "Estimated baseline", notes: "Portable air-conditioner summer runtime estimate." },
+        { appliance: "Portable AC", room: "Office upstaris", typical_kw: 1.1, typical_hours_per_day: 8, estimated_daily_kwh: 8.8, estimated_monthly_kwh: 264, recommendation: "High summer load. Seal the room, clean the filter, and consider a higher-efficiency cooling option.", estimated_source: "Estimated baseline", notes: "Portable air-conditioner summer runtime estimate." },
+        { appliance: "Portable AC", room: "Theo's room", typical_kw: 1.1, typical_hours_per_day: 8, estimated_daily_kwh: 8.8, estimated_monthly_kwh: 264, recommendation: "High summer load. Seal the room, clean the filter, and consider a higher-efficiency cooling option.", estimated_source: "Estimated baseline", notes: "Portable air-conditioner summer runtime estimate." },
+        { appliance: "Electric base heater", room: "Family Room", typical_kw: 1.5, typical_hours_per_day: 4, estimated_daily_kwh: 6, estimated_monthly_kwh: 180, recommendation: "Resistance heat is expensive. Reduce runtime where possible and consider a heat-pump upgrade.", estimated_source: "Estimated baseline", notes: "Per-heater seasonal estimate; winter usage can be much higher." },
+        { appliance: "GE Oven", room: "Kitchen", typical_kw: 3.5, typical_hours_per_day: 1.5, estimated_daily_kwh: 5.25, estimated_monthly_kwh: 157.5, recommendation: "Batch cooking or washing helps. Eco modes can reduce energy use.", estimated_source: "Estimated baseline", notes: "Electric oven heating-element estimate; existing workbook note suggested 6-7 kWh per use day." },
+        { appliance: "Dehumidifyer", room: "Basement", typical_kw: 0.6, typical_hours_per_day: 8, estimated_daily_kwh: 4.8, estimated_monthly_kwh: 144, recommendation: "Long runtime adds up. Raise the humidity setpoint a bit and keep the area sealed.", estimated_source: "Estimated baseline", notes: "Continuous summer moisture-control estimate." },
+        { appliance: "Clothes Dryer", room: "Basement", typical_kw: 5, typical_hours_per_day: 0.75, estimated_daily_kwh: 3.75, estimated_monthly_kwh: 112.5, recommendation: "Run full loads, clean the vent, and use lower-heat cycles when practical.", estimated_source: "Estimated baseline", notes: "Typical electric dryer heating load." },
+        { appliance: "Dishwasher", room: "Kitchen", typical_kw: 1.5, typical_hours_per_day: 1.5, estimated_daily_kwh: 2.25, estimated_monthly_kwh: 67.5, recommendation: "Batch cooking or washing helps. Eco modes can reduce energy use.", estimated_source: "Estimated baseline", notes: "Heated wash and dry cycle estimate." },
+        { appliance: "Desktop computer - runs oftn", room: "Theo's room", typical_kw: 0.25, typical_hours_per_day: 8, estimated_daily_kwh: 2, estimated_monthly_kwh: 60, recommendation: "Enable sleep timers and aggressive power-saving settings.", estimated_source: "Estimated baseline", notes: "Desktop system estimate for regular active use." },
+        { appliance: "Refrigderator", room: "Kitchen", typical_kw: 0.15, typical_hours_per_day: 10, estimated_daily_kwh: 1.5, estimated_monthly_kwh: 45, recommendation: "Check seals and keep coils clean so the compressor does not run longer than needed.", estimated_source: "Estimated baseline", notes: "Compressor-equivalent runtime estimate." },
+        { appliance: "Weil Mclain Boiler", room: "Basement", typical_kw: 0.18, typical_hours_per_day: 8, estimated_daily_kwh: 1.44, estimated_monthly_kwh: 43.2, recommendation: "Worth monitoring. A small cut in daily runtime could noticeably reduce consumption.", estimated_source: "Estimated baseline", notes: "Circulator, blower, and control power only, not fuel heat content." },
+        { appliance: "Freezer", room: "Basement", typical_kw: 0.12, typical_hours_per_day: 10, estimated_daily_kwh: 1.2, estimated_monthly_kwh: 36, recommendation: "Check seals and keep coils clean so the compressor does not run longer than needed.", estimated_source: "Estimated baseline", notes: "Compressor-equivalent runtime estimate." },
+        { appliance: "Hot Water Tank", room: "Basement", typical_kw: 0.08, typical_hours_per_day: 10, estimated_daily_kwh: 0.8, estimated_monthly_kwh: 24, recommendation: "Indirect load through the boiler. Lower standby losses with pipe insulation, tank temperature tuning, and lower hot-water waste.", estimated_source: "Estimated baseline", notes: "Indirect hot water tank load represented as added boiler runtime and controls." },
+        { appliance: "Small coffee heater", room: "Office upstaris", typical_kw: 0.2, typical_hours_per_day: 4, estimated_daily_kwh: 0.8, estimated_monthly_kwh: 24, recommendation: "Worth monitoring. A small cut in daily runtime could noticeably reduce consumption.", estimated_source: "Estimated baseline", notes: "Mug warmer / small plate heater estimate." },
+        { appliance: "Computer monitors - 2", room: "Office upstaris", typical_kw: 0.08, typical_hours_per_day: 8, estimated_daily_kwh: 0.64, estimated_monthly_kwh: 19.2, recommendation: "Enable sleep timers and aggressive power-saving settings.", estimated_source: "Estimated baseline", notes: "Two monitors combined." },
+        { appliance: "65\" TV", room: "Living room", typical_kw: 0.12, typical_hours_per_day: 5, estimated_daily_kwh: 0.6, estimated_monthly_kwh: 18, recommendation: "Enable sleep timers and aggressive power-saving settings.", estimated_source: "Estimated baseline", notes: "Modern large-format LED television estimate." },
+        { appliance: "65\" TV", room: "Master bedroom", typical_kw: 0.12, typical_hours_per_day: 5, estimated_daily_kwh: 0.6, estimated_monthly_kwh: 18, recommendation: "Enable sleep timers and aggressive power-saving settings.", estimated_source: "Estimated baseline", notes: "Modern large-format LED television estimate." },
+        { appliance: "55\" TV", room: "Family Room", typical_kw: 0.09, typical_hours_per_day: 5, estimated_daily_kwh: 0.45, estimated_monthly_kwh: 13.5, recommendation: "Enable sleep timers and aggressive power-saving settings.", estimated_source: "Estimated baseline", notes: "Modern LED television estimate." },
+        { appliance: "Washing machine", room: "Basement", typical_kw: 0.5, typical_hours_per_day: 0.75, estimated_daily_kwh: 0.38, estimated_monthly_kwh: 11.4, recommendation: "Lower estimated load. Focus first on higher-kWh appliances unless usage changes a lot.", estimated_source: "Estimated baseline", notes: "Motor and wash-cycle average draw." },
+        { appliance: "Mini computer Intel NUC", room: "Office upstaris", typical_kw: 0.03, typical_hours_per_day: 12, estimated_daily_kwh: 0.36, estimated_monthly_kwh: 10.8, recommendation: "Enable sleep timers and aggressive power-saving settings.", estimated_source: "Estimated baseline", notes: "Small-form-factor computer estimate." },
+        { appliance: "Rice cooker, blender, toaster", room: "Kitchen", typical_kw: 1.2, typical_hours_per_day: 0.3, estimated_daily_kwh: 0.36, estimated_monthly_kwh: 10.8, recommendation: "Lower estimated load. Focus first on higher-kWh appliances unless usage changes a lot.", estimated_source: "Estimated baseline", notes: "Grouped small-kitchen-appliance estimate." },
+        { appliance: "Computer monitor", room: "Theo's room", typical_kw: 0.04, typical_hours_per_day: 8, estimated_daily_kwh: 0.32, estimated_monthly_kwh: 9.6, recommendation: "Enable sleep timers and aggressive power-saving settings.", estimated_source: "Estimated baseline", notes: "Single monitor estimate." },
+        { appliance: "Coffee maker", room: "Kitchen", typical_kw: 1, typical_hours_per_day: 0.25, estimated_daily_kwh: 0.25, estimated_monthly_kwh: 7.5, recommendation: "Lower estimated load. Focus first on higher-kWh appliances unless usage changes a lot.", estimated_source: "Estimated baseline", notes: "Brew cycle estimate." },
+        { appliance: "4 Lamps", room: "Master bedroom", typical_kw: 0.04, typical_hours_per_day: 5, estimated_daily_kwh: 0.2, estimated_monthly_kwh: 6, recommendation: "Low load if LED. Swap any remaining non-LED bulbs first.", estimated_source: "Estimated baseline", notes: "Assumes four efficient LED lamps." },
+        { appliance: "Microware oven 1000 watt", room: "Kitchen", typical_kw: 1, typical_hours_per_day: 0.25, estimated_daily_kwh: 0.25, estimated_monthly_kwh: 7.5, recommendation: "Lower estimated load. Focus first on higher-kWh appliances unless usage changes a lot.", estimated_source: "Estimated baseline", notes: "Nameplate microwave output rounded to input draw." },
+        { appliance: "Garage door opener - 2", room: "Garage", typical_kw: 0.5, typical_hours_per_day: 0.1, estimated_daily_kwh: 0.05, estimated_monthly_kwh: 1.5, recommendation: "Lower estimated load. Focus first on higher-kWh appliances unless usage changes a lot.", estimated_source: "Estimated baseline", notes: "Short burst load across two openers." },
+        { appliance: "Lamps -2", room: "Theo's room", typical_kw: 0.02, typical_hours_per_day: 5, estimated_daily_kwh: 0.1, estimated_monthly_kwh: 3, recommendation: "Low load if LED. Swap any remaining non-LED bulbs first.", estimated_source: "Estimated baseline", notes: "Two efficient LED lamps." },
+        { appliance: "Lamps -2", room: "Shanelle's room", typical_kw: 0.02, typical_hours_per_day: 5, estimated_daily_kwh: 0.1, estimated_monthly_kwh: 3, recommendation: "Low load if LED. Swap any remaining non-LED bulbs first.", estimated_source: "Estimated baseline", notes: "Two efficient LED lamps." },
+        { appliance: "55\" TV not used", room: "Theo's room", typical_kw: 0.08, typical_hours_per_day: 0, estimated_daily_kwh: 0, estimated_monthly_kwh: 0, recommendation: "Low load if unused. Keep it unplugged or on a switched strip to avoid standby draw.", estimated_source: "Estimated baseline", notes: "Set as effectively off based on workbook label." }
+      ]
+    };
+  </script>
+  <script type="module" src="assets/js/appliances.js?v=20260723b"></script>
+</body>
+</html>
