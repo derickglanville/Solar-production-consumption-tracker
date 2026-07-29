@@ -17,7 +17,11 @@
         <div>
           <p class="status-title mb-1">
             {% if firebase_status.kind == "success" %}
-            Firebase connected
+            Live data loaded
+            {% elif firebase_status.kind == "local" %}
+            Local snapshot loaded
+            {% elif firebase_status.kind == "loading" %}
+            Connecting to Firebase
             {% else %}
             Firestore connection issue
             {% endif %}
@@ -25,18 +29,18 @@
           <p class="mb-0">{{ firebase_status.message }}</p>
         </div>
         {% if firebase_status.using_demo_data %}
-        <span class="status-pill">Showing demo data</span>
+        <span class="status-pill">{% if firebase_status.kind == "loading" %}Using startup data{% else %}Showing demo data{% endif %}</span>
         {% endif %}
       </div>
     </section>
     {% endif %}
 
     <section class="hero-panel mb-4">
-      <div class="row g-3 align-items-center">
-        <div class="col-lg-8">
+      <div class="dashboard-hero-layout">
+        <div class="dashboard-hero-copy">
           <p class="eyebrow mb-2">Sunrun + NYSEG + Irradiance + Weather</p>
-          <div class="d-flex flex-wrap align-items-center gap-2">
-            <h1 class="hero-title mb-0">Solar performance and guarantee tracking</h1>
+          <h1 class="hero-title mb-2">Solar performance and guarantee tracking</h1>
+          <div class="dashboard-hero-actions">
             <button
               type="button"
               class="btn btn-contract btn-sm"
@@ -49,26 +53,30 @@
               data-bs-toggle="modal"
               data-bs-target="#dashboardIntroModal"
             >About</button>
+            <button
+              type="button"
+              class="btn btn-sun btn-sm"
+              onclick="window.location.assign(window.location.pathname + '?refresh=' + Date.now())"
+              title="Re-read the SunRun CSV and refresh live Firebase data"
+            >Force Load Data</button>
           </div>
         </div>
-        <div class="col-lg-4">
-          <div class="stat-callout">
-            <div class="d-flex justify-content-between align-items-start gap-2">
-              <span class="small-label mb-0">Annual Projection</span>
-              <button
-                type="button"
-                class="metric-info-button"
-                data-bs-toggle="modal"
-                data-bs-target="#annualProjectionModal"
-                aria-label="Explain annual projection calculation"
-              >?</button>
-            </div>
-            <div class="callout-value">{{ "{:,.0f}".format(metrics.annual_projection) }} kWh</div>
-            <div class="{% if metrics.projection_vs_guarantee_kwh >= 0 %}text-success{% else %}text-danger{% endif %}">
-              {% if metrics.projection_vs_guarantee_kwh >= 0 %}Ahead{% else %}Behind{% endif %}
-              {{ "{:,.0f}".format(metrics.projection_vs_guarantee_kwh|abs) }} kWh
-              ({{ "%.1f"|format(metrics.projection_vs_guarantee_pct|abs) }}%)
-            </div>
+        <div class="stat-callout dashboard-projection-callout">
+          <div class="d-flex justify-content-between align-items-start gap-2">
+            <span class="small-label mb-0">Annual Projection</span>
+            <button
+              type="button"
+              class="metric-info-button"
+              data-bs-toggle="modal"
+              data-bs-target="#annualProjectionModal"
+              aria-label="Explain annual projection calculation"
+            >?</button>
+          </div>
+          <div class="callout-value">{{ "{:,.0f}".format(metrics.annual_projection) }} kWh</div>
+          <div class="projection-difference {% if metrics.projection_vs_guarantee_kwh >= 0 %}text-success{% else %}text-danger{% endif %}">
+            {% if metrics.projection_vs_guarantee_kwh >= 0 %}Ahead{% else %}Behind{% endif %}
+            {{ "{:,.0f}".format(metrics.projection_vs_guarantee_kwh|abs) }} kWh
+            ({{ "%.1f"|format(metrics.projection_vs_guarantee_pct|abs) }}%)
           </div>
         </div>
       </div>
@@ -238,30 +246,32 @@
       </div>
     </section>
 
-    <section class="row g-3 mb-4">
+    <section class="row g-2 mb-4 dashboard-summary-row">
       <div class="col-md-6 col-xl-3">
-        <div class="metric-card sun">
+        <div
+          class="metric-card dashboard-summary-metric sun"
+          title="{% if metrics.today_pending_sunrun %}Today's value is pending final data from SunRun. {% endif %}Yesterday: {{ '%.1f'|format(metrics.yesterday_production) }} kWh{% if metrics.yesterday_pending_sunrun %}; yesterday is also pending final SunRun data{% endif %}."
+        >
           <span>Today's Production</span>
           <strong>{{ "%.1f"|format(metrics.today_production) }} kWh</strong>
-          <small>Yesterday: {{ "%.1f"|format(metrics.yesterday_production) }} kWh</small>
+          {% if metrics.today_pending_sunrun %}<span class="metric-status-dot" aria-label="Pending final SunRun data"></span>{% endif %}
         </div>
       </div>
       <div class="col-md-6 col-xl-3">
-        <div class="metric-card export">
+        <div class="metric-card dashboard-summary-metric export" title="Today's grid import: {{ '%.1f'|format(metrics.today_import) }} kWh.">
           <span>Today's Export</span>
+          <span class="metric-corner-detail">Import {{ "%.1f"|format(metrics.today_import) }}</span>
           <strong>{{ "%.1f"|format(metrics.today_export) }} kWh</strong>
-          <small>Import: {{ "%.1f"|format(metrics.today_import) }} kWh</small>
         </div>
       </div>
       <div class="col-md-6 col-xl-3">
-        <div class="metric-card sky">
+        <div class="metric-card dashboard-summary-metric sky" title="Current 7-day average production: {{ '%.1f'|format(metrics.weekly_average) }} kWh.">
           <span>Today's Irradiance</span>
           <strong>{{ "%.0f"|format(metrics.today_irradiance) }} W/m²</strong>
-          <small>Weekly Avg: {{ "%.1f"|format(metrics.weekly_average) }} kWh</small>
         </div>
       </div>
       <div class="col-md-6 col-xl-3">
-        <div class="metric-card money">
+        <div class="metric-card dashboard-summary-metric money" title="Estimated annual savings: ${{ '{:,.0f}'.format(metrics.annual_savings) }}. Use the help button for the full calculation.">
           <div class="d-flex justify-content-between align-items-start gap-2">
             <span>Monthly Savings</span>
             <button
@@ -273,7 +283,51 @@
             >?</button>
           </div>
           <strong>${{ "{:,.0f}".format(metrics.monthly_savings) }}</strong>
-          <small>Annual: ${{ "{:,.0f}".format(metrics.annual_savings) }}</small>
+        </div>
+      </div>
+    </section>
+
+    <section class="mb-4">
+      <div class="card tracker-card operational-snapshot-card">
+        <div class="card-body">
+          <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
+            <div>
+              <p class="eyebrow mb-2">Operational Snapshot</p>
+              <h2 class="h5 mb-1">Current production and smart meter summary</h2>
+              <p class="text-muted mb-0">Calculated from the current dashboard dataset. Production uses confirmed SunRun days, while Import (01) and Export (02) use the smart meter history.</p>
+            </div>
+            <span class="operational-snapshot-date">Latest confirmed SunRun day: {{ metrics.latest_confirmed_production_date_label }}</span>
+          </div>
+          <div class="info-grid operational-snapshot-grid mb-3">
+            <div><span>Final Production Through {{ metrics.latest_confirmed_production_date_label }}</span><strong>{{ "{:,.1f}".format(metrics.confirmed_production_total) }} kWh</strong></div>
+            <div><span>Average Final Day</span><strong>{{ "{:,.1f}".format(metrics.confirmed_average_daily_production) }} kWh/day</strong></div>
+            <div><span>Best Day</span><strong>{{ "{:,.1f}".format(metrics.confirmed_best_day_production) }} kWh</strong></div>
+            <div><span>Cumulative Guarantee Progress</span><strong>{{ "{:,.1f}".format(metrics.cumulative_guarantee_progress_pct) }}%</strong></div>
+            <div><span>Meter Export Since {{ metrics.smart_meter_start_label }}</span><strong>{{ "{:,.1f}".format(metrics.meter_export_since_install) }} kWh</strong></div>
+            <div><span>Meter Import Since {{ metrics.smart_meter_start_label }}</span><strong>{{ "{:,.1f}".format(metrics.meter_import_since_install) }} kWh</strong></div>
+            <div><span>Net Export Since {{ metrics.smart_meter_start_label }}</span><strong>{{ "{:,.1f}".format(metrics.net_export_since_install) }} kWh</strong></div>
+          </div>
+          <div class="tracker-modal-note operational-snapshot-note">
+            Production is measured by SunRun. Import and export are measured by NYSEG. Estimated home usage = production - export + import. Projected annual production remains in the Annual Projection card above to avoid duplication.
+          </div>
+          <div class="row g-3 mt-1">
+            <div class="col-xl-6">
+              <div class="chart-popout-frame" data-chart-popout-label="Daily SunRun Production">
+                <button type="button" class="btn btn-contract btn-sm chart-popout-button" data-chart-popout>Pop Out</button>
+                <div class="dashboard-chart dashboard-chart-embedded operational-chart-embedded">
+                  {{ charts.operational_production_chart|safe }}
+                </div>
+              </div>
+            </div>
+            <div class="col-xl-6">
+              <div class="chart-popout-frame" data-chart-popout-label="Production, Grid Import/Export and Estimated Usage">
+                <button type="button" class="btn btn-contract btn-sm chart-popout-button" data-chart-popout>Pop Out</button>
+                <div class="dashboard-chart dashboard-chart-embedded operational-chart-embedded">
+                  {{ charts.operational_balance_chart|safe }}
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </section>
@@ -396,8 +450,11 @@
               Estimated bars are hatched, and annual projection uses confirmed rows by default{% if metrics.projection_uses_estimated %} because no confirmed production rows exist yet.{% else %}.{% endif %}
             </div>
             {% endif %}
-            <div class="dashboard-chart dashboard-chart-embedded">
-              {{ charts.daily_chart|safe }}
+            <div class="chart-popout-frame" data-chart-popout-label="Production Overview">
+              <button type="button" class="btn btn-contract btn-sm chart-popout-button" data-chart-popout>Pop Out</button>
+              <div class="dashboard-chart dashboard-chart-embedded">
+                {{ charts.daily_chart|safe }}
+              </div>
             </div>
             <div class="energy-impact-panel mt-3">
               <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
@@ -473,8 +530,11 @@
         <div class="card tracker-card h-100">
           <div class="card-body">
             <h2 class="h5 mb-3">Grid Flow and Virtual Consumption Monitor</h2>
-            <div class="dashboard-chart dashboard-chart-embedded">
-              {{ charts.flow_chart|safe }}
+            <div class="chart-popout-frame" data-chart-popout-label="Grid Flow and Virtual Consumption Monitor">
+              <button type="button" class="btn btn-contract btn-sm chart-popout-button" data-chart-popout>Pop Out</button>
+              <div class="dashboard-chart dashboard-chart-embedded">
+                {{ charts.flow_chart|safe }}
+              </div>
             </div>
           </div>
         </div>
@@ -505,8 +565,11 @@
           <div class="card-body">
             <h2 class="h5 mb-2">Running Totals</h2>
             <p class="text-muted mb-3">Cumulative solar production, grid import, grid export, estimated self-consumption, and cumulative net savings over time.</p>
-            <div class="dashboard-chart dashboard-chart-embedded">
-              {{ charts.running_totals_chart|safe }}
+            <div class="chart-popout-frame" data-chart-popout-label="Running Totals">
+              <button type="button" class="btn btn-contract btn-sm chart-popout-button" data-chart-popout>Pop Out</button>
+              <div class="dashboard-chart dashboard-chart-embedded">
+                {{ charts.running_totals_chart|safe }}
+              </div>
             </div>
           </div>
         </div>
@@ -725,8 +788,11 @@
       <div class="col-lg-4">
         <div class="card tracker-card h-100">
           <div class="card-body">
-            <div class="dashboard-chart dashboard-chart-embedded">
-              {{ charts.irradiance_chart|safe }}
+            <div class="chart-popout-frame" data-chart-popout-label="Production and Irradiance Trend">
+              <button type="button" class="btn btn-contract btn-sm chart-popout-button" data-chart-popout>Pop Out</button>
+              <div class="dashboard-chart dashboard-chart-embedded">
+                {{ charts.irradiance_chart|safe }}
+              </div>
             </div>
           </div>
         </div>
@@ -734,8 +800,11 @@
       <div class="col-lg-4">
         <div class="card tracker-card h-100">
           <div class="card-body">
-            <div class="dashboard-chart dashboard-chart-embedded">
-              {{ charts.weather_chart|safe }}
+            <div class="chart-popout-frame" data-chart-popout-label="Daily Production by Weather">
+              <button type="button" class="btn btn-contract btn-sm chart-popout-button" data-chart-popout>Pop Out</button>
+              <div class="dashboard-chart dashboard-chart-embedded">
+                {{ charts.weather_chart|safe }}
+              </div>
             </div>
           </div>
         </div>
@@ -743,8 +812,11 @@
       <div class="col-lg-4">
         <div class="card tracker-card h-100">
           <div class="card-body">
-            <div class="dashboard-chart dashboard-chart-embedded">
-              {{ charts.monthly_chart|safe }}
+            <div class="chart-popout-frame" data-chart-popout-label="Monthly Progress vs Guarantee">
+              <button type="button" class="btn btn-contract btn-sm chart-popout-button" data-chart-popout>Pop Out</button>
+              <div class="dashboard-chart dashboard-chart-embedded">
+                {{ charts.monthly_chart|safe }}
+              </div>
             </div>
           </div>
         </div>

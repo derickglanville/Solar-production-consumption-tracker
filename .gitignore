@@ -7,3 +7,8 @@ tmp_contract_extract.txt
 
 .DS_Store
 Thumbs.db
+
+node_modules/
+.pnpm-store/
+JSON/application_data_current.json
+JSON/application_data_current.json.tmp

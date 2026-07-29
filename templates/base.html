@@ -8,13 +8,23 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}?v=20260729-sync47">
+  <script src="{{ url_for('main.plotly_javascript') }}"></script>
 </head>
-<body data-page="{{ page_name }}">
+<body data-page="{{ page_name }}" data-local-snapshot-mode="{% if local_snapshot_mode %}true{% else %}false{% endif %}">
   <nav class="navbar navbar-expand-lg tracker-nav">
     <div class="container">
       <a class="navbar-brand fw-semibold" href="{{ url_for('main.dashboard') }}">Solar Production & Consumption Tracker</a>
       <div class="navbar-nav ms-auto">
+        {% if page_name == "dashboard" %}
+        <button
+          type="button"
+          class="nav-link nav-link-button local-dashboard-nav-link"
+          data-validated-local-dashboard
+          data-target-url="http://127.0.0.1:8765/"
+          title="Validate and open the local dashboard on port 8765"
+        >Open Local Dashboard</button>
+        {% endif %}
         <a class="nav-link" href="{{ url_for('main.dashboard') }}">Dashboard</a>
         <a class="nav-link" href="{{ url_for('main.entries') }}">Daily Entry</a>
         <a class="nav-link" href="{{ url_for('main.appliances') }}">Appliances</a>
@@ -42,8 +52,8 @@
   <script>
     window.SOLAR_BOOTSTRAP = {{ bootstrap_data|tojson }};
   </script>
-  <script src="{{ url_for('static', filename='js/firebase-config.js') }}"></script>
-  <script type="module" src="{{ url_for('static', filename='js/app-client.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/firebase-config.js') }}?v=20260729-sync37"></script>
+  <script defer src="{{ url_for('static', filename='js/app-bundle.js') }}?v=20260729-sync47"></script>
   {% block extra_scripts %}{% endblock %}
 </body>
 </html>

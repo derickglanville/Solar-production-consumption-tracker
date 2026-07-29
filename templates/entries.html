@@ -3,7 +3,7 @@
 {% block content %}
 <div id="entries-status"></div>
 <div class="row g-4">
-  <div class="col-lg-4">
+  <div class="col-lg-4 col-xl-4">
     <div class="card tracker-card">
       <div class="card-body">
         <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
@@ -20,28 +20,28 @@
             <button type="button" id="entry-refresh" class="btn btn-contract btn-sm">Refresh Data</button>
           </div>
         </div>
-        <form id="entry-form" class="row g-3">
-          <div class="col-12">
+        <form id="entry-form" class="row g-2 entry-form-compact">
+          <div class="col-md-4">
             <label class="form-label">Date</label>
             <input type="date" name="entry_date" class="form-control" required>
           </div>
-          <div class="col-md-6">
+          <div class="col-md-4">
             <label class="form-label">Solar Irradiance (Peak W/m²)</label>
             <input type="number" step="0.1" name="irradiance_peak_wm2" class="form-control" required>
           </div>
-          <div class="col-md-6">
+          <div class="col-md-4">
             <label class="form-label">Sunrun Daily Production (kWh)</label>
             <input type="number" step="0.1" name="production_kwh" class="form-control" required>
           </div>
-          <div class="col-md-6">
+          <div class="col-md-4">
             <label class="form-label">Meter 01 Import Reading</label>
             <input type="number" step="0.1" name="meter_01_import_reading" class="form-control" required>
           </div>
-          <div class="col-md-6">
+          <div class="col-md-4">
             <label class="form-label">Meter 02 Export Reading</label>
             <input type="number" step="0.1" name="meter_02_export_reading" class="form-control" required>
           </div>
-          <div class="col-md-6">
+          <div class="col-md-4">
             <label class="form-label">Weather</label>
             <select name="weather" class="form-select">
               {% for option in weather_options %}
@@ -49,15 +49,15 @@
               {% endfor %}
             </select>
           </div>
-          <div class="col-md-6">
+          <div class="col-md-4">
             <label class="form-label">Temperature (°F)</label>
             <input type="number" step="0.1" name="temperature_f" class="form-control">
           </div>
-          <div class="col-md-6">
+          <div class="col-md-4">
             <label class="form-label">Daily High (°F)</label>
             <input type="number" step="0.1" name="temperature_high_f" class="form-control">
           </div>
-          <div class="col-md-6">
+          <div class="col-md-4">
             <label class="form-label">Daily Low (°F)</label>
             <input type="number" step="0.1" name="temperature_low_f" class="form-control">
           </div>
@@ -75,21 +75,89 @@
           </div>
           <div class="col-12">
             <label class="form-label">Notes</label>
-            <textarea name="notes" rows="4" class="form-control"></textarea>
+            <textarea name="notes" rows="2" class="form-control"></textarea>
           </div>
-          <div class="col-12 d-flex flex-wrap gap-2">
-            <button class="btn btn-sun" id="entry-save-button">Save Entry</button>
-            <button type="button" class="btn btn-contract" id="entry-clear-button">Clear Form</button>
+          <div class="col-12 d-flex flex-wrap gap-2 entry-form-actions">
+            <button class="btn btn-sun btn-sm" id="entry-save-button">Save Entry</button>
+            <button type="button" class="btn btn-contract btn-sm" id="entry-clear-button">Clear Form</button>
+          </div>
+          <div class="col-12">
+            <div class="meter-simulation-last-run">
+              <span>Last Meter Simulation: <strong id="entry-meter-sim-timestamp">Not run yet</strong></span>
+              <button type="button" class="btn btn-contract btn-sm" id="entry-meter-sim-view-day">View Day Estimates</button>
+            </div>
+          </div>
+          <div class="col-12">
+            <details class="entry-meter-sim card tracker-card tracker-card-soft">
+              <summary class="entry-meter-sim-toggle">
+                <strong>Meter Simulation &amp; Training</strong>
+                <span>Expand to review simulated M01/M02 values or record a calibration checkpoint.</span>
+              </summary>
+              <div class="card-body">
+                <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+                  <div>
+                    <h2 class="h6 mb-1">Meter Simulation</h2>
+                    <p class="text-muted small mb-0">
+                      Intraday estimate for Meter 01 import and Meter 02 export based on comparable weather, prior entries, and a time-of-day schedule.
+                    </p>
+                  </div>
+                  <div class="d-flex flex-wrap gap-2">
+                    <button type="button" id="entry-meter-sim-apply" class="btn btn-contract btn-sm">Apply &amp; Save Simulated Meters</button>
+                  </div>
+                </div>
+                <div class="entry-meter-sim-summary mb-3" id="entry-meter-sim-summary">
+                  Select a date to build a simulated intraday meter estimate.
+                </div>
+                <div class="table-responsive">
+                  <table class="table table-sm align-middle entry-meter-sim-table mb-0">
+                    <thead>
+                      <tr>
+                        <th>Time</th>
+                        <th class="text-end">Import Share</th>
+                        <th class="text-end">Export Share</th>
+                        <th class="text-end">Sim M01</th>
+                        <th class="text-end">Sim M02</th>
+                      </tr>
+                    </thead>
+                    <tbody id="entry-meter-sim-body"></tbody>
+                  </table>
+                </div>
+                <div class="meter-checkpoint mt-3">
+                  <div class="meter-checkpoint-heading">
+                    <strong>Calibration Checkpoint</strong>
+                    <span>Record an occasional actual reading so future estimates learn the error for similar weather and time.</span>
+                  </div>
+                  <div class="meter-checkpoint-grid">
+                    <label>Time<input type="time" id="entry-meter-checkpoint-time" class="form-control form-control-sm"></label>
+                    <label>Sim M01<input type="number" step="0.1" id="entry-meter-checkpoint-predicted-m01" class="form-control form-control-sm"></label>
+                    <label>Sim M02<input type="number" step="0.1" id="entry-meter-checkpoint-predicted-m02" class="form-control form-control-sm"></label>
+                    <label>Actual M01<input type="number" step="0.1" id="entry-meter-checkpoint-actual-m01" class="form-control form-control-sm"></label>
+                    <label>Actual M02<input type="number" step="0.1" id="entry-meter-checkpoint-actual-m02" class="form-control form-control-sm"></label>
+                    <button type="button" id="entry-meter-checkpoint-save" class="btn btn-contract btn-sm">Train Model</button>
+                  </div>
+                </div>
+              </div>
+            </details>
           </div>
         </form>
       </div>
     </div>
   </div>
-  <div class="col-lg-8">
-    <div class="card tracker-card">
+  <div class="col-lg-8 col-xl-8">
+    <div class="card tracker-card entries-history-card" id="entries-history-card">
       <div class="card-body">
-        <h2 class="h5 mb-3">Historical Entries</h2>
-        <div class="table-responsive">
+        <div class="entries-history-toolbar">
+          <div>
+            <h2 class="h5 mb-1">Historical Entries</h2>
+            <p class="text-muted small mb-0"><span id="entries-record-count">{{ entries|length }}</span> records. Select any row to edit it.</p>
+          </div>
+          <div class="entries-history-actions">
+            <button type="button" class="btn btn-contract btn-sm" id="entries-previous-record" title="Select the previous record">Previous</button>
+            <button type="button" class="btn btn-contract btn-sm" id="entries-next-record" title="Select the next record">Next</button>
+            <button type="button" class="btn btn-sun btn-sm" id="entries-history-popout">Pop Out</button>
+          </div>
+        </div>
+        <div class="table-responsive entries-history-window" id="entries-history-window">
           <table class="table align-middle entries-history-table">
             <thead>
               <tr>
@@ -102,13 +170,13 @@
                 <th>High</th>
                 <th>Low</th>
                 <th>Notes</th>
-                <th>Actual / Estimated</th>
+                <th>Status</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody id="entries-table-body">
               {% for entry in entries %}
-              <tr>
+              <tr class="entry-history-row" data-entry-date="{{ entry.entry_date.strftime('%Y-%m-%d') }}" tabindex="0" title="Select this record to edit">
                 <td>{{ entry.entry_date.strftime("%Y-%m-%d") }}</td>
                 <td>{{ "%.1f"|format(entry.production_kwh) }}</td>
                 <td>{{ "%.0f"|format(entry.irradiance_peak_wm2) }}</td>
@@ -119,9 +187,16 @@
                 <td>{% if entry.temperature_low_f is not none %}{{ "%.0f"|format(entry.temperature_low_f) }}°F{% else %}<span class="text-muted">-</span>{% endif %}</td>
                 <td><span class="entry-note-preview" title="{{ entry.notes }}">{{ entry.notes }}</span></td>
                 <td>{% if entry.estimated %}<span class="entry-estimated-pill">Estimated</span>{% else %}<span class="entry-confirmed-pill">Actual</span>{% endif %}</td>
-                <td><button type="button" class="btn btn-contract btn-sm" disabled>Edit</button></td>
+                <td><button type="button" class="btn btn-contract btn-sm entry-edit-button" data-entry-date="{{ entry.entry_date.strftime('%Y-%m-%d') }}">Edit</button></td>
               </tr>
               {% endfor %}
+              {% if entries|length < 18 %}
+              {% for _ in range(18 - entries|length) %}
+              <tr class="entry-empty-row" aria-hidden="true">
+                {% for _ in range(11) %}<td>&nbsp;</td>{% endfor %}
+              </tr>
+              {% endfor %}
+              {% endif %}
             </tbody>
           </table>
         </div>
@@ -129,4 +204,229 @@
     </div>
   </div>
 </div>
+<dialog class="meter-simulation-dialog" id="entry-meter-sim-dialog">
+  <div class="meter-simulation-dialog-header">
+    <div>
+      <div class="eyebrow">Meter Simulation</div>
+      <h2 id="entry-meter-sim-dialog-title">Daily estimates</h2>
+      <p id="entry-meter-sim-dialog-meta"></p>
+    </div>
+    <button type="button" class="btn btn-contract btn-sm" id="entry-meter-sim-dialog-close">Close</button>
+  </div>
+  <div class="table-responsive">
+    <table class="table align-middle meter-simulation-dialog-table">
+      <thead>
+        <tr>
+          <th>Time</th>
+          <th>Import Share</th>
+          <th>Export Share</th>
+          <th>Estimated M01</th>
+          <th>Estimated M02</th>
+        </tr>
+      </thead>
+      <tbody id="entry-meter-sim-dialog-body"></tbody>
+    </table>
+  </div>
+  <div class="meter-simulation-dialog-summary" id="entry-meter-sim-dialog-summary"></div>
+</dialog>
+<style>
+  .entry-meter-sim {
+    margin-top: 0.35rem;
+    padding: 0;
+    border: 1px solid rgba(92, 124, 146, 0.18);
+    border-radius: 20px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(244, 248, 251, 0.94));
+  }
+
+  .entry-meter-sim-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.65rem;
+    padding: 0.65rem 0.8rem;
+    cursor: pointer;
+    list-style: none;
+  }
+
+  .entry-meter-sim-toggle::-webkit-details-marker {
+    display: none;
+  }
+
+  .entry-meter-sim-toggle::after {
+    content: "+";
+    flex: 0 0 auto;
+    color: #56758a;
+    font-size: 1.1rem;
+    font-weight: 700;
+  }
+
+  .entry-meter-sim[open] .entry-meter-sim-toggle::after {
+    content: "−";
+  }
+
+  .entry-meter-sim-toggle span {
+    color: #6f8191;
+    font-size: 0.72rem;
+    font-weight: 400;
+  }
+
+  .entry-meter-sim > .card-body {
+    padding: 0.75rem;
+    border-top: 1px solid rgba(92, 124, 146, 0.14);
+  }
+
+  .meter-simulation-last-run {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.55rem;
+    padding: 0.45rem 0.6rem;
+    border: 1px solid rgba(92, 124, 146, 0.16);
+    border-radius: 10px;
+    background: rgba(242, 247, 249, 0.82);
+    color: #607487;
+    font-size: 0.74rem;
+  }
+
+  .meter-simulation-last-run strong {
+    color: #283c49;
+  }
+
+  .meter-simulation-dialog {
+    width: min(900px, calc(100vw - 32px));
+    max-width: none;
+    padding: 0;
+    border: 0;
+    border-radius: 18px;
+    box-shadow: 0 28px 90px rgba(20, 40, 50, 0.32);
+  }
+
+  .meter-simulation-dialog::backdrop {
+    background: rgba(24, 42, 51, 0.52);
+    backdrop-filter: blur(3px);
+  }
+
+  .meter-simulation-dialog-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1rem 1.1rem 0.75rem;
+    border-bottom: 1px solid rgba(92, 124, 146, 0.14);
+  }
+
+  .meter-simulation-dialog-header h2 {
+    margin: 0.15rem 0 0.1rem;
+    font-size: 1.25rem;
+  }
+
+  .meter-simulation-dialog-header p {
+    margin: 0;
+    color: #6a7d8c;
+    font-size: 0.82rem;
+  }
+
+  .meter-simulation-dialog-table {
+    margin: 0;
+    font-size: 0.86rem;
+  }
+
+  .meter-simulation-dialog-table th,
+  .meter-simulation-dialog-table td {
+    padding: 0.55rem 1rem;
+    white-space: nowrap;
+  }
+
+  .meter-simulation-dialog-summary {
+    padding: 0.8rem 1.1rem 1rem;
+    border-top: 1px solid rgba(92, 124, 146, 0.14);
+    color: #506776;
+    font-size: 0.82rem;
+  }
+
+  .entry-meter-sim__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.8rem;
+    margin-bottom: 0.65rem;
+    flex-wrap: wrap;
+  }
+
+  .entry-meter-sim__header h3 {
+    margin: 0;
+    font-size: 1rem;
+  }
+
+  .entry-meter-sim__summary {
+    margin: 0 0 0.85rem;
+    color: #5d7184;
+    font-size: 0.92rem;
+    line-height: 1.45;
+  }
+
+  .entry-meter-sim__table-wrap {
+    overflow-x: auto;
+  }
+
+  .entry-meter-sim__table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+  }
+
+  .entry-meter-sim__table th,
+  .entry-meter-sim__table td {
+    padding: 0.45rem 0.4rem;
+    border-bottom: 1px solid rgba(92, 124, 146, 0.12);
+    text-align: left;
+    white-space: nowrap;
+  }
+
+  .entry-meter-sim__table tbody tr:last-child td {
+    border-bottom: 0;
+  }
+
+  .entry-meter-sim__muted {
+    color: #7b8ea1;
+    font-size: 0.82rem;
+  }
+
+  .meter-checkpoint {
+    border-top: 1px solid rgba(92, 124, 146, 0.16);
+    padding-top: 0.85rem;
+  }
+
+  .meter-checkpoint-heading {
+    display: flex;
+    align-items: baseline;
+    gap: 0.55rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.55rem;
+  }
+
+  .meter-checkpoint-heading span {
+    color: #6f8191;
+    font-size: 0.76rem;
+  }
+
+  .meter-checkpoint-grid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(82px, 1fr)) auto;
+    align-items: end;
+    gap: 0.45rem;
+  }
+
+  .meter-checkpoint-grid label {
+    color: #647789;
+    font-size: 0.72rem;
+  }
+
+  @media (max-width: 767px) {
+    .meter-checkpoint-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+</style>
+
 {% endblock %}

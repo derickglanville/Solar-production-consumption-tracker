@@ -1,0 +1,12 @@
+{
+  "private": true,
+  "scripts": {
+    "build:browser": "esbuild static/js/app-client.js --bundle --format=iife --target=es2020 --outfile=static/js/app-bundle.js"
+  },
+  "dependencies": {
+    "firebase": "12.16.0"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.8"
+  }
+}

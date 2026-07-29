@@ -1,9 +1,13 @@
 from dataclasses import asdict
-from datetime import date
+from datetime import datetime
+from http.client import HTTPConnection
 from io import StringIO
+import json
+from pathlib import Path
 
 import pandas as pd
-from flask import Blueprint, Response, jsonify, render_template, request, send_from_directory
+from flask import Blueprint, Response, jsonify, render_template, request, send_file, send_from_directory
+from plotly.offline.offline import get_plotlyjs
 
 from .ai import answer_question, get_ai_status
 from .analytics import build_alerts, build_chart_bundle, build_dataframe, calculate_metrics
@@ -12,6 +16,8 @@ from .firestore import AppConfig, DailySolarEntry
 from .historical_usage import historical_usage_to_dict, load_historical_usage_summary
 from .monthly_bill import load_monthly_bill_summary, monthly_bill_to_dict
 from .seed import build_sample_entries
+from .sunrun_production import load_sunrun_daily_production
+from .time_utils import tracker_today
 
 
 main_blueprint = Blueprint("main", __name__)
@@ -28,6 +34,10 @@ WEATHER_OPTIONS = [
     "Wind",
     "Unknown",
 ]
+
+LOCAL_DASHBOARD_URL = "http://127.0.0.1:8765/"
+LOCAL_JSON_DIRECTORY = Path(__file__).resolve().parent.parent / "JSON"
+LOCAL_APPLICATION_SNAPSHOT_PATH = LOCAL_JSON_DIRECTORY / "application_data_current.json"
 
 
 def entry_to_dict(entry):
@@ -50,14 +60,71 @@ def build_bootstrap_data():
         expected_annual_home_usage_kwh=config.annual_home_usage_kwh
     )
     monthly_bill = load_monthly_bill_summary()
+    sunrun_production = load_sunrun_daily_production()
     return {
+        "tracker_today": tracker_today().isoformat(),
         "sample_entries": [entry_to_dict(entry) for entry in sample_entries],
         "default_config": config_to_dict(config),
         "weather_options": WEATHER_OPTIONS,
         "ai_status": get_ai_status(),
         "historical_usage": historical_usage_to_dict(historical_usage),
         "monthly_bill": monthly_bill_to_dict(monthly_bill),
+        "sunrun_production": sunrun_production,
     }
+
+
+def build_local_application_snapshot(firebase_payload):
+    config = firebase_payload.get("config") or {}
+    entries = firebase_payload.get("entries") or []
+    expected_usage = float(config.get("annual_home_usage_kwh") or AppConfig().annual_home_usage_kwh)
+    historical_usage = load_historical_usage_summary(
+        expected_annual_home_usage_kwh=expected_usage
+    )
+
+    return {
+        "schema_version": 1,
+        "generated_at": datetime.now().astimezone().isoformat(),
+        "timezone": "America/New_York",
+        "firebase": {
+            "project_id": "glanville-issue-tracker",
+            "entry_collection": "solar_daily_entries",
+            "configuration_collection": "solar_tracker_config",
+            "configuration_document": "primary",
+            "synced_by": "Firebase Web SDK through the local Flask application",
+        },
+        "schedule": {
+            "hourly_start": "09:00",
+            "hourly_end": "20:00",
+            "frequency": "hourly",
+            "requires_local_app_open": True,
+        },
+        "daily_entries": entries,
+        "configuration": config,
+        "sunrun_production": load_sunrun_daily_production(),
+        "historical_usage": historical_usage_to_dict(historical_usage),
+        "monthly_bill": monthly_bill_to_dict(load_monthly_bill_summary()),
+        "appliances": load_appliance_summary(),
+        "source_notes": {
+            "production": "SunRun production CSV/history",
+            "meter_01": "NYSEG smart meter cumulative import register",
+            "meter_02": "NYSEG smart meter cumulative export register",
+            "weather_and_irradiance": "Open-Meteo values stored with each daily entry",
+        },
+    }
+
+
+def _should_hide_entry_from_display(entry, sunrun_production=None):
+    today_value = tracker_today()
+    return entry.entry_date > today_value
+
+
+def filter_entries_for_display(entries, sunrun_production=None):
+    ordered_entries = sorted(entries, key=lambda entry: entry.entry_date)
+    return [
+        entry
+        for entry in ordered_entries
+        if not _should_hide_entry_from_display(entry, sunrun_production)
+    ]
 
 
 def build_contract_summary():
@@ -147,7 +214,7 @@ def build_contract_summary():
 def build_billing_outlook(config, metrics, monthly_bill):
     contract_year_one_payment = 153.19
     annual_escalator_rate = (config.sunrun_escalator_pct or 0.0) / 100.0
-    years_since_activation = max(0, date.today().year - config.activation_date.year)
+    years_since_activation = max(0, tracker_today().year - config.activation_date.year)
     sunrun_current_monthly = contract_year_one_payment * ((1 + annual_escalator_rate) ** years_since_activation)
     sunrun_next_year_monthly = sunrun_current_monthly * (1 + annual_escalator_rate)
 
@@ -293,11 +360,13 @@ def hydrate_config(item):
 
 
 def render_dashboard(entries, config, firebase_status):
-    df = build_dataframe(entries, config)
+    sunrun_production = load_sunrun_daily_production()
+    visible_entries = filter_entries_for_display(entries, sunrun_production)
+    df = build_dataframe(visible_entries, config)
     metrics = calculate_metrics(df, config)
     alerts = build_alerts(df, config)
     charts = build_chart_bundle(df, config)
-    recent_entries = list(reversed(entries[-10:]))
+    recent_entries = list(reversed(visible_entries[-10:]))
     historical_usage = load_historical_usage_summary(
         expected_annual_home_usage_kwh=config.annual_home_usage_kwh
     )
@@ -324,26 +393,29 @@ def render_dashboard(entries, config, firebase_status):
 def dashboard():
     entries = build_sample_entries()
     config = AppConfig()
+    sunrun_production = load_sunrun_daily_production()
+    visible_entries = filter_entries_for_display(entries, sunrun_production)
     historical_usage = load_historical_usage_summary(
         expected_annual_home_usage_kwh=config.annual_home_usage_kwh
     )
     monthly_bill = load_monthly_bill_summary()
-    metrics = calculate_metrics(build_dataframe(entries, config), config)
+    metrics = calculate_metrics(build_dataframe(visible_entries, config), config)
     billing_outlook = build_billing_outlook(config, metrics, monthly_bill)
     energy_impact = build_energy_impact_summary(config, metrics)
     firebase_status = {
-        "message": "Loading live Firebase data in the browser. Demo data is shown until the connection completes.",
-        "kind": "warning",
+        "message": "Loading live Firebase data in the browser. Startup data is shown until the connection completes.",
+        "kind": "loading",
         "using_demo_data": True,
     }
     return render_template(
         "dashboard.html",
         page_name="dashboard",
+        local_snapshot_mode=False,
         bootstrap_data=build_bootstrap_data(),
         metrics=metrics,
-        alerts=build_alerts(build_dataframe(entries, config), config),
-        charts=build_chart_bundle(build_dataframe(entries, config), config),
-        recent_entries=list(reversed(entries[-10:])),
+        alerts=build_alerts(build_dataframe(visible_entries, config), config),
+        charts=build_chart_bundle(build_dataframe(visible_entries, config), config),
+        recent_entries=list(reversed(visible_entries[-10:])),
         config=config,
         firebase_status=firebase_status,
         historical_usage=historical_usage_to_dict(historical_usage),
@@ -358,6 +430,7 @@ def entries():
     return render_template(
         "entries.html",
         page_name="entries",
+        local_snapshot_mode=False,
         bootstrap_data=build_bootstrap_data(),
         entries=list(reversed(build_sample_entries())),
         weather_options=WEATHER_OPTIONS,
@@ -369,6 +442,7 @@ def settings():
     return render_template(
         "settings.html",
         page_name="settings",
+        local_snapshot_mode=False,
         bootstrap_data=build_bootstrap_data(),
         config=AppConfig(),
     )
@@ -379,6 +453,7 @@ def contract_summary():
     return render_template(
         "contract_summary.html",
         page_name="contract-summary",
+        local_snapshot_mode=False,
         bootstrap_data=build_bootstrap_data(),
         contract_summary=build_contract_summary(),
     )
@@ -389,6 +464,7 @@ def dictionary():
     return render_template(
         "dictionary.html",
         page_name="dictionary",
+        local_snapshot_mode=False,
         bootstrap_data=build_bootstrap_data(),
     )
 
@@ -398,6 +474,7 @@ def appliances():
     return render_template(
         "appliances.html",
         page_name="appliances",
+        local_snapshot_mode=False,
         bootstrap_data=build_bootstrap_data(),
         appliances=load_appliance_summary(),
     )
@@ -457,6 +534,82 @@ def appliances_save_api():
     return jsonify(save_appliance_records(records))
 
 
+@main_blueprint.route("/api/validate-local-dashboard")
+def validate_local_dashboard():
+    connection = HTTPConnection("127.0.0.1", 8765, timeout=3)
+    try:
+        connection.request("GET", "/")
+        response = connection.getresponse()
+        return jsonify(
+            {
+                "available": 200 <= response.status < 500,
+                "status": response.status,
+                "url": LOCAL_DASHBOARD_URL,
+            }
+        )
+    except OSError as error:
+        return jsonify(
+            {
+                "available": False,
+                "status": None,
+                "url": LOCAL_DASHBOARD_URL,
+                "message": str(error),
+            }
+        )
+    finally:
+        connection.close()
+
+
+@main_blueprint.route("/api/local-data-snapshot", methods=["GET", "POST"])
+def local_data_snapshot_api():
+    if request.method == "GET":
+        if not LOCAL_APPLICATION_SNAPSHOT_PATH.exists():
+            return jsonify(
+                {
+                    "available": False,
+                    "path": str(LOCAL_APPLICATION_SNAPSHOT_PATH),
+                    "message": "The local application snapshot has not been created yet.",
+                }
+            ), 404
+        return send_file(
+            LOCAL_APPLICATION_SNAPSHOT_PATH,
+            mimetype="application/json",
+            as_attachment=False,
+            download_name=LOCAL_APPLICATION_SNAPSHOT_PATH.name,
+            max_age=0,
+        )
+
+    if request.remote_addr not in {"127.0.0.1", "::1"}:
+        return jsonify({"saved": False, "message": "Snapshot writes are localhost-only."}), 403
+
+    payload = request.get_json(silent=True) or {}
+    if not isinstance(payload.get("entries"), list) or not isinstance(payload.get("config"), dict):
+        return jsonify(
+            {
+                "saved": False,
+                "message": "Snapshot payload must contain Firebase entries and configuration.",
+            }
+        ), 400
+
+    snapshot = build_local_application_snapshot(payload)
+    LOCAL_JSON_DIRECTORY.mkdir(parents=True, exist_ok=True)
+    temporary_path = LOCAL_APPLICATION_SNAPSHOT_PATH.with_suffix(".json.tmp")
+    temporary_path.write_text(
+        json.dumps(snapshot, indent=2, ensure_ascii=False),
+        encoding="utf-8",
+    )
+    temporary_path.replace(LOCAL_APPLICATION_SNAPSHOT_PATH)
+
+    return jsonify(
+        {
+            "saved": True,
+            "path": str(LOCAL_APPLICATION_SNAPSHOT_PATH),
+            "generated_at": snapshot["generated_at"],
+            "entry_count": len(snapshot["daily_entries"]),
+        }
+    )
+
+
 @main_blueprint.route("/export/csv")
 def export_csv():
     entries = build_sample_entries()
@@ -468,6 +621,15 @@ def export_csv():
         stream.getvalue(),
         mimetype="text/csv",
         headers={"Content-Disposition": "attachment; filename=solar_tracker_demo_export.csv"},
+    )
+
+
+@main_blueprint.route("/vendor/plotly.min.js")
+def plotly_javascript():
+    return Response(
+        get_plotlyjs(),
+        mimetype="application/javascript",
+        headers={"Cache-Control": "public, max-age=86400"},
     )
 
 

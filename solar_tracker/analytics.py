@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import timedelta
 from statistics import mean
 
 import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
+
+from .time_utils import tracker_today
 
 
 WEATHER_FACTORS = {
@@ -107,6 +110,17 @@ class DashboardMetrics:
     estimated_entry_count: int
     projection_uses_estimated: bool
     latest_production_estimated: bool
+    latest_confirmed_production_date_label: str
+    confirmed_production_total: float
+    confirmed_average_daily_production: float
+    confirmed_best_day_production: float
+    cumulative_guarantee_progress_pct: float
+    meter_export_since_install: float
+    meter_import_since_install: float
+    net_export_since_install: float
+    smart_meter_start_label: str
+    today_pending_sunrun: bool
+    yesterday_pending_sunrun: bool
 
 
 def build_dataframe(entries, config=None):
@@ -138,6 +152,20 @@ def build_dataframe(entries, config=None):
         )
 
     df = pd.DataFrame(rows).sort_values("entry_date").reset_index(drop=True)
+    today_value = pd.Timestamp(tracker_today())
+    analog_pairs = {
+        today_value: today_value - pd.Timedelta(days=3),
+        today_value - pd.Timedelta(days=1): today_value - pd.Timedelta(days=4),
+    }
+    entry_index_by_date = {row["entry_date"]: index for index, row in df.iterrows()}
+    for target_date, analog_date in analog_pairs.items():
+        target_index = entry_index_by_date.get(target_date)
+        analog_index = entry_index_by_date.get(analog_date)
+        if target_index is None or analog_index is None:
+            continue
+        if bool(df.at[target_index, "estimated"]):
+            df.at[target_index, "production_kwh"] = float(df.at[analog_index, "production_kwh"])
+
     df["daily_import_kwh"] = (
         df["meter_01_import_reading"].diff().clip(lower=0).fillna(0.0)
     )
@@ -204,6 +232,17 @@ def calculate_metrics(df, config):
             estimated_entry_count=0,
             projection_uses_estimated=False,
             latest_production_estimated=False,
+            latest_confirmed_production_date_label="N/A",
+            confirmed_production_total=0.0,
+            confirmed_average_daily_production=0.0,
+            confirmed_best_day_production=0.0,
+            cumulative_guarantee_progress_pct=0.0,
+            meter_export_since_install=0.0,
+            meter_import_since_install=0.0,
+            net_export_since_install=0.0,
+            smart_meter_start_label=config.smart_meter_install_date.isoformat(),
+            today_pending_sunrun=False,
+            yesterday_pending_sunrun=False,
         )
 
     today = df.iloc[-1]
@@ -214,6 +253,7 @@ def calculate_metrics(df, config):
 
     confirmed_df = df[~df["estimated"].fillna(False)]
     projection_df = confirmed_df if not confirmed_df.empty else df
+    latest_confirmed_row = confirmed_df.iloc[-1] if not confirmed_df.empty else df.iloc[-1]
     avg_daily = float(projection_df["production_kwh"].mean())
     annual_projection = avg_daily * 365.0
     guarantee_progress_pct = (
@@ -252,6 +292,24 @@ def calculate_metrics(df, config):
     tree_payback_months = (
         config.tree_removal_cost / monthly_savings if monthly_savings > 0 else None
     )
+    confirmed_production_total = float(confirmed_df["production_kwh"].sum()) if not confirmed_df.empty else float(df["production_kwh"].sum())
+    confirmed_average_daily = float(confirmed_df["production_kwh"].mean()) if not confirmed_df.empty else float(df["production_kwh"].mean())
+    confirmed_best_day = float(confirmed_df["production_kwh"].max()) if not confirmed_df.empty else float(df["production_kwh"].max())
+    cumulative_guarantee_progress_pct = (
+        (confirmed_production_total / config.production_guarantee_kwh) * 100
+        if config.production_guarantee_kwh
+        else 0.0
+    )
+    meter_window_df = df[df["entry_date"] >= pd.Timestamp(config.smart_meter_install_date)]
+    meter_export_since_install = float(meter_window_df["daily_export_kwh"].sum()) if not meter_window_df.empty else 0.0
+    meter_import_since_install = float(meter_window_df["daily_import_kwh"].sum()) if not meter_window_df.empty else 0.0
+    net_export_since_install = meter_export_since_install - meter_import_since_install
+    today_value = tracker_today()
+    today_pending_sunrun = bool(today["estimated"] and today["entry_date"].date() == today_value)
+    yesterday_pending_sunrun = bool(
+        yesterday["estimated"]
+        and yesterday["entry_date"].date() == (today_value - timedelta(days=1))
+    )
 
     return DashboardMetrics(
         today_production=float(today["production_kwh"]),
@@ -285,6 +343,17 @@ def calculate_metrics(df, config):
         estimated_entry_count=int(df["estimated"].fillna(False).sum()),
         projection_uses_estimated=confirmed_df.empty,
         latest_production_estimated=bool(today["estimated"]),
+        latest_confirmed_production_date_label=latest_confirmed_row["entry_date"].strftime("%Y-%m-%d"),
+        confirmed_production_total=confirmed_production_total,
+        confirmed_average_daily_production=confirmed_average_daily,
+        confirmed_best_day_production=confirmed_best_day,
+        cumulative_guarantee_progress_pct=cumulative_guarantee_progress_pct,
+        meter_export_since_install=meter_export_since_install,
+        meter_import_since_install=meter_import_since_install,
+        net_export_since_install=net_export_since_install,
+        smart_meter_start_label=config.smart_meter_install_date.strftime("%Y-%m-%d"),
+        today_pending_sunrun=today_pending_sunrun,
+        yesterday_pending_sunrun=yesterday_pending_sunrun,
     )
 
 
@@ -485,103 +554,268 @@ def build_chart_bundle(df, config=None):
         template="plotly_white",
     )
 
-    irradiance_chart = go.Figure()
-    irradiance_chart.add_trace(
+    operational_production_chart = go.Figure()
+    operational_production_chart.add_trace(
         go.Scatter(
-            x=df["irradiance_peak_wm2"],
+            x=df["entry_date"],
             y=df["production_kwh"],
-            mode="markers",
+            mode="lines+markers",
+            name="SunRun Production",
+            line={"color": "#2f6f3e", "width": 3},
             marker={
-                "size": 11,
-                "color": df["anomaly_label"].map(
-                    {
-                        "Observed": "#0f4c81",
-                        "Estimated": "#f6c86a",
-                        "Needs Review": "#d97706",
-                        "Likely Underperformance": "#b42318",
-                    }
-                ),
-                "symbol": df["anomaly_label"].map(
-                    {
-                        "Observed": "circle",
-                        "Estimated": "diamond",
-                        "Needs Review": "triangle-up",
-                        "Likely Underperformance": "x",
-                    }
-                ),
+                "size": 10,
+                "color": df["production_kwh"],
+                "colorscale": [
+                    [0.0, "#0f4c81"],
+                    [0.4, "#2a8ac7"],
+                    [0.7, "#f2b94b"],
+                    [1.0, "#e26a2c"],
+                ],
                 "line": {"width": 1, "color": "#ffffff"},
             },
-            customdata=list(
-                zip(
-                    df["entry_date"].dt.strftime("%Y-%m-%d"),
-                    df["anomaly_label"],
-                )
-            ),
-            hovertemplate=(
-                "Date: %{customdata[0]}<br>"
-                "Irradiance: %{x:.0f} W/m²<br>"
-                "Production: %{y:.1f} kWh<br>"
-                "Status: %{customdata[1]}<extra></extra>"
-            ),
-            name="Days",
         )
     )
-    irradiance_chart.update_layout(
-        title="Production vs Irradiance",
-        xaxis_title="Peak Irradiance (W/m²)",
-        yaxis_title="Production (kWh)",
-        margin={"l": 20, "r": 20, "t": 50, "b": 20},
+    operational_production_chart.update_layout(
+        title="Daily SunRun Production",
+        margin={"l": 20, "r": 20, "t": 56, "b": 30},
         template="plotly_white",
-        hoverlabel={
-            "bgcolor": "rgba(255,255,255,0.92)",
-            "bordercolor": "rgba(15,76,129,0.18)",
-            "font": {"color": "#12324d", "size": 12},
+        xaxis={"tickangle": -45},
+        yaxis={"title": "kWh"},
+    )
+
+    operational_balance_chart = go.Figure()
+    operational_balance_chart.add_trace(
+        go.Bar(
+            x=df["entry_date"],
+            y=df["production_kwh"],
+            name="SunRun Production",
+            marker_color="#e26a2c",
+        )
+    )
+    operational_balance_chart.add_trace(
+        go.Bar(
+            x=df["entry_date"],
+            y=df["daily_import_kwh"],
+            name="Grid Import",
+            marker_color="#157f3b",
+        )
+    )
+    operational_balance_chart.add_trace(
+        go.Bar(
+            x=df["entry_date"],
+            y=df["daily_export_kwh"],
+            name="Grid Export",
+            marker_color="#2a8ac7",
+        )
+    )
+    operational_balance_chart.add_trace(
+        go.Bar(
+            x=df["entry_date"],
+            y=df["estimated_total_home_consumption_kwh"],
+            name="Estimated Home Usage",
+            marker_color="#8c3fa8",
+        )
+    )
+    operational_balance_chart.update_layout(
+        title="Production, Grid Import/Export and Estimated Usage",
+        margin={"l": 20, "r": 20, "t": 68, "b": 40},
+        template="plotly_white",
+        barmode="group",
+        xaxis={"tickangle": -45},
+        yaxis={"title": "kWh"},
+        legend={
+            "orientation": "h",
+            "yanchor": "bottom",
+            "y": -0.34,
+            "xanchor": "left",
+            "x": 0,
+            "font": {"size": 11},
         },
     )
 
+    irradiance_chart = make_subplots(specs=[[{"secondary_y": True}]])
+    irradiance_chart.add_trace(
+        go.Bar(
+            x=df["entry_date"],
+            y=df["production_kwh"],
+            name="Production",
+            marker_color="#e3a008",
+            customdata=df["weather"],
+            hovertemplate=(
+                "Date: %{x|%Y-%m-%d}<br>"
+                "Production: %{y:.1f} kWh<br>"
+                "Weather: %{customdata}<extra></extra>"
+            ),
+        ),
+        secondary_y=False,
+    )
+    irradiance_chart.add_trace(
+        go.Scatter(
+            x=df["entry_date"],
+            y=df["irradiance_peak_wm2"],
+            name="Irradiance",
+            mode="lines+markers",
+            line={"color": "#0f4c81", "width": 3},
+            marker={"size": 8},
+            hovertemplate=(
+                "Date: %{x|%Y-%m-%d}<br>"
+                "Irradiance: %{y:.0f} W/m²<extra></extra>"
+            ),
+        ),
+        secondary_y=True,
+    )
+    irradiance_chart.update_layout(
+        title="Production and Irradiance Trend",
+        margin={"l": 20, "r": 20, "t": 56, "b": 28},
+        template="plotly_white",
+        legend={
+            "orientation": "h",
+            "yanchor": "bottom",
+            "y": 1.02,
+            "xanchor": "left",
+            "x": 0,
+            "font": {"size": 11},
+        },
+    )
+    irradiance_chart.update_yaxes(title_text="Production (kWh)", secondary_y=False)
+    irradiance_chart.update_yaxes(title_text="Irradiance (W/m²)", secondary_y=True)
+
+    guaranteed_daily = (
+        float(config.production_guarantee_kwh) / 365.0
+        if config and getattr(config, "production_guarantee_kwh", None)
+        else 0.0
+    )
+    weather_colors = {
+        "Sunny": "#f2b94b",
+        "Cloudy": "#7c96ad",
+        "Overcast": "#58728d",
+        "Rain": "#3b82f6",
+        "Snow": "#94a3b8",
+        "Smoke": "#a16207",
+        "Extreme Heat": "#ef4444",
+        "Wind": "#14b8a6",
+        "Unknown": "#94a3b8",
+    }
     weather_chart = go.Figure()
-    weather_summary = df.groupby("weather", as_index=False)["production_kwh"].mean()
     weather_chart.add_trace(
         go.Bar(
-            x=weather_summary["weather"],
-            y=weather_summary["production_kwh"],
-            marker_color="#3b82f6",
+            x=df["entry_date"],
+            y=df["production_kwh"],
+            name="Daily Production",
+            marker_color=[weather_colors.get(str(value), "#94a3b8") for value in df["weather"]],
+            customdata=df["weather"],
+            hovertemplate=(
+                "Date: %{x|%Y-%m-%d}<br>"
+                "Production: %{y:.1f} kWh<br>"
+                "Weather: %{customdata}<extra></extra>"
+            ),
         )
     )
+    weather_chart.add_trace(
+        go.Scatter(
+            x=df["entry_date"],
+            y=[float(df["production_kwh"].mean())] * len(df),
+            name="Overall Average",
+            mode="lines",
+            line={"color": "#0f4c81", "width": 3, "dash": "dot"},
+        )
+    )
+    if guaranteed_daily > 0:
+        weather_chart.add_trace(
+            go.Scatter(
+                x=df["entry_date"],
+                y=[guaranteed_daily] * len(df),
+                name="Guarantee Daily Target",
+                mode="lines",
+                line={"color": "#b42318", "width": 2, "dash": "dash"},
+            )
+        )
     weather_chart.update_layout(
-        title="Average Production by Weather",
-        margin={"l": 20, "r": 20, "t": 50, "b": 20},
+        title="Daily Production by Weather",
+        margin={"l": 20, "r": 20, "t": 56, "b": 28},
         template="plotly_white",
+        legend={
+            "orientation": "h",
+            "yanchor": "bottom",
+            "y": 1.02,
+            "xanchor": "left",
+            "x": 0,
+            "font": {"size": 11},
+        },
     )
 
-    monthly_df = (
-        df.assign(month=df["entry_date"].dt.strftime("%Y-%m"))
-        .groupby("month", as_index=False)["production_kwh"]
-        .sum()
+    month_frame = df.assign(
+        month=df["entry_date"].dt.strftime("%Y-%m"),
+        month_period=df["entry_date"].dt.to_period("M"),
     )
+    monthly_summary = (
+        month_frame.groupby(["month", "month_period"], as_index=False)
+        .agg(
+            production_kwh=("production_kwh", "sum"),
+            observed_days=("entry_date", "nunique"),
+        )
+    )
+    monthly_summary["days_in_month"] = monthly_summary["month_period"].apply(lambda value: value.days_in_month)
+    monthly_summary["projected_month_end_kwh"] = (
+        monthly_summary["production_kwh"] / monthly_summary["observed_days"].clip(lower=1)
+        * monthly_summary["days_in_month"]
+    )
+    monthly_summary["guarantee_month_target_kwh"] = monthly_summary["days_in_month"] * guaranteed_daily
+
     monthly_chart = go.Figure()
     monthly_chart.add_trace(
         go.Bar(
-            x=monthly_df["month"],
-            y=monthly_df["production_kwh"],
+            x=monthly_summary["month"],
+            y=monthly_summary["production_kwh"],
             marker_color="#157f3b",
-            name="Monthly Production",
+            name="Actual To Date",
+        )
+    )
+    monthly_chart.add_trace(
+        go.Bar(
+            x=monthly_summary["month"],
+            y=monthly_summary["projected_month_end_kwh"],
+            marker_color="#e3a008",
+            name="Projected Month End",
+        )
+    )
+    monthly_chart.add_trace(
+        go.Bar(
+            x=monthly_summary["month"],
+            y=monthly_summary["guarantee_month_target_kwh"],
+            marker_color="#7c96ad",
+            name="Guarantee Pace",
         )
     )
     monthly_chart.update_layout(
-        title="Monthly Production",
-        margin={"l": 20, "r": 20, "t": 50, "b": 20},
+        title="Monthly Progress vs Guarantee",
+        margin={"l": 20, "r": 20, "t": 56, "b": 28},
         template="plotly_white",
+        barmode="group",
+        legend={
+            "orientation": "h",
+            "yanchor": "bottom",
+            "y": 1.02,
+            "xanchor": "left",
+            "x": 0,
+            "font": {"size": 11},
+        },
     )
 
     chart_config = {"displayModeBar": False, "responsive": True}
 
     return {
         "running_totals_chart": running_totals_chart.to_html(
-            full_html=False, include_plotlyjs="cdn", config=chart_config
+            full_html=False, include_plotlyjs=False, config=chart_config
         ),
-        "daily_chart": daily_chart.to_html(full_html=False, include_plotlyjs="cdn", config=chart_config),
+        "daily_chart": daily_chart.to_html(full_html=False, include_plotlyjs=False, config=chart_config),
         "flow_chart": flow_chart.to_html(full_html=False, include_plotlyjs=False, config=chart_config),
+        "operational_production_chart": operational_production_chart.to_html(
+            full_html=False, include_plotlyjs=False, config=chart_config
+        ),
+        "operational_balance_chart": operational_balance_chart.to_html(
+            full_html=False, include_plotlyjs=False, config=chart_config
+        ),
         "irradiance_chart": irradiance_chart.to_html(
             full_html=False, include_plotlyjs=False, config=chart_config
         ),

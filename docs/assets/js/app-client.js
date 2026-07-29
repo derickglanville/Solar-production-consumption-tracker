@@ -47,8 +47,71 @@ const entryLookupOverrides = {
     cloud_cover_pct: 85,
     wind_mph: 12,
     notes: "Estimated from Yorktown Heights forecast: overcast conditions with late thunderstorms expected. Update with actual production and meter readings when available."
+  },
+  "2026-07-22": {
+    irradiance_peak_wm2: 922,
+    production_kwh: 29.2,
+    meter_01_import_reading: 126,
+    meter_02_export_reading: 305,
+    weather: "Sunny",
+    temperature_f: 72.5,
+    temperature_high_f: 79,
+    temperature_low_f: 66,
+    humidity_pct: 57,
+    cloud_cover_pct: 22,
+    wind_mph: 9,
+    notes: "Estimated placeholder based on recent weather and meter progression. Replace with actual Sunrun and NYSEG values when available."
   }
 };
+const recentHistoricalBackfillEntries = [
+  {
+    entry_date: "2026-07-21",
+    irradiance_peak_wm2: 460,
+    production_kwh: 36.5,
+    meter_01_import_reading: 107,
+    meter_02_export_reading: 250,
+    weather: "Overcast",
+    temperature_f: 70.5,
+    temperature_high_f: 76,
+    temperature_low_f: 65,
+    humidity_pct: 72,
+    cloud_cover_pct: 85,
+    wind_mph: 12,
+    estimated: true,
+    lookup_source: "override",
+    notes: "Estimated from Yorktown Heights forecast: overcast conditions with late thunderstorms expected. Update with actual production and meter readings when available."
+  },
+  {
+    entry_date: "2026-07-22",
+    irradiance_peak_wm2: 922,
+    production_kwh: 29.2,
+    meter_01_import_reading: 126,
+    meter_02_export_reading: 305,
+    weather: "Sunny",
+    temperature_f: 72.5,
+    temperature_high_f: 79,
+    temperature_low_f: 66,
+    humidity_pct: 57,
+    cloud_cover_pct: 22,
+    wind_mph: 9,
+    estimated: true,
+    lookup_source: "override",
+    notes: "Estimated placeholder based on recent weather and meter progression. Replace with actual Sunrun and NYSEG values when available."
+  },
+  {
+    entry_date: "2026-07-23",
+    irradiance_peak_wm2: 367,
+    production_kwh: 5.0,
+    meter_01_import_reading: 137.3,
+    meter_02_export_reading: 343.4,
+    weather: "Sunny",
+    temperature_high_f: 83,
+    temperature_low_f: 68,
+    estimated: true,
+    lookup_source: "intraday-placeholder",
+    notes: "Live intraday placeholder for Thursday, July 23, 2026. Replace with actual end-of-day production and meter readings."
+  }
+];
 
 const bootstrap = window.SOLAR_BOOTSTRAP || {};
 const sampleEntries = Array.isArray(bootstrap.sample_entries) ? bootstrap.sample_entries : [];
@@ -487,7 +550,7 @@ function looksLikeOnlyPlaceholderData(entries) {
 }
 
 async function backfillStarterEntriesIfNeeded(db, entries) {
-  if (!sampleEntries.length || !looksLikeOnlyPlaceholderData(entries)) {
+  if (!sampleEntries.length) {
     return { entries, backfilled: false };
   }
 
@@ -1545,17 +1608,67 @@ function getMostRecentEntryBefore(entries, entryDate) {
   return priorEntries.length ? priorEntries[priorEntries.length - 1] : null;
 }
 
-async function buildAutoEntry(entries, entryDate, sourceLabel = "Auto-created") {
+function getIntradayProgressShares(entryDate = getTodayIsoDate(), now = new Date()) {
+  if (String(entryDate) !== String(getTodayIsoDate())) {
+    return { importShare: 1, exportShare: 1, productionShare: 1 };
+  }
+
+  const minutesNow = now.getHours() * 60 + now.getMinutes();
+  const firstPoint = meterSimulationSchedule[0];
+  const firstMinutes = firstPoint.hour * 60 + firstPoint.minute;
+
+  if (minutesNow <= firstMinutes) {
+    return {
+      importShare: firstPoint.importWeight,
+      exportShare: firstPoint.exportWeight,
+      productionShare: firstPoint.exportWeight
+    };
+  }
+
+  for (let index = 1; index < meterSimulationSchedule.length; index += 1) {
+    const previous = meterSimulationSchedule[index - 1];
+    const next = meterSimulationSchedule[index];
+    const previousMinutes = previous.hour * 60 + previous.minute;
+    const nextMinutes = next.hour * 60 + next.minute;
+
+    if (minutesNow <= nextMinutes) {
+      const span = nextMinutes - previousMinutes || 1;
+      const progress = Math.min(1, Math.max(0, (minutesNow - previousMinutes) / span));
+      const importShare = previous.importWeight + ((next.importWeight - previous.importWeight) * progress);
+      const exportShare = previous.exportWeight + ((next.exportWeight - previous.exportWeight) * progress);
+      return {
+        importShare,
+        exportShare,
+        productionShare: exportShare
+      };
+    }
+  }
+
+  return { importShare: 1, exportShare: 1, productionShare: 1 };
+}
+
+function buildIntradayEstimatedEntry(entryDate, entries, estimatedValues, sourceLabel = "Auto-created") {
   const previousEntry = getMostRecentEntryBefore(entries, entryDate);
-  const estimatedValues = await buildEstimatedLookupValues(entryDate, entries);
+  const projectedProduction = Number(estimatedValues.production_kwh || 0);
+  const projectedIrradiance = Number(estimatedValues.irradiance_peak_wm2 || 0);
+  const progress = getIntradayProgressShares(entryDate);
+  const importDelta = Math.max(6, Math.round(Math.max(0, 54 - projectedProduction * 0.35)));
+  const exportDelta = Math.max(8, Math.round(projectedProduction * 0.72));
+  const baseImport = previousEntry ? Number(previousEntry.meter_01_import_reading || 0) : 0;
+  const baseExport = previousEntry ? Number(previousEntry.meter_02_export_reading || 0) : 0;
+  const isToday = String(entryDate) === String(getTodayIsoDate());
+  const progressMultiplier = isToday ? progress.productionShare : 1;
+
   return {
     entry_date: entryDate,
-    irradiance_peak_wm2: Number(estimatedValues.irradiance_peak_wm2 || 0),
-    production_kwh: Number(estimatedValues.production_kwh || 0),
-    meter_01_import_reading: previousEntry ? Number(previousEntry.meter_01_import_reading || 0) : 0,
-    meter_02_export_reading: previousEntry ? Number(previousEntry.meter_02_export_reading || 0) : 0,
+    irradiance_peak_wm2: Math.round(projectedIrradiance * (isToday ? Math.max(progress.exportShare, 0.12) : 1)),
+    production_kwh: Number((projectedProduction * progressMultiplier).toFixed(1)),
+    meter_01_import_reading: Number((baseImport + (importDelta * (isToday ? progress.importShare : 1))).toFixed(1)),
+    meter_02_export_reading: Number((baseExport + (exportDelta * (isToday ? progress.exportShare : 1))).toFixed(1)),
     weather: estimatedValues.weather || previousEntry?.weather || "Unknown",
     temperature_f: estimatedValues.temperature_f ?? null,
+    temperature_high_f: estimatedValues.temperature_high_f ?? estimatedValues.temperature_f ?? null,
+    temperature_low_f: estimatedValues.temperature_low_f ?? estimatedValues.temperature_f ?? null,
     humidity_pct: estimatedValues.humidity_pct ?? null,
     cloud_cover_pct: estimatedValues.cloud_cover_pct ?? null,
     wind_mph: estimatedValues.wind_mph ?? null,
@@ -1565,6 +1678,11 @@ async function buildAutoEntry(entries, entryDate, sourceLabel = "Auto-created") 
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
   };
+}
+
+async function buildAutoEntry(entries, entryDate, sourceLabel = "Auto-created") {
+  const estimatedValues = await buildEstimatedLookupValues(entryDate, entries);
+  return buildIntradayEstimatedEntry(entryDate, entries, estimatedValues, sourceLabel);
 }
 
 async function ensureDailyPlaceholderRecord(db, entries, options = {}) {
@@ -1577,11 +1695,23 @@ async function ensureDailyPlaceholderRecord(db, entries, options = {}) {
 
   const existingEntry = entries.find((entry) => entry.entry_date === entryDate);
   if (existingEntry) {
+    if (existingEntry.estimated && String(entryDate) === String(getTodayIsoDate())) {
+      const refreshedEntry = await buildAutoEntry(entries, entryDate, sourceLabel);
+      const mergedEntry = normalizeEntry({
+        ...existingEntry,
+        ...refreshedEntry,
+        updated_at: new Date().toISOString()
+      });
+      await setDoc(doc(db, entryCollectionName, entryDate), mergedEntry, { merge: true });
+      if (shouldRunOneTimeManualAutoCreate(entryDate)) {
+        markOneTimeManualAutoCreateComplete();
+      }
+      return { entry: mergedEntry, created: false, hydrated: true };
+    }
     if (isPlaceholderLikeEntry(existingEntry)) {
       const hydratedEntry = {
         ...existingEntry,
-        ...(await buildEstimatedLookupValues(entryDate, entries)),
-        estimated: true,
+        ...(await buildAutoEntry(entries, entryDate, sourceLabel)),
         updated_at: new Date().toISOString()
       };
       await setDoc(doc(db, entryCollectionName, entryDate), hydratedEntry, { merge: true });
@@ -1606,6 +1736,28 @@ async function ensureDailyPlaceholderRecord(db, entries, options = {}) {
     markOneTimeManualAutoCreateComplete();
   }
   return { entry: placeholderEntry, created: true };
+}
+
+async function backfillRecentHistoricalEntriesIfMissing(db, entries) {
+  const existingDates = new Set(entries.map((entry) => entry.entry_date));
+  const missingEntries = recentHistoricalBackfillEntries
+    .map((entry) => normalizeEntry(entry))
+    .filter((entry) => !existingDates.has(entry.entry_date));
+
+  if (!missingEntries.length) {
+    return { entries, backfilled: false };
+  }
+
+  for (const entry of missingEntries) {
+    await setDoc(doc(db, entryCollectionName, entry.entry_date), {
+      ...entry,
+      created_at: entry.created_at || new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    }, { merge: true });
+  }
+
+  const refreshedState = await loadFirestoreState(db);
+  return { entries: refreshedState.entries, backfilled: true };
 }
 
 function setEntryFormMode(modeText, saveLabel = "Save Entry") {
@@ -1952,6 +2104,10 @@ async function bootDashboard(db) {
     if (backfillResult.backfilled) {
       state = { ...state, entries: backfillResult.entries };
     }
+    const recentBackfillResult = await backfillRecentHistoricalEntriesIfMissing(db, state.entries);
+    if (recentBackfillResult.backfilled) {
+      state = { ...state, entries: recentBackfillResult.entries };
+    }
     const temperatureBackfill = await backfillMissingTemperatureRanges(db, state.entries);
     if (temperatureBackfill.updated) {
       state = { ...state, entries: temperatureBackfill.entries };
@@ -1992,6 +2148,10 @@ async function bootEntries(db) {
     const backfillResult = await backfillStarterEntriesIfNeeded(db, state.entries);
     if (backfillResult.backfilled) {
       state = { ...state, entries: backfillResult.entries };
+    }
+    const recentBackfillResult = await backfillRecentHistoricalEntriesIfMissing(db, state.entries);
+    if (recentBackfillResult.backfilled) {
+      state = { ...state, entries: recentBackfillResult.entries };
     }
     const temperatureBackfill = await backfillMissingTemperatureRanges(db, state.entries);
     if (temperatureBackfill.updated) {
