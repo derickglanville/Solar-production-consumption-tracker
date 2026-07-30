@@ -98,7 +98,7 @@
                   <div>
                     <h2 class="h6 mb-1">Meter Simulation</h2>
                     <p class="text-muted small mb-0">
-                      Intraday estimate for Meter 01 import and Meter 02 export based on comparable weather, prior entries, and a time-of-day schedule.
+                      Weather-adjusted M01/M02 monitoring every 15 minutes, all day. M01 accumulates from sunset to sunrise; M02 accumulates from sunrise to sunset using the recorded solar window and gathered calibration data.
                     </p>
                   </div>
                   <div class="d-flex flex-wrap gap-2">
@@ -227,6 +227,26 @@
       <tbody id="entry-meter-sim-dialog-body"></tbody>
     </table>
   </div>
+  <div class="meter-simulation-dialog-runs">
+    <h3>Recorded Monitoring Checks</h3>
+    <p>Quarter-hour estimates saved with the weather conditions and model basis available at that time.</p>
+    <div class="table-responsive">
+      <table class="table align-middle meter-simulation-dialog-table">
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>Type</th>
+            <th>M01</th>
+            <th>M02</th>
+            <th>Weather</th>
+            <th>Cloud</th>
+            <th>Recorded</th>
+          </tr>
+        </thead>
+        <tbody id="entry-meter-sim-run-dialog-body"></tbody>
+      </table>
+    </div>
+  </div>
   <div class="meter-simulation-dialog-summary" id="entry-meter-sim-dialog-summary"></div>
 </dialog>
 <style>
@@ -342,6 +362,22 @@
     border-top: 1px solid rgba(92, 124, 146, 0.14);
     color: #506776;
     font-size: 0.82rem;
+  }
+
+  .meter-simulation-dialog-runs {
+    padding: 0.9rem 1.1rem 0;
+    border-top: 1px solid rgba(92, 124, 146, 0.14);
+  }
+
+  .meter-simulation-dialog-runs h3 {
+    margin: 0;
+    font-size: 1rem;
+  }
+
+  .meter-simulation-dialog-runs p {
+    margin: 0.2rem 0 0.6rem;
+    color: #6a7d8c;
+    font-size: 0.78rem;
   }
 
   .entry-meter-sim__header {

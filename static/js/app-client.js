@@ -47,6 +47,9 @@ async function renderDashboardUnified(entries, config, firebaseStatus) {
 const entryCollectionName = "solar_daily_entries";
 const configCollectionName = "solar_tracker_config";
 const configDocumentId = "primary";
+const meterSimulationMonitorStartMinute = 0;
+const meterSimulationMonitorEndMinute = 23 * 60 + 59;
+const meterSimulationMonitorIntervalMinutes = 15;
 const dailyAutoCreateHour = 7;
 const dailyAutoCreateMinute = 30;
 const oneTimeManualAutoCreateDate = "2026-07-22";
@@ -162,6 +165,7 @@ const localSnapshotSyncStartHour = 9;
 const localSnapshotSyncEndHour = 20;
 let localSnapshotSyncTimer = null;
 let meterSimulationSyncTimer = null;
+let meterSimulationLastAttemptedRunKey = "";
 let meterSimulationCheckpoints = [];
 let entriesPageState = {
   entries: [],
@@ -329,6 +333,7 @@ async function fetchOpenMeteoLookupValues(entryDate) {
   url.searchParams.set("latitude", String(yorktownHeightsLocation.latitude));
   url.searchParams.set("longitude", String(yorktownHeightsLocation.longitude));
   url.searchParams.set("hourly", hourlyFields.join(","));
+  url.searchParams.set("daily", "sunrise,sunset");
   url.searchParams.set("temperature_unit", "fahrenheit");
   url.searchParams.set("wind_speed_unit", "mph");
   url.searchParams.set("timezone", yorktownHeightsLocation.timezone);
@@ -370,6 +375,11 @@ async function fetchOpenMeteoLookupValues(entryDate) {
   const weatherLabels = weatherIndexes.map((index) => mapWeatherCodeToLabel(hourly.weather_code?.[index]));
   const peakIrradiance = Math.round(maxNumericValue(shortwaveValues) || 0);
   const sourceKind = isPastIsoDate(entryDate) ? "historical archive" : "forecast";
+  const dailyIndex = Array.isArray(payload?.daily?.time)
+    ? payload.daily.time.findIndex((value) => String(value) === String(entryDate))
+    : -1;
+  const sunriseTime = dailyIndex >= 0 ? String(payload.daily.sunrise?.[dailyIndex] || "") : "";
+  const sunsetTime = dailyIndex >= 0 ? String(payload.daily.sunset?.[dailyIndex] || "") : "";
 
   return {
     irradiance_peak_wm2: peakIrradiance,
@@ -380,6 +390,8 @@ async function fetchOpenMeteoLookupValues(entryDate) {
     humidity_pct: roundToStep(averageNumericValues(humidityValues), 1),
     cloud_cover_pct: roundToStep(averageNumericValues(cloudValues), 1),
     wind_mph: roundToStep(maxNumericValue(windValues), 1),
+    sunrise_time: sunriseTime,
+    sunset_time: sunsetTime,
     lookup_source: `open-meteo-${isPastIsoDate(entryDate) ? "historical" : "forecast"}`,
     notes: `Auto-filled from Open-Meteo ${sourceKind} data for ${yorktownHeightsLocation.label}. Irradiance is the day's peak hourly shortwave radiation.`
   };
@@ -412,6 +424,8 @@ function normalizeMeterSimulationCheckpoints(checkpoints) {
       predicted_m02: Number(checkpoint.predicted_m02),
       actual_m01: Number(checkpoint.actual_m01),
       actual_m02: Number(checkpoint.actual_m02),
+      base_m01: parseOptionalNumber(checkpoint.base_m01),
+      base_m02: parseOptionalNumber(checkpoint.base_m02),
       import_error: Number(checkpoint.import_error),
       export_error: Number(checkpoint.export_error),
       recorded_at: String(checkpoint.recorded_at || "")
@@ -476,6 +490,8 @@ function normalizeEntry(entry) {
     humidity_pct: parseOptionalNumber(entry.humidity_pct),
     cloud_cover_pct: parseOptionalNumber(entry.cloud_cover_pct),
     wind_mph: parseOptionalNumber(entry.wind_mph),
+    sunrise_time: entry.sunrise_time || "",
+    sunset_time: entry.sunset_time || "",
     notes: entry.notes || "",
     estimated: Boolean(entry.estimated),
     lookup_source: entry.lookup_source || "",
@@ -484,6 +500,38 @@ function normalizeEntry(entry) {
     meter_simulation_weather: entry.meter_simulation_weather || "",
     meter_simulation_basis: entry.meter_simulation_basis || "",
     meter_simulation_updated_at: entry.meter_simulation_updated_at || "",
+    meter_simulation_schedule_key: entry.meter_simulation_schedule_key || "",
+    meter_simulation_schedule_label: entry.meter_simulation_schedule_label || "",
+    meter_simulation_run_key: entry.meter_simulation_run_key || "",
+    meter_simulation_run_label: entry.meter_simulation_run_label || "",
+    meter_simulation_run_type: entry.meter_simulation_run_type || "",
+    meter_simulation_model_signature: entry.meter_simulation_model_signature || "",
+    meter_simulation_runs: Array.isArray(entry.meter_simulation_runs)
+      ? entry.meter_simulation_runs
+        .filter((run) => run && run.run_key)
+        .map((run) => ({
+          run_key: String(run.run_key),
+          run_label: run.run_label || "",
+          run_type: run.run_type || "incremental",
+          minute_of_day: Number(run.minute_of_day || 0),
+          meter_01_import_reading: Number(run.meter_01_import_reading || 0),
+          meter_02_export_reading: Number(run.meter_02_export_reading || 0),
+          weather: run.weather || "Unknown",
+          irradiance_peak_wm2: Number(run.irradiance_peak_wm2 || 0),
+          cloud_cover_pct: parseOptionalNumber(run.cloud_cover_pct),
+          humidity_pct: parseOptionalNumber(run.humidity_pct),
+          wind_mph: parseOptionalNumber(run.wind_mph),
+          model_basis: run.model_basis || "",
+          calibration_basis: run.calibration_basis || "",
+          overnight_import_kwh: Number(run.overnight_import_kwh || 0),
+          overnight_basis: run.overnight_basis || "",
+          sunrise_time: run.sunrise_time || "",
+          sunset_time: run.sunset_time || "",
+          solar_window_basis: run.solar_window_basis || "",
+          recorded_at: run.recorded_at || ""
+        }))
+        .sort((left, right) => left.minute_of_day - right.minute_of_day)
+      : [],
     created_at: entry.created_at || "",
     updated_at: entry.updated_at || ""
   };
@@ -2396,20 +2444,77 @@ function getHistoricalMeterDeltas(entries, entryDate, targetWeather = "Unknown")
   };
 }
 
+function getLearnedOvernightImport(entries, entryDate) {
+  const sortedEntries = sortEntries(entries).reverse();
+  const checkpointSamples = normalizeMeterSimulationCheckpoints(meterSimulationCheckpoints)
+    .filter((checkpoint) => (
+      checkpoint.entry_date <= String(entryDate) &&
+      checkpoint.weather_bucket === "Sunny" &&
+      checkpoint.minute_of_day >= 9 * 60 &&
+      checkpoint.minute_of_day <= 15 * 60 + 30
+    ))
+    .map((checkpoint) => {
+      const priorEntry = getMostRecentEntryBefore(sortedEntries, checkpoint.entry_date);
+      const baseImport = checkpoint.base_m01 ?? Number(priorEntry?.meter_01_import_reading || 0);
+      return checkpoint.actual_m01 - baseImport;
+    })
+    .filter((value) => Number.isFinite(value) && value >= 0 && value <= 50);
+
+  if (checkpointSamples.length) {
+    return {
+      value: median(checkpointSamples),
+      basis: `${checkpointSamples.length} actual sunny daytime checkpoint${checkpointSamples.length === 1 ? "" : "s"}`,
+      sampleCount: checkpointSamples.length
+    };
+  }
+
+  const priorEntries = sortedEntries
+    .filter((entry) => String(entry.entry_date) < String(entryDate))
+    .sort((left, right) => String(left.entry_date).localeCompare(String(right.entry_date)));
+  const sunnyDailySamples = [];
+  const allDailySamples = [];
+  for (let index = 1; index < priorEntries.length; index += 1) {
+    const previous = priorEntries[index - 1];
+    const current = priorEntries[index];
+    if (current.meter_values_estimated) continue;
+    const dailyImport = (
+      Number(current.meter_01_import_reading || 0) -
+      Number(previous.meter_01_import_reading || 0)
+    );
+    if (!Number.isFinite(dailyImport) || dailyImport < 0 || dailyImport > 75) continue;
+    allDailySamples.push(dailyImport);
+    if (normalizeWeatherBucket(current.weather) === "Sunny") {
+      sunnyDailySamples.push(dailyImport);
+    }
+  }
+  const selected = sunnyDailySamples.length ? sunnyDailySamples : allDailySamples;
+  return {
+    value: selected.length ? median(selected) : 0,
+    basis: selected.length
+      ? `${selected.length} confirmed ${sunnyDailySamples.length ? "sunny " : ""}daily import change${selected.length === 1 ? "" : "s"}`
+      : "awaiting actual import history",
+    sampleCount: selected.length
+  };
+}
+
 function getImportWeightForWeather(point, weather) {
   const index = meterSimulationSchedule.findIndex((candidate) => (
     candidate.hour === point.hour && candidate.minute === point.minute
   ));
   const bucket = normalizeWeatherBucket(weather);
   const profile = meterImportProfiles[bucket] || meterImportProfiles.Unknown;
-  return index >= 0 ? profile[index] : Number(point.importWeight || 0);
+  if (index < 0) return Number(point.importWeight || 0);
+  const overnightShare = Number(profile[0] || 0);
+  const daylightRange = Math.max(0.01, 1 - overnightShare);
+  return Math.min(1, Math.max(0, (Number(profile[index] || 0) - overnightShare) / daylightRange));
 }
 
 function getMeterSimulationCorrection(
   entryDate,
   weather,
   minuteOfDay,
-  checkpoints = meterSimulationCheckpoints
+  checkpoints = meterSimulationCheckpoints,
+  modelContext = null
 ) {
   const weatherBucket = normalizeWeatherBucket(weather);
   const usable = normalizeMeterSimulationCheckpoints(checkpoints);
@@ -2422,6 +2527,25 @@ function getMeterSimulationCorrection(
 
   if (sameDay.length) {
     const latest = sameDay[sameDay.length - 1];
+    if (modelContext) {
+      const checkpointCycle = getSolarCycleProgress(latest.minute_of_day, modelContext.entry);
+      const checkpointRawImport = (
+        modelContext.baseImport +
+        modelContext.overnightImport * checkpointCycle.preSunriseProgress +
+        modelContext.overnightImport * checkpointCycle.postSunsetProgress
+      );
+      const checkpointRawExport = (
+        modelContext.baseExport +
+        modelContext.exportDelta * checkpointCycle.daylightProgress
+      );
+      return {
+        importOffset: latest.actual_m01 - checkpointRawImport,
+        exportOffset: latest.actual_m02 - checkpointRawExport,
+        basis: `today checkpoint at ${latest.checkpoint_time}`,
+        sampleCount: 1,
+        checkpointMinute: latest.minute_of_day
+      };
+    }
     return {
       importOffset: latest.import_error,
       exportOffset: latest.export_error,
@@ -2458,38 +2582,109 @@ function getClockMinutes(now = new Date()) {
   return Number(parts.hour) * 60 + Number(parts.minute);
 }
 
+function parseSolarEventMinute(value, fallbackMinute) {
+  const match = /T(\d{1,2}):(\d{2})/.exec(String(value || ""));
+  if (!match) return fallbackMinute;
+  const hour = Number(match[1]);
+  const minute = Number(match[2]);
+  return Number.isFinite(hour) && Number.isFinite(minute)
+    ? hour * 60 + minute
+    : fallbackMinute;
+}
+
+function getSolarWindow(entry = {}) {
+  const sunriseMinute = parseSolarEventMinute(entry.sunrise_time, 6 * 60);
+  const sunsetMinute = parseSolarEventMinute(entry.sunset_time, 20 * 60);
+  return {
+    sunriseMinute,
+    sunsetMinute: Math.max(sunriseMinute + 60, sunsetMinute),
+    basis: entry.sunrise_time && entry.sunset_time
+      ? "Open-Meteo sunrise/sunset"
+      : "seasonal fallback solar window"
+  };
+}
+
+function getSolarCycleProgress(minuteOfDay, entry = {}) {
+  const { sunriseMinute, sunsetMinute, basis } = getSolarWindow(entry);
+  const boundedMinute = Math.min(24 * 60 - 1, Math.max(0, minuteOfDay));
+  const daylightMinutes = Math.max(1, sunsetMinute - sunriseMinute);
+  const nightMinutes = Math.max(1, (24 * 60 - sunsetMinute) + sunriseMinute);
+  const daylightLinear = Math.min(
+    1,
+    Math.max(0, (boundedMinute - sunriseMinute) / daylightMinutes)
+  );
+  const daylightProgress = 0.5 - (0.5 * Math.cos(Math.PI * daylightLinear));
+  const preSunriseProgress = boundedMinute < sunriseMinute
+    ? boundedMinute / Math.max(1, sunriseMinute)
+    : 1;
+  const postSunsetProgress = boundedMinute > sunsetMinute
+    ? (boundedMinute - sunsetMinute) / nightMinutes
+    : 0;
+  return {
+    sunriseMinute,
+    sunsetMinute,
+    basis,
+    daylightProgress,
+    preSunriseProgress,
+    postSunsetProgress
+  };
+}
+
 function buildMeterSimulation(entryDate, entries, options = {}) {
   const previousEntry = getMostRecentEntryBefore(entries, entryDate);
   const targetEntry = entries.find((entry) => String(entry.entry_date) === String(entryDate));
   const deltas = getHistoricalMeterDeltas(entries, entryDate, targetEntry?.weather);
+  const overnightImport = getLearnedOvernightImport(entries, entryDate);
+  const expectedTotalImport = Math.max(deltas.importDelta, overnightImport.value);
+  const daylightImportDelta = Math.max(0, expectedTotalImport - overnightImport.value);
   const baseImport = Number(previousEntry?.meter_01_import_reading || 0);
   const baseExport = Number(previousEntry?.meter_02_export_reading || 0);
   const currentMinute = Number.isFinite(Number(options.minuteOfDay))
     ? Number(options.minuteOfDay)
     : getClockMinutes();
-  const currentProgress = getIntradayProgressShares(
-    entryDate,
-    currentMinute,
-    targetEntry?.weather
-  );
+  const solarCycle = getSolarCycleProgress(currentMinute, targetEntry);
   const isToday = String(entryDate) === String(getTodayIsoDate());
+  const currentPreSunriseImport = overnightImport.value * solarCycle.preSunriseProgress;
+  const currentPostSunsetImport = overnightImport.value * solarCycle.postSunsetProgress;
   const rawCurrentImport = Number(
-    (baseImport + deltas.importDelta * (isToday ? currentProgress.importShare : 1)).toFixed(1)
+    (
+      baseImport +
+      (isToday
+        ? currentPreSunriseImport + currentPostSunsetImport
+        : expectedTotalImport)
+    ).toFixed(1)
   );
   const rawCurrentExport = Number(
-    (baseExport + deltas.exportDelta * (isToday ? currentProgress.exportShare : 1)).toFixed(1)
+    (
+      baseExport +
+      deltas.exportDelta * (isToday ? solarCycle.daylightProgress : 1)
+    ).toFixed(1)
   );
+  const correctionModelContext = {
+    entry: targetEntry,
+    baseImport,
+    baseExport,
+    overnightImport: overnightImport.value,
+    exportDelta: deltas.exportDelta
+  };
   const correction = getMeterSimulationCorrection(
     entryDate,
     targetEntry?.weather,
-    currentMinute
+    currentMinute,
+    meterSimulationCheckpoints,
+    correctionModelContext
   );
 
   return {
     previousEntry,
     baseImport,
     baseExport,
-    importDelta: deltas.importDelta,
+    importDelta: expectedTotalImport,
+    overnightImport: overnightImport.value,
+    overnightBasis: overnightImport.basis,
+    overnightSampleCount: overnightImport.sampleCount,
+    daylightImportDelta,
+    solarCycle,
     exportDelta: deltas.exportDelta,
     weatherBucket: deltas.weatherBucket,
     basis: deltas.basis,
@@ -2502,20 +2697,32 @@ function buildMeterSimulation(entryDate, entries, options = {}) {
     currentExport: Number((rawCurrentExport + correction.exportOffset).toFixed(1)),
     rows: meterSimulationSchedule.map((point) => {
       const pointMinute = point.hour * 60 + point.minute;
-      const importWeight = getImportWeightForWeather(point, targetEntry?.weather);
+      const pointSolarCycle = getSolarCycleProgress(pointMinute, targetEntry);
       const pointCorrection = getMeterSimulationCorrection(
         entryDate,
         targetEntry?.weather,
-        pointMinute
+        pointMinute,
+        meterSimulationCheckpoints,
+        correctionModelContext
       );
       return {
         ...point,
-        importWeight,
+        importWeight: pointSolarCycle.postSunsetProgress,
+        exportWeight: pointSolarCycle.daylightProgress,
         meter01: Number(
-          (baseImport + deltas.importDelta * importWeight + pointCorrection.importOffset).toFixed(1)
+          (
+            baseImport +
+            overnightImport.value * pointSolarCycle.preSunriseProgress +
+            overnightImport.value * pointSolarCycle.postSunsetProgress +
+            pointCorrection.importOffset
+          ).toFixed(1)
         ),
         meter02: Number(
-          (baseExport + deltas.exportDelta * point.exportWeight + pointCorrection.exportOffset).toFixed(1)
+          (
+            baseExport +
+            deltas.exportDelta * pointSolarCycle.daylightProgress +
+            pointCorrection.exportOffset
+          ).toFixed(1)
         )
       };
     })
@@ -2538,6 +2745,12 @@ function renderMeterSimulation(entryDate = entriesPageState.selectedDate, { auto
     Weather-adjusted basis: <strong>${basisDescription}</strong>.
     Daily change: <strong>+${simulation.importDelta.toFixed(1)} import</strong> and
     <strong>+${simulation.exportDelta.toFixed(1)} export</strong>.
+    Learned overnight import: <strong>${simulation.overnightImport.toFixed(1)} kWh</strong>
+    from <strong>${escapeHtml(simulation.overnightBasis)}</strong>.
+    Solar window: <strong>${formatMeterSimulationRunLabel(simulation.solarCycle.sunriseMinute)}</strong>
+    to <strong>${formatMeterSimulationRunLabel(simulation.solarCycle.sunsetMinute)}</strong>
+    (${escapeHtml(simulation.solarCycle.basis)}).
+    M01 accumulates outside that window; M02 accumulates during it.
     Calibration: <strong>${escapeHtml(simulation.calibration.basis)}</strong>
     (${simulation.calibration.importOffset >= 0 ? "+" : ""}${simulation.calibration.importOffset.toFixed(1)} M01,
     ${simulation.calibration.exportOffset >= 0 ? "+" : ""}${simulation.calibration.exportOffset.toFixed(1)} M02).
@@ -2581,7 +2794,10 @@ function formatMeterSimulationTimestamp(timestamp) {
 function updateMeterSimulationTimestamp(entry) {
   const target = document.getElementById("entry-meter-sim-timestamp");
   if (!target) return;
-  target.textContent = formatMeterSimulationTimestamp(entry?.meter_simulation_updated_at);
+  const timestamp = formatMeterSimulationTimestamp(entry?.meter_simulation_updated_at);
+  target.textContent = entry?.meter_simulation_run_label
+    ? `${entry.meter_simulation_run_label} · ${timestamp}`
+    : timestamp;
   target.title = entry?.meter_simulation_updated_at || "No saved simulation timestamp";
 }
 
@@ -2590,13 +2806,17 @@ function renderMeterSimulationDialog(entryDate) {
   const title = document.getElementById("entry-meter-sim-dialog-title");
   const meta = document.getElementById("entry-meter-sim-dialog-meta");
   const body = document.getElementById("entry-meter-sim-dialog-body");
+  const runBody = document.getElementById("entry-meter-sim-run-dialog-body");
   const summary = document.getElementById("entry-meter-sim-dialog-summary");
-  if (!dialog || !title || !meta || !body || !summary || !entryDate) return null;
+  if (!dialog || !title || !meta || !body || !runBody || !summary || !entryDate) return null;
 
   const entry = getEntryByDate(entryDate);
   const simulation = buildMeterSimulation(entryDate, entriesPageState.entries);
   title.textContent = `${entryDate} daily meter estimates`;
-  meta.textContent = `Last saved simulation: ${formatMeterSimulationTimestamp(entry?.meter_simulation_updated_at)} · Weather: ${simulation.weatherBucket}`;
+  const runLabel = entry?.meter_simulation_run_label
+    ? `${entry.meter_simulation_run_label} · `
+    : "";
+  meta.textContent = `Last saved simulation: ${runLabel}${formatMeterSimulationTimestamp(entry?.meter_simulation_updated_at)} · Weather: ${simulation.weatherBucket}`;
   body.innerHTML = simulation.rows.map((row) => `
     <tr>
       <td><strong>${row.label}</strong></td>
@@ -2606,14 +2826,33 @@ function renderMeterSimulationDialog(entryDate) {
       <td>${row.meter02.toFixed(1)}</td>
     </tr>
   `).join("");
+  const recordedRuns = entry?.meter_simulation_runs || [];
+  runBody.innerHTML = recordedRuns.length
+    ? recordedRuns.map((run) => `
+      <tr>
+        <td><strong>${escapeHtml(run.run_label)}</strong></td>
+        <td>${run.run_type === "checkpoint" ? "Checkpoint" : "15-minute check"}</td>
+        <td>${run.meter_01_import_reading.toFixed(1)}</td>
+        <td>${run.meter_02_export_reading.toFixed(1)}</td>
+        <td>${escapeHtml(run.weather)}</td>
+        <td>${run.cloud_cover_pct === null ? "—" : `${run.cloud_cover_pct.toFixed(0)}%`}</td>
+        <td>${formatMeterSimulationTimestamp(run.recorded_at)}</td>
+      </tr>
+    `).join("")
+    : `<tr><td colspan="7" class="text-muted">No quarter-hour monitoring checks have been recorded for this date yet.</td></tr>`;
   summary.innerHTML = `
     Historical basis: <strong>${escapeHtml(simulation.basis)}</strong>
     (${simulation.sampleCount} usable day${simulation.sampleCount === 1 ? "" : "s"}).
     Expected daily change: <strong>+${simulation.importDelta.toFixed(1)} M01</strong> and
     <strong>+${simulation.exportDelta.toFixed(1)} M02</strong>.
+    Learned overnight import: <strong>${simulation.overnightImport.toFixed(1)} kWh</strong>
+    from <strong>${escapeHtml(simulation.overnightBasis)}</strong>.
+    Solar window: <strong>${formatMeterSimulationRunLabel(simulation.solarCycle.sunriseMinute)}</strong>
+    to <strong>${formatMeterSimulationRunLabel(simulation.solarCycle.sunsetMinute)}</strong>.
     Calibration: <strong>${escapeHtml(simulation.calibration.basis)}</strong>
     (${simulation.calibration.importOffset >= 0 ? "+" : ""}${simulation.calibration.importOffset.toFixed(1)} M01,
     ${simulation.calibration.exportOffset >= 0 ? "+" : ""}${simulation.calibration.exportOffset.toFixed(1)} M02).
+    <strong>${recordedRuns.length}</strong> monitoring check${recordedRuns.length === 1 ? "" : "s"} recorded.
   `;
   return simulation;
 }
@@ -2635,13 +2874,7 @@ function formatCheckpointTime(minuteOfDay) {
 
 function shouldAutoSimulateMeters(entry) {
   if (!entry || String(entry.entry_date) !== String(getTodayIsoDate())) return false;
-  if (entry.meter_values_confirmed) return false;
-  return (
-    entry.meter_values_estimated ||
-    entry.estimated ||
-    Number(entry.production_kwh || 0) === 0 ||
-    String(entry.lookup_source || "").toLowerCase() !== "manual"
-  );
+  return true;
 }
 
 async function persistMeterSimulation(db, entryDate, simulation, entries, { force = false } = {}) {
@@ -2651,6 +2884,38 @@ async function persistMeterSimulation(db, entryDate, simulation, entries, { forc
   }
 
   const timestamp = new Date().toISOString();
+  const existingRuns = Array.isArray(existingEntry.meter_simulation_runs)
+    ? existingEntry.meter_simulation_runs
+    : [];
+  const monitoringRun = simulation.runKey
+    ? {
+      run_key: simulation.runKey,
+      run_label: simulation.runLabel,
+      run_type: simulation.runType,
+      minute_of_day: simulation.currentMinute,
+      meter_01_import_reading: simulation.currentImport,
+      meter_02_export_reading: simulation.currentExport,
+      weather: existingEntry.weather || simulation.weatherBucket || "Unknown",
+      irradiance_peak_wm2: Number(existingEntry.irradiance_peak_wm2 || 0),
+      cloud_cover_pct: parseOptionalNumber(existingEntry.cloud_cover_pct),
+      humidity_pct: parseOptionalNumber(existingEntry.humidity_pct),
+      wind_mph: parseOptionalNumber(existingEntry.wind_mph),
+      model_basis: simulation.basis,
+      calibration_basis: simulation.calibration?.basis || "",
+      overnight_import_kwh: simulation.overnightImport,
+      overnight_basis: simulation.overnightBasis,
+      sunrise_time: existingEntry.sunrise_time || "",
+      sunset_time: existingEntry.sunset_time || "",
+      solar_window_basis: simulation.solarCycle?.basis || "",
+      recorded_at: timestamp
+    }
+    : null;
+  const recordedRuns = monitoringRun
+    ? [
+      ...existingRuns.filter((run) => run.run_key !== monitoringRun.run_key),
+      monitoringRun
+    ].sort((left, right) => Number(left.minute_of_day || 0) - Number(right.minute_of_day || 0))
+    : existingRuns;
   const simulatedEntry = normalizeEntry({
     ...existingEntry,
     meter_01_import_reading: simulation.currentImport,
@@ -2660,6 +2925,13 @@ async function persistMeterSimulation(db, entryDate, simulation, entries, { forc
     meter_simulation_weather: simulation.weatherBucket,
     meter_simulation_basis: simulation.basis,
     meter_simulation_updated_at: timestamp,
+    meter_simulation_schedule_key: simulation.scheduleKey || existingEntry.meter_simulation_schedule_key || "",
+    meter_simulation_schedule_label: simulation.scheduleLabel || existingEntry.meter_simulation_schedule_label || "",
+    meter_simulation_run_key: simulation.runKey || existingEntry.meter_simulation_run_key || "",
+    meter_simulation_run_label: simulation.runLabel || existingEntry.meter_simulation_run_label || "",
+    meter_simulation_run_type: simulation.runType || existingEntry.meter_simulation_run_type || "",
+    meter_simulation_model_signature: simulation.modelSignature || existingEntry.meter_simulation_model_signature || "",
+    meter_simulation_runs: recordedRuns,
     updated_at: timestamp
   });
 
@@ -2667,38 +2939,132 @@ async function persistMeterSimulation(db, entryDate, simulation, entries, { forc
   return simulatedEntry;
 }
 
-async function syncTodaySimulatedMeters(db) {
-  const state = await loadFirestoreState(db);
-  const today = getTodayIsoDate();
-  const todayEntry = state.entries.find((entry) => String(entry.entry_date) === String(today));
-  if (!shouldAutoSimulateMeters(todayEntry)) return null;
+function formatMeterSimulationRunLabel(minuteOfDay) {
+  const hour24 = Math.floor(minuteOfDay / 60);
+  const minute = minuteOfDay % 60;
+  const suffix = hour24 >= 12 ? "PM" : "AM";
+  const hour12 = hour24 % 12 || 12;
+  return `${hour12}:${String(minute).padStart(2, "0")} ${suffix}`;
+}
 
-  const simulation = buildMeterSimulation(today, state.entries);
-  const currentImport = Number(todayEntry.meter_01_import_reading || 0);
-  const currentExport = Number(todayEntry.meter_02_export_reading || 0);
-  const alreadyCurrent = (
-    todayEntry.meter_values_estimated &&
-    currentImport === simulation.currentImport &&
-    currentExport === simulation.currentExport &&
-    todayEntry.meter_simulation_basis === simulation.basis &&
-    todayEntry.meter_simulation_weather === simulation.weatherBucket
+function getLatestDueMeterSimulationRun(minuteOfDay = getClockMinutes()) {
+  if (minuteOfDay < meterSimulationMonitorStartMinute) return null;
+  const boundedMinute = Math.min(minuteOfDay, meterSimulationMonitorEndMinute);
+  const runMinute = meterSimulationMonitorStartMinute + (
+    Math.floor(
+      (boundedMinute - meterSimulationMonitorStartMinute) /
+      meterSimulationMonitorIntervalMinutes
+    ) * meterSimulationMonitorIntervalMinutes
   );
-  if (alreadyCurrent) return { entry: todayEntry, simulation, updated: false };
+  const checkpoint = meterSimulationSchedule.find(
+    (point) => (point.hour * 60 + point.minute) === runMinute
+  );
+  return {
+    minuteOfDay: runMinute,
+    label: checkpoint?.label || formatMeterSimulationRunLabel(runMinute),
+    type: checkpoint ? "checkpoint" : "incremental",
+    checkpoint
+  };
+}
 
-  const entry = await persistMeterSimulation(db, today, simulation, state.entries);
+async function syncTodaySimulatedMeters(db) {
+  const today = getTodayIsoDate();
+  const dueRun = getLatestDueMeterSimulationRun();
+  if (!dueRun) return null;
+
+  const runHour = Math.floor(dueRun.minuteOfDay / 60);
+  const runMinute = dueRun.minuteOfDay % 60;
+  const runKey = `${today}T${String(runHour).padStart(2, "0")}:${String(runMinute).padStart(2, "0")}`;
+  if (meterSimulationLastAttemptedRunKey === runKey) return null;
+
+  let state = await loadFirestoreState(db);
+  let todayEntry = state.entries.find((entry) => String(entry.entry_date) === String(today));
+  if (!todayEntry) {
+    const creation = await ensureDailyPlaceholderRecord(db, state.entries, {
+      forceCreate: true,
+      entryDate: today,
+      sourceLabel: "15-minute meter monitoring"
+    });
+    if (!creation.entry) return null;
+    state = await loadFirestoreState(db);
+    todayEntry = state.entries.find((entry) => String(entry.entry_date) === String(today));
+  }
+  if (!todayEntry) return null;
+  if (!todayEntry.sunrise_time || !todayEntry.sunset_time) {
+    try {
+      const refreshedEntry = await refreshEntryLookupFields(db, today);
+      todayEntry = refreshedEntry;
+      state = {
+        ...state,
+        entries: state.entries.map((entry) => (
+          String(entry.entry_date) === String(today) ? refreshedEntry : entry
+        ))
+      };
+    } catch (error) {
+      console.warn("Sunrise/sunset refresh was unavailable; using the fallback solar window.", error);
+    }
+  }
+  if (!shouldAutoSimulateMeters(todayEntry)) {
+    meterSimulationLastAttemptedRunKey = runKey;
+    return null;
+  }
+  const simulation = {
+    ...buildMeterSimulation(today, state.entries, { minuteOfDay: dueRun.minuteOfDay }),
+    runKey,
+    runLabel: `${dueRun.label} ${dueRun.type === "checkpoint" ? "checkpoint" : "incremental check"}`,
+    runType: dueRun.type,
+    scheduleKey: dueRun.checkpoint ? runKey : "",
+    scheduleLabel: dueRun.checkpoint?.label || ""
+  };
+  simulation.modelSignature = [
+    simulation.weatherBucket,
+    simulation.basis,
+    simulation.importDelta.toFixed(2),
+    simulation.exportDelta.toFixed(2),
+    simulation.overnightImport.toFixed(2),
+    simulation.overnightBasis,
+    simulation.solarCycle?.sunriseMinute ?? "",
+    simulation.solarCycle?.sunsetMinute ?? "",
+    simulation.solarCycle?.basis || "",
+    simulation.calibration?.basis || "",
+    simulation.calibration?.importOffset?.toFixed(2) || "0.00",
+    simulation.calibration?.exportOffset?.toFixed(2) || "0.00"
+  ].join("|");
+  if (
+    todayEntry.meter_simulation_run_key === runKey &&
+    todayEntry.meter_simulation_model_signature === simulation.modelSignature
+  ) {
+    meterSimulationLastAttemptedRunKey = runKey;
+    return { entry: todayEntry, simulation, updated: false };
+  }
+
+  const entry = await persistMeterSimulation(db, today, simulation, state.entries, { force: true });
+  meterSimulationLastAttemptedRunKey = runKey;
   return { entry, simulation, updated: true };
 }
 
+function publishMeterSimulationResult(result) {
+  if (!result?.entry) return;
+  updateMeterSimulationTimestamp(result.entry);
+  window.dispatchEvent(new CustomEvent("solar-meter-simulation-saved", {
+    detail: {
+      entry: result.entry,
+      simulation: result.simulation,
+      updated: Boolean(result.updated)
+    }
+  }));
+}
+
 function startMeterSimulationScheduler(db) {
-  if (meterSimulationSyncTimer || isStaticSite()) return;
+  if (meterSimulationSyncTimer) return;
   meterSimulationSyncTimer = window.setInterval(async () => {
     try {
       const result = await syncTodaySimulatedMeters(db);
-      if (result?.entry) updateMeterSimulationTimestamp(result.entry);
+      publishMeterSimulationResult(result);
     } catch (error) {
       console.warn("Automatic meter simulation sync failed.", error);
     }
-  }, 30 * 60_000);
+  }, 60_000);
 }
 
 function getIntradayProgressShares(
@@ -3113,6 +3479,8 @@ async function refreshEntryLookupFields(db, entryDate) {
     humidity_pct: lookupValues.humidity_pct ?? existingEntry?.humidity_pct ?? null,
     cloud_cover_pct: lookupValues.cloud_cover_pct ?? existingEntry?.cloud_cover_pct ?? null,
     wind_mph: lookupValues.wind_mph ?? existingEntry?.wind_mph ?? null,
+    sunrise_time: lookupValues.sunrise_time || existingEntry?.sunrise_time || "",
+    sunset_time: lookupValues.sunset_time || existingEntry?.sunset_time || "",
     lookup_source: lookupValues.lookup_source || existingEntry?.lookup_source || "manual",
     notes: lookupValues.notes || existingEntry?.notes || "",
     estimated: existingEntry?.estimated ?? true,
@@ -3218,6 +3586,31 @@ async function handleEntryForm(db) {
     refreshCheckpointPrediction();
   }
 
+  window.addEventListener("solar-meter-simulation-saved", (event) => {
+    const savedEntry = normalizeEntry(event.detail?.entry || {});
+    if (!savedEntry.entry_date) return;
+    const existingIndex = entriesPageState.entries.findIndex(
+      (entry) => String(entry.entry_date) === String(savedEntry.entry_date)
+    );
+    if (existingIndex >= 0) {
+      entriesPageState.entries[existingIndex] = savedEntry;
+    } else {
+      entriesPageState.entries.push(savedEntry);
+    }
+    entriesPageState.entries = sortEntries(entriesPageState.entries);
+    populateEntriesTable(entriesPageState.entries);
+    if (String(getActiveEntryDate()) === String(savedEntry.entry_date)) {
+      fillEntryForm(savedEntry);
+    }
+    if (event.detail?.updated) {
+      renderStatusAlert(
+        "entries-status",
+        `Meter Simulation recorded the ${savedEntry.meter_simulation_run_label}: M01 ${savedEntry.meter_01_import_reading.toFixed(1)}, M02 ${savedEntry.meter_02_export_reading.toFixed(1)}.`,
+        "success"
+      );
+    }
+  });
+
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
     const formData = new FormData(form);
@@ -3235,6 +3628,8 @@ async function handleEntryForm(db) {
       humidity_pct: formData.get("humidity_pct") ? Number(formData.get("humidity_pct")) : null,
       cloud_cover_pct: formData.get("cloud_cover_pct") ? Number(formData.get("cloud_cover_pct")) : null,
       wind_mph: formData.get("wind_mph") ? Number(formData.get("wind_mph")) : null,
+      sunrise_time: existingEntry?.sunrise_time || "",
+      sunset_time: existingEntry?.sunset_time || "",
       notes: formData.get("notes") || "",
       estimated: false,
       lookup_source: "manual",
@@ -3243,6 +3638,13 @@ async function handleEntryForm(db) {
       meter_simulation_weather: "",
       meter_simulation_basis: "",
       meter_simulation_updated_at: "",
+      meter_simulation_schedule_key: "",
+      meter_simulation_schedule_label: "",
+      meter_simulation_run_key: "",
+      meter_simulation_run_label: "",
+      meter_simulation_run_type: "",
+      meter_simulation_model_signature: "",
+      meter_simulation_runs: existingEntry?.meter_simulation_runs || [],
       created_at: existingEntry?.created_at || new Date().toISOString(),
       updated_at: new Date().toISOString()
     };
@@ -3392,6 +3794,8 @@ async function handleEntryForm(db) {
         predicted_m02: predictedM02,
         actual_m01: actualM01,
         actual_m02: actualM02,
+        base_m01: checkpointSimulation.baseImport,
+        base_m02: checkpointSimulation.baseExport,
         import_error: Number((actualM01 - checkpointSimulation.rawCurrentImport).toFixed(1)),
         export_error: Number((actualM02 - checkpointSimulation.rawCurrentExport).toFixed(1)),
         recorded_at: new Date().toISOString()
@@ -3406,6 +3810,7 @@ async function handleEntryForm(db) {
         { meter_simulation_checkpoints: meterSimulationCheckpoints },
         { merge: true }
       );
+      meterSimulationLastAttemptedRunKey = "";
 
       const simulation = renderMeterSimulation(entryDate, { autoApply: true });
       const savedEntry = await persistMeterSimulation(
@@ -3626,7 +4031,7 @@ async function bootPage() {
 
   startLocalSnapshotScheduler(context.db);
   try {
-    await syncTodaySimulatedMeters(context.db);
+    publishMeterSimulationResult(await syncTodaySimulatedMeters(context.db));
   } catch (error) {
     console.warn("Initial meter simulation sync failed.", error);
   }

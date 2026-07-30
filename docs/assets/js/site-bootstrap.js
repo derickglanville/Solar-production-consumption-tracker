@@ -1,116 +1,10 @@
 window.SOLAR_STATIC_SITE = true;
 window.SOLAR_ASSET_BASE = "assets";
 window.SOLAR_BOOTSTRAP = {
-  default_config: {
-    activation_date: "2026-07-10",
-    annual_home_usage_kwh: 17967.0,
-    current_electric_rate: 0.24,
-    expected_grid_usage_kwh: 6826.0,
-    expected_offset_pct: 62.0,
-    inverter_count: 2,
-    lease_term_years: 25,
-    monthly_fixed_charges: 19.5,
-    monthly_lease_payment: 155.0,
-    panel_count: 41,
-    production_guarantee_kwh: 11141.0,
-    smart_meter_install_date: "2026-07-16",
-    sunrun_escalator_pct: 2.99,
-    system_size_kw_dc: 18.45,
-    tree_removal_cost: 3090.0,
-    utility_name: "NYSEG"
-  },
-  sample_entries: [
-    {
-      entry_date: "2026-07-16",
-      irradiance_peak_wm2: 860,
-      production_kwh: 62.4,
-      meter_01_import_reading: 36,
-      meter_02_export_reading: 74,
-      weather: "Sunny",
-      temperature_f: null,
-      humidity_pct: null,
-      cloud_cover_pct: null,
-      wind_mph: null,
-      notes: "Smart meter data starts.",
-      created_at: "",
-      updated_at: ""
-    },
-    {
-      entry_date: "2026-07-17",
-      irradiance_peak_wm2: 910,
-      production_kwh: 70.8,
-      meter_01_import_reading: 53,
-      meter_02_export_reading: 128,
-      weather: "Sunny",
-      temperature_f: null,
-      humidity_pct: null,
-      cloud_cover_pct: null,
-      wind_mph: null,
-      notes: "Strong clear day.",
-      created_at: "",
-      updated_at: ""
-    },
-    {
-      entry_date: "2026-07-18",
-      irradiance_peak_wm2: 740,
-      production_kwh: 58.2,
-      meter_01_import_reading: 71,
-      meter_02_export_reading: 170,
-      weather: "Cloudy",
-      temperature_f: null,
-      humidity_pct: null,
-      cloud_cover_pct: null,
-      wind_mph: null,
-      notes: "Afternoon cloud cover.",
-      created_at: "",
-      updated_at: ""
-    },
-    {
-      entry_date: "2026-07-19",
-      irradiance_peak_wm2: 802,
-      production_kwh: 63.1,
-      meter_01_import_reading: 79,
-      meter_02_export_reading: 207,
-      weather: "Sunny",
-      temperature_f: null,
-      humidity_pct: null,
-      cloud_cover_pct: null,
-      wind_mph: null,
-      notes: "Recovered after clouds.",
-      created_at: "",
-      updated_at: ""
-    },
-    {
-      entry_date: "2026-07-20",
-      irradiance_peak_wm2: 950,
-      production_kwh: 75.0,
-      meter_01_import_reading: 82,
-      meter_02_export_reading: 229,
-      weather: "Sunny",
-      temperature_f: null,
-      humidity_pct: null,
-      cloud_cover_pct: null,
-      wind_mph: null,
-      notes: "Excellent solar day.",
-      created_at: "",
-      updated_at: ""
-    }
-  ],
-  weather_options: [
-    "Sunny",
-    "Cloudy",
-    "Smoke",
-    "Rain",
-    "Snow",
-    "Overcast",
-    "Extreme Heat",
-    "Wind",
-    "Unknown"
-  ],
-  ai_status: {
-    openai_configured: false,
-    model: "gpt-5",
-    suggested_prompts: [
+  "ai_status": {
+    "model": "gpt-5",
+    "openai_configured": true,
+    "suggested_prompts": [
       "Am I on track to hit my guarantee?",
       "What caused today's low production?",
       "Compare this month to last month.",
@@ -123,77 +17,630 @@ window.SOLAR_BOOTSTRAP = {
       "Is one inverter underperforming?"
     ]
   },
-  monthly_bill: {
-    available: true,
-    source_path: "NYSEG Bill/July 2027.pdf",
-    display_name: "July 2027.pdf",
-    statement_date: "2026-07-07",
-    billing_start_date: "2026-06-05",
-    billing_end_date: "2026-07-01",
-    days_in_period: 27,
-    amount_due: 516.90,
-    total_energy_charges: 45.76,
-    total_electricity_cost: 45.76,
-    current_usage_kwh: 118.0,
-    average_daily_use_kwh: 4.0,
-    prior_year_average_daily_use_kwh: 35.0,
-    budget_billing_amount: 507.00,
-    payment_agreement_amount: 10.00,
-    balance_forward: -1.05,
-    total_adjustments: -1151.52,
-    miscellaneous_charges: 0.95,
-    notes: [
-      "The PDF filename says July 2027, but the bill content shows a statement date of July 07, 2026.",
-      "This bill is being used as a monthly bill reference source for dashboard context.",
-      "The bill shows only 118 kWh over a 27-day period, which is much lower than the same period one year earlier and should be interpreted carefully alongside solar production and export data."
-    ]
+  "default_config": {
+    "activation_date": "2026-07-10",
+    "annual_home_usage_kwh": 17967.0,
+    "current_electric_rate": 0.24,
+    "expected_grid_usage_kwh": 6826.0,
+    "expected_offset_pct": 62.0,
+    "inverter_count": 2,
+    "lease_term_years": 25,
+    "monthly_fixed_charges": 19.5,
+    "monthly_lease_payment": 155.0,
+    "panel_count": 41,
+    "production_guarantee_kwh": 11141.0,
+    "smart_meter_install_date": "2026-07-16",
+    "sunrun_escalator_pct": 2.99,
+    "system_size_kw_dc": 18.45,
+    "tree_removal_cost": 3090.0,
+    "utility_name": "NYSEG"
   },
-  historical_usage: {
-    available: true,
-    source_path: "NYSEG Bill/NYSEG Bill.xlsx",
-    meter_label: "00265645",
-    record_count: 23,
-    start_date: "2024-09-03",
-    end_date: "2026-07-01",
-    total_kwh: 35243.0,
-    average_monthly_kwh: 1532.304347826087,
-    annualized_kwh: 18387.652173913044,
-    actual_read_count: 12,
-    calculated_read_count: 11,
-    minimum_kwh: 24.0,
-    maximum_kwh: 3865.0,
-    latest_kwh: 118.0,
-    versus_expected_annual_kwh: 420.65217391304395,
-    versus_expected_annual_pct: 2.3412488112263814,
-    notes: [
+  "historical_usage": {
+    "actual_read_count": 12,
+    "annualized_kwh": 18387.652173913044,
+    "available": true,
+    "average_monthly_kwh": 1532.304347826087,
+    "calculated_read_count": 11,
+    "end_date": "2026-07-01",
+    "latest_kwh": 118.0,
+    "maximum_kwh": 3865.0,
+    "meter_label": "00265645",
+    "minimum_kwh": 24.0,
+    "monthly_records": [
+      {
+        "kwh": 1602.0,
+        "read_date": "2024-09-03",
+        "read_type": "NYSEG"
+      },
+      {
+        "kwh": 875.0,
+        "read_date": "2024-10-03",
+        "read_type": "CALCULATED"
+      },
+      {
+        "kwh": 24.0,
+        "read_date": "2024-11-04",
+        "read_type": "NYSEG"
+      },
+      {
+        "kwh": 1778.0,
+        "read_date": "2024-12-05",
+        "read_type": "CALCULATED"
+      },
+      {
+        "kwh": 2936.0,
+        "read_date": "2025-01-06",
+        "read_type": "NYSEG"
+      },
+      {
+        "kwh": 561.0,
+        "read_date": "2025-02-05",
+        "read_type": "CALCULATED"
+      },
+      {
+        "kwh": 2110.0,
+        "read_date": "2025-03-03",
+        "read_type": "NYSEG"
+      },
+      {
+        "kwh": 1380.0,
+        "read_date": "2025-04-03",
+        "read_type": "CALCULATED"
+      },
+      {
+        "kwh": 3865.0,
+        "read_date": "2025-05-05",
+        "read_type": "NYSEG"
+      },
+      {
+        "kwh": 1077.0,
+        "read_date": "2025-06-04",
+        "read_type": "CALCULATED"
+      },
+      {
+        "kwh": 1005.0,
+        "read_date": "2025-07-03",
+        "read_type": "NYSEG"
+      },
+      {
+        "kwh": 1087.0,
+        "read_date": "2025-08-05",
+        "read_type": "CALCULATED"
+      },
+      {
+        "kwh": 1210.0,
+        "read_date": "2025-09-03",
+        "read_type": "NYSEG"
+      },
+      {
+        "kwh": 1002.0,
+        "read_date": "2025-10-06",
+        "read_type": "CALCULATED"
+      },
+      {
+        "kwh": 523.0,
+        "read_date": "2025-11-04",
+        "read_type": "NYSEG"
+      },
+      {
+        "kwh": 2296.0,
+        "read_date": "2025-12-05",
+        "read_type": "CALCULATED"
+      },
+      {
+        "kwh": 1955.0,
+        "read_date": "2026-01-06",
+        "read_type": "NYSEG"
+      },
+      {
+        "kwh": 1419.0,
+        "read_date": "2026-02-04",
+        "read_type": "CALCULATED"
+      },
+      {
+        "kwh": 3160.0,
+        "read_date": "2026-03-03",
+        "read_type": "NYSEG"
+      },
+      {
+        "kwh": 1874.0,
+        "read_date": "2026-04-06",
+        "read_type": "CALCULATED"
+      },
+      {
+        "kwh": 1473.0,
+        "read_date": "2026-05-05",
+        "read_type": "NYSEG"
+      },
+      {
+        "kwh": 1913.0,
+        "read_date": "2026-06-04",
+        "read_type": "CALCULATED"
+      },
+      {
+        "kwh": 118.0,
+        "read_date": "2026-07-01",
+        "read_type": "NYSEG"
+      }
+    ],
+    "notes": [
       "Source includes 23 monthly-style NYSEG history rows from 2024-09-03 through 2026-07-01.",
       "12 reads are marked NYSEG and 11 are marked CALCULATED.",
       "This baseline can be used to compare historic utility consumption against the solar-era dashboard estimates and contract assumptions."
     ],
-    monthly_records: [
-      { read_date: "2024-09-03", read_type: "NYSEG", kwh: 1602.0 },
-      { read_date: "2024-10-03", read_type: "CALCULATED", kwh: 875.0 },
-      { read_date: "2024-11-04", read_type: "NYSEG", kwh: 24.0 },
-      { read_date: "2024-12-05", read_type: "CALCULATED", kwh: 1778.0 },
-      { read_date: "2025-01-06", read_type: "NYSEG", kwh: 2936.0 },
-      { read_date: "2025-02-05", read_type: "CALCULATED", kwh: 561.0 },
-      { read_date: "2025-03-03", read_type: "NYSEG", kwh: 2110.0 },
-      { read_date: "2025-04-03", read_type: "CALCULATED", kwh: 1380.0 },
-      { read_date: "2025-05-05", read_type: "NYSEG", kwh: 3865.0 },
-      { read_date: "2025-06-04", read_type: "CALCULATED", kwh: 1077.0 },
-      { read_date: "2025-07-03", read_type: "NYSEG", kwh: 1005.0 },
-      { read_date: "2025-08-05", read_type: "CALCULATED", kwh: 1087.0 },
-      { read_date: "2025-09-03", read_type: "NYSEG", kwh: 1210.0 },
-      { read_date: "2025-10-06", read_type: "CALCULATED", kwh: 1002.0 },
-      { read_date: "2025-11-04", read_type: "NYSEG", kwh: 523.0 },
-      { read_date: "2025-12-05", read_type: "CALCULATED", kwh: 2296.0 },
-      { read_date: "2026-01-06", read_type: "NYSEG", kwh: 1955.0 },
-      { read_date: "2026-02-04", read_type: "CALCULATED", kwh: 1419.0 },
-      { read_date: "2026-03-03", read_type: "NYSEG", kwh: 3160.0 },
-      { read_date: "2026-04-06", read_type: "CALCULATED", kwh: 1874.0 },
-      { read_date: "2026-05-05", read_type: "NYSEG", kwh: 1473.0 },
-      { read_date: "2026-06-04", read_type: "CALCULATED", kwh: 1913.0 },
-      { read_date: "2026-07-01", read_type: "NYSEG", kwh: 118.0 }
+    "record_count": 23,
+    "start_date": "2024-09-03",
+    "total_kwh": 35243.0,
+    "versus_expected_annual_kwh": 420.65217391304395,
+    "versus_expected_annual_pct": 2.3412488112263814
+  },
+  "monthly_bill": {
+    "amount_due": 516.9,
+    "available": true,
+    "average_daily_use_kwh": 4.0,
+    "balance_forward": -1.05,
+    "billing_end_date": "2026-07-01",
+    "billing_start_date": "2026-06-05",
+    "budget_billing_amount": 507.0,
+    "current_usage_kwh": 118.0,
+    "days_in_period": 27,
+    "display_name": "July 2027.pdf",
+    "miscellaneous_charges": 0.95,
+    "notes": [
+      "The PDF filename says July 2027, but the bill content shows a statement date of July 07, 2026.",
+      "This bill is being used as a monthly bill reference source for dashboard context.",
+      "The bill shows only 118 kWh over a 27-day period, which is much lower than the same period one year earlier and should be interpreted carefully alongside solar production and export data."
+    ],
+    "payment_agreement_amount": 10.0,
+    "prior_year_average_daily_use_kwh": 35.0,
+    "statement_date": "2026-07-07",
+    "total_adjustments": -1151.52,
+    "total_electricity_cost": 45.76,
+    "total_energy_charges": 45.76
+  },
+  "sample_entries": [
+    {
+      "cloud_cover_pct": null,
+      "created_at": null,
+      "entry_date": "2026-07-16",
+      "estimated": false,
+      "humidity_pct": null,
+      "irradiance_peak_wm2": 860,
+      "lookup_source": "",
+      "meter_01_import_reading": 36,
+      "meter_02_export_reading": 74,
+      "notes": "Smart meter data starts.",
+      "production_kwh": 44.416,
+      "temperature_f": null,
+      "temperature_high_f": null,
+      "temperature_low_f": null,
+      "updated_at": null,
+      "weather": "Sunny",
+      "wind_mph": null
+    },
+    {
+      "cloud_cover_pct": null,
+      "created_at": null,
+      "entry_date": "2026-07-17",
+      "estimated": false,
+      "humidity_pct": null,
+      "irradiance_peak_wm2": 910,
+      "lookup_source": "",
+      "meter_01_import_reading": 53,
+      "meter_02_export_reading": 128,
+      "notes": "Strong clear day.",
+      "production_kwh": 90.788,
+      "temperature_f": null,
+      "temperature_high_f": null,
+      "temperature_low_f": null,
+      "updated_at": null,
+      "weather": "Sunny",
+      "wind_mph": null
+    },
+    {
+      "cloud_cover_pct": null,
+      "created_at": null,
+      "entry_date": "2026-07-18",
+      "estimated": false,
+      "humidity_pct": null,
+      "irradiance_peak_wm2": 740,
+      "lookup_source": "",
+      "meter_01_import_reading": 71,
+      "meter_02_export_reading": 170,
+      "notes": "Afternoon cloud cover.",
+      "production_kwh": 25.498,
+      "temperature_f": null,
+      "temperature_high_f": null,
+      "temperature_low_f": null,
+      "updated_at": null,
+      "weather": "Cloudy",
+      "wind_mph": null
+    },
+    {
+      "cloud_cover_pct": null,
+      "created_at": null,
+      "entry_date": "2026-07-19",
+      "estimated": false,
+      "humidity_pct": null,
+      "irradiance_peak_wm2": 802,
+      "lookup_source": "",
+      "meter_01_import_reading": 79,
+      "meter_02_export_reading": 207,
+      "notes": "Recovered after clouds.",
+      "production_kwh": 92.862,
+      "temperature_f": null,
+      "temperature_high_f": null,
+      "temperature_low_f": null,
+      "updated_at": null,
+      "weather": "Sunny",
+      "wind_mph": null
+    },
+    {
+      "cloud_cover_pct": null,
+      "created_at": null,
+      "entry_date": "2026-07-20",
+      "estimated": false,
+      "humidity_pct": null,
+      "irradiance_peak_wm2": 950,
+      "lookup_source": "",
+      "meter_01_import_reading": 82,
+      "meter_02_export_reading": 229,
+      "notes": "Excellent solar day.",
+      "production_kwh": 94.041,
+      "temperature_f": null,
+      "temperature_high_f": null,
+      "temperature_low_f": null,
+      "updated_at": null,
+      "weather": "Sunny",
+      "wind_mph": null
+    },
+    {
+      "cloud_cover_pct": null,
+      "created_at": null,
+      "entry_date": "2026-07-21",
+      "estimated": false,
+      "humidity_pct": null,
+      "irradiance_peak_wm2": 460,
+      "lookup_source": "sunrun-csv",
+      "meter_01_import_reading": 107,
+      "meter_02_export_reading": 250,
+      "notes": "Production synced from SunRun CSV. Smart meter readings remain based on recorded NYSEG history.",
+      "production_kwh": 22.614,
+      "temperature_f": null,
+      "temperature_high_f": 76,
+      "temperature_low_f": 65,
+      "updated_at": null,
+      "weather": "Overcast",
+      "wind_mph": null
+    },
+    {
+      "cloud_cover_pct": null,
+      "created_at": null,
+      "entry_date": "2026-07-22",
+      "estimated": false,
+      "humidity_pct": null,
+      "irradiance_peak_wm2": 922,
+      "lookup_source": "sunrun-csv",
+      "meter_01_import_reading": 126,
+      "meter_02_export_reading": 305,
+      "notes": "Production synced from SunRun CSV. Smart meter readings remain based on recorded NYSEG history.",
+      "production_kwh": 78.042,
+      "temperature_f": null,
+      "temperature_high_f": 79,
+      "temperature_low_f": 66,
+      "updated_at": null,
+      "weather": "Sunny",
+      "wind_mph": null
+    },
+    {
+      "cloud_cover_pct": null,
+      "created_at": null,
+      "entry_date": "2026-07-23",
+      "estimated": false,
+      "humidity_pct": null,
+      "irradiance_peak_wm2": 367,
+      "lookup_source": "sunrun-csv",
+      "meter_01_import_reading": 137.3,
+      "meter_02_export_reading": 343.4,
+      "notes": "Production synced from SunRun CSV. Smart meter readings remain based on recorded NYSEG history.",
+      "production_kwh": 93.15,
+      "temperature_f": null,
+      "temperature_high_f": 83,
+      "temperature_low_f": 68,
+      "updated_at": null,
+      "weather": "Sunny",
+      "wind_mph": null
+    },
+    {
+      "cloud_cover_pct": null,
+      "created_at": null,
+      "entry_date": "2026-07-24",
+      "estimated": true,
+      "humidity_pct": null,
+      "irradiance_peak_wm2": 460,
+      "lookup_source": "pending-sunrun-analog",
+      "meter_01_import_reading": 162.3,
+      "meter_02_export_reading": 364.4,
+      "notes": "Pending data from SunRun. Temporary placeholder aligned to the July 21 pattern until the SunRun CSV includes July 24.",
+      "production_kwh": 22.614,
+      "temperature_f": null,
+      "temperature_high_f": 76,
+      "temperature_low_f": 65,
+      "updated_at": null,
+      "weather": "Overcast",
+      "wind_mph": null
+    },
+    {
+      "cloud_cover_pct": null,
+      "created_at": null,
+      "entry_date": "2026-07-25",
+      "estimated": true,
+      "humidity_pct": null,
+      "irradiance_peak_wm2": 922,
+      "lookup_source": "pending-sunrun-analog",
+      "meter_01_import_reading": 181.3,
+      "meter_02_export_reading": 419.4,
+      "notes": "Pending data from SunRun. Temporary placeholder aligned to the July 22 pattern until the SunRun CSV includes July 25.",
+      "production_kwh": 78.042,
+      "temperature_f": null,
+      "temperature_high_f": 79,
+      "temperature_low_f": 66,
+      "updated_at": null,
+      "weather": "Sunny",
+      "wind_mph": null
+    }
+  ],
+  "sunrun_production": {
+    "available": true,
+    "by_date": {
+      "2026-07-10": {
+        "available": true,
+        "end_of_day_meter_kwh": 59.369,
+        "entry_date": "2026-07-10",
+        "production_kwh": 59.369
+      },
+      "2026-07-11": {
+        "available": true,
+        "end_of_day_meter_kwh": 133.199,
+        "entry_date": "2026-07-11",
+        "production_kwh": 73.83
+      },
+      "2026-07-12": {
+        "available": true,
+        "end_of_day_meter_kwh": 214.085,
+        "entry_date": "2026-07-12",
+        "production_kwh": 80.886
+      },
+      "2026-07-13": {
+        "available": true,
+        "end_of_day_meter_kwh": 285.192,
+        "entry_date": "2026-07-13",
+        "production_kwh": 71.107
+      },
+      "2026-07-14": {
+        "available": true,
+        "end_of_day_meter_kwh": 362.815,
+        "entry_date": "2026-07-14",
+        "production_kwh": 77.623
+      },
+      "2026-07-15": {
+        "available": true,
+        "end_of_day_meter_kwh": 412.074,
+        "entry_date": "2026-07-15",
+        "production_kwh": 49.259
+      },
+      "2026-07-16": {
+        "available": true,
+        "end_of_day_meter_kwh": 456.49,
+        "entry_date": "2026-07-16",
+        "production_kwh": 44.416
+      },
+      "2026-07-17": {
+        "available": true,
+        "end_of_day_meter_kwh": 547.278,
+        "entry_date": "2026-07-17",
+        "production_kwh": 90.788
+      },
+      "2026-07-18": {
+        "available": true,
+        "end_of_day_meter_kwh": 572.776,
+        "entry_date": "2026-07-18",
+        "production_kwh": 25.498
+      },
+      "2026-07-19": {
+        "available": true,
+        "end_of_day_meter_kwh": 665.638,
+        "entry_date": "2026-07-19",
+        "production_kwh": 92.862
+      },
+      "2026-07-20": {
+        "available": true,
+        "end_of_day_meter_kwh": 759.679,
+        "entry_date": "2026-07-20",
+        "production_kwh": 94.041
+      },
+      "2026-07-21": {
+        "available": true,
+        "end_of_day_meter_kwh": 782.293,
+        "entry_date": "2026-07-21",
+        "production_kwh": 22.614
+      },
+      "2026-07-22": {
+        "available": true,
+        "end_of_day_meter_kwh": 860.335,
+        "entry_date": "2026-07-22",
+        "production_kwh": 78.042
+      },
+      "2026-07-23": {
+        "available": true,
+        "end_of_day_meter_kwh": 953.485,
+        "entry_date": "2026-07-23",
+        "production_kwh": 93.15
+      },
+      "2026-07-24": {
+        "available": true,
+        "end_of_day_meter_kwh": 1026.875,
+        "entry_date": "2026-07-24",
+        "production_kwh": 73.39
+      },
+      "2026-07-25": {
+        "available": true,
+        "end_of_day_meter_kwh": 1117.304,
+        "entry_date": "2026-07-25",
+        "production_kwh": 90.429
+      },
+      "2026-07-26": {
+        "available": true,
+        "end_of_day_meter_kwh": 1191.841,
+        "entry_date": "2026-07-26",
+        "production_kwh": 74.537
+      },
+      "2026-07-27": {
+        "available": true,
+        "end_of_day_meter_kwh": 1274.831,
+        "entry_date": "2026-07-27",
+        "production_kwh": 82.989
+      }
+    },
+    "latest_available_date": "2026-07-27",
+    "rows": [
+      {
+        "available": false,
+        "end_of_day_meter_kwh": 0.0,
+        "entry_date": "2026-07-09",
+        "production_kwh": 0.0
+      },
+      {
+        "available": true,
+        "end_of_day_meter_kwh": 59.369,
+        "entry_date": "2026-07-10",
+        "production_kwh": 59.369
+      },
+      {
+        "available": true,
+        "end_of_day_meter_kwh": 133.199,
+        "entry_date": "2026-07-11",
+        "production_kwh": 73.83
+      },
+      {
+        "available": true,
+        "end_of_day_meter_kwh": 214.085,
+        "entry_date": "2026-07-12",
+        "production_kwh": 80.886
+      },
+      {
+        "available": true,
+        "end_of_day_meter_kwh": 285.192,
+        "entry_date": "2026-07-13",
+        "production_kwh": 71.107
+      },
+      {
+        "available": true,
+        "end_of_day_meter_kwh": 362.815,
+        "entry_date": "2026-07-14",
+        "production_kwh": 77.623
+      },
+      {
+        "available": true,
+        "end_of_day_meter_kwh": 412.074,
+        "entry_date": "2026-07-15",
+        "production_kwh": 49.259
+      },
+      {
+        "available": true,
+        "end_of_day_meter_kwh": 456.49,
+        "entry_date": "2026-07-16",
+        "production_kwh": 44.416
+      },
+      {
+        "available": true,
+        "end_of_day_meter_kwh": 547.278,
+        "entry_date": "2026-07-17",
+        "production_kwh": 90.788
+      },
+      {
+        "available": true,
+        "end_of_day_meter_kwh": 572.776,
+        "entry_date": "2026-07-18",
+        "production_kwh": 25.498
+      },
+      {
+        "available": true,
+        "end_of_day_meter_kwh": 665.638,
+        "entry_date": "2026-07-19",
+        "production_kwh": 92.862
+      },
+      {
+        "available": true,
+        "end_of_day_meter_kwh": 759.679,
+        "entry_date": "2026-07-20",
+        "production_kwh": 94.041
+      },
+      {
+        "available": true,
+        "end_of_day_meter_kwh": 782.293,
+        "entry_date": "2026-07-21",
+        "production_kwh": 22.614
+      },
+      {
+        "available": true,
+        "end_of_day_meter_kwh": 860.335,
+        "entry_date": "2026-07-22",
+        "production_kwh": 78.042
+      },
+      {
+        "available": true,
+        "end_of_day_meter_kwh": 953.485,
+        "entry_date": "2026-07-23",
+        "production_kwh": 93.15
+      },
+      {
+        "available": true,
+        "end_of_day_meter_kwh": 1026.875,
+        "entry_date": "2026-07-24",
+        "production_kwh": 73.39
+      },
+      {
+        "available": true,
+        "end_of_day_meter_kwh": 1117.304,
+        "entry_date": "2026-07-25",
+        "production_kwh": 90.429
+      },
+      {
+        "available": true,
+        "end_of_day_meter_kwh": 1191.841,
+        "entry_date": "2026-07-26",
+        "production_kwh": 74.537
+      },
+      {
+        "available": true,
+        "end_of_day_meter_kwh": 1274.831,
+        "entry_date": "2026-07-27",
+        "production_kwh": 82.989
+      },
+      {
+        "available": false,
+        "end_of_day_meter_kwh": 0.0,
+        "entry_date": "2026-07-28",
+        "production_kwh": 0.0
+      },
+      {
+        "available": false,
+        "end_of_day_meter_kwh": 0.0,
+        "entry_date": "2026-07-29",
+        "production_kwh": 0.0
+      }
     ]
-  }
+  },
+  "weather_options": [
+    "Sunny",
+    "Cloudy",
+    "Smoke",
+    "Rain",
+    "Snow",
+    "Overcast",
+    "Extreme Heat",
+    "Wind",
+    "Unknown"
+  ]
 };
