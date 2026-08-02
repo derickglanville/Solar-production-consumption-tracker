@@ -23589,7 +23589,7 @@ This typically indicates that your device does not have a healthy Internet conne
   var configDocumentId = "primary";
   var meterSimulationMonitorStartMinute = 0;
   var meterSimulationMonitorEndMinute = 23 * 60 + 59;
-  var meterSimulationMonitorIntervalMinutes = 15;
+  var meterSimulationMonitorIntervalMinutes = 60;
   var dailyAutoCreateHour = 7;
   var dailyAutoCreateMinute = 30;
   var oneTimeManualAutoCreateDate = "2026-07-22";
@@ -25676,6 +25676,39 @@ This typically indicates that your device does not have a healthy Internet conne
     const daylightRange = Math.max(0.01, 1 - overnightShare);
     return Math.min(1, Math.max(0, (Number(profile[index] || 0) - overnightShare) / daylightRange));
   }
+  function getWeatherMeterFactors(entry = {}) {
+    const weatherBucket = normalizeWeatherBucket(entry.weather);
+    const irradiance = Math.max(0, Number(entry.irradiance_peak_wm2 || 0));
+    const cloudCover = Math.min(100, Math.max(0, Number(entry.cloud_cover_pct || 0)));
+    const irradianceRatio = Math.min(1, irradiance / 900);
+    if (weatherBucket === "Wet") {
+      return {
+        exportFactor: Math.min(0.12, Math.max(0.03, irradianceRatio * 0.35)),
+        daylightImportFactor: 0.65,
+        basis: "wet-weather suppression"
+      };
+    }
+    if (weatherBucket === "Cloudy") {
+      const extremeCloud = irradiance <= 250 || cloudCover >= 85;
+      return {
+        exportFactor: Math.min(0.45, Math.max(0.05, irradianceRatio * 0.55)),
+        daylightImportFactor: extremeCloud ? 0.35 : 0,
+        basis: extremeCloud ? "extreme-cloud suppression" : "cloud-adjusted production"
+      };
+    }
+    if (weatherBucket === "Sunny") {
+      return {
+        exportFactor: Math.min(1, Math.max(0.65, irradianceRatio)),
+        daylightImportFactor: 0,
+        basis: "sunny-day production"
+      };
+    }
+    return {
+      exportFactor: Math.min(0.65, Math.max(0.15, irradianceRatio * 0.7)),
+      daylightImportFactor: irradiance <= 200 ? 0.25 : 0,
+      basis: "limited-weather fallback"
+    };
+  }
   function getMeterSimulationCorrection(entryDate, weather, minuteOfDay, checkpoints = meterSimulationCheckpoints, modelContext = null) {
     const weatherBucket = normalizeWeatherBucket(weather);
     const usable = normalizeMeterSimulationCheckpoints(checkpoints);
@@ -25684,8 +25717,8 @@ This typically indicates that your device does not have a healthy Internet conne
       const latest = sameDay[sameDay.length - 1];
       if (modelContext) {
         const checkpointCycle = getSolarCycleProgress(latest.minute_of_day, modelContext.entry);
-        const checkpointRawImport = modelContext.baseImport + modelContext.overnightImport * checkpointCycle.preSunriseProgress + modelContext.overnightImport * checkpointCycle.postSunsetProgress;
-        const checkpointRawExport = modelContext.baseExport + modelContext.exportDelta * checkpointCycle.daylightProgress;
+        const checkpointRawImport = modelContext.baseImport + modelContext.overnightImport * checkpointCycle.preSunriseProgress + modelContext.overnightImport * checkpointCycle.postSunsetProgress + modelContext.daylightImportDelta * modelContext.daylightImportFactor * checkpointCycle.daylightProgress;
+        const checkpointRawExport = modelContext.baseExport + modelContext.exportDelta * modelContext.exportFactor * checkpointCycle.daylightProgress;
         return {
           importOffset: latest.actual_m01 - checkpointRawImport,
           exportOffset: latest.actual_m02 - checkpointRawExport,
@@ -25765,21 +25798,26 @@ This typically indicates that your device does not have a healthy Internet conne
     const baseExport = Number(previousEntry?.meter_02_export_reading || 0);
     const currentMinute = Number.isFinite(Number(options.minuteOfDay)) ? Number(options.minuteOfDay) : getClockMinutes();
     const solarCycle = getSolarCycleProgress(currentMinute, targetEntry);
+    const weatherFactors = getWeatherMeterFactors(targetEntry);
     const isToday = String(entryDate) === String(getTodayIsoDate());
     const currentPreSunriseImport = overnightImport.value * solarCycle.preSunriseProgress;
     const currentPostSunsetImport = overnightImport.value * solarCycle.postSunsetProgress;
+    const currentDaylightImport = daylightImportDelta * weatherFactors.daylightImportFactor * solarCycle.daylightProgress;
     const rawCurrentImport = Number(
-      (baseImport + (isToday ? currentPreSunriseImport + currentPostSunsetImport : expectedTotalImport)).toFixed(1)
+      (baseImport + (isToday ? currentPreSunriseImport + currentPostSunsetImport + currentDaylightImport : expectedTotalImport)).toFixed(1)
     );
     const rawCurrentExport = Number(
-      (baseExport + deltas.exportDelta * (isToday ? solarCycle.daylightProgress : 1)).toFixed(1)
+      (baseExport + deltas.exportDelta * weatherFactors.exportFactor * (isToday ? solarCycle.daylightProgress : 1)).toFixed(1)
     );
     const correctionModelContext = {
       entry: targetEntry,
       baseImport,
       baseExport,
       overnightImport: overnightImport.value,
-      exportDelta: deltas.exportDelta
+      daylightImportDelta,
+      daylightImportFactor: weatherFactors.daylightImportFactor,
+      exportDelta: deltas.exportDelta,
+      exportFactor: weatherFactors.exportFactor
     };
     const correction = getMeterSimulationCorrection(
       entryDate,
@@ -25799,6 +25837,9 @@ This typically indicates that your device does not have a healthy Internet conne
       daylightImportDelta,
       solarCycle,
       exportDelta: deltas.exportDelta,
+      exportFactor: weatherFactors.exportFactor,
+      daylightImportFactor: weatherFactors.daylightImportFactor,
+      weatherFactorBasis: weatherFactors.basis,
       weatherBucket: deltas.weatherBucket,
       basis: deltas.basis,
       sampleCount: deltas.sampleCount,
@@ -25823,10 +25864,10 @@ This typically indicates that your device does not have a healthy Internet conne
           importWeight: pointSolarCycle.postSunsetProgress,
           exportWeight: pointSolarCycle.daylightProgress,
           meter01: Number(
-            (baseImport + overnightImport.value * pointSolarCycle.preSunriseProgress + overnightImport.value * pointSolarCycle.postSunsetProgress + pointCorrection.importOffset).toFixed(1)
+            (baseImport + overnightImport.value * pointSolarCycle.preSunriseProgress + overnightImport.value * pointSolarCycle.postSunsetProgress + daylightImportDelta * weatherFactors.daylightImportFactor * pointSolarCycle.daylightProgress + pointCorrection.importOffset).toFixed(1)
           ),
           meter02: Number(
-            (baseExport + deltas.exportDelta * pointSolarCycle.daylightProgress + pointCorrection.exportOffset).toFixed(1)
+            (baseExport + deltas.exportDelta * weatherFactors.exportFactor * pointSolarCycle.daylightProgress + pointCorrection.exportOffset).toFixed(1)
           )
         };
       })
@@ -25851,6 +25892,8 @@ This typically indicates that your device does not have a healthy Internet conne
     to <strong>${formatMeterSimulationRunLabel(simulation.solarCycle.sunsetMinute)}</strong>
     (${escapeHtml(simulation.solarCycle.basis)}).
     M01 accumulates outside that window; M02 accumulates during it.
+    Weather behavior: <strong>${escapeHtml(simulation.weatherFactorBasis)}</strong>
+    (${Math.round(simulation.exportFactor * 100)}% of the historical export curve).
     Calibration: <strong>${escapeHtml(simulation.calibration.basis)}</strong>
     (${simulation.calibration.importOffset >= 0 ? "+" : ""}${simulation.calibration.importOffset.toFixed(1)} M01,
     ${simulation.calibration.exportOffset >= 0 ? "+" : ""}${simulation.calibration.exportOffset.toFixed(1)} M02).
@@ -25921,14 +25964,14 @@ This typically indicates that your device does not have a healthy Internet conne
     runBody.innerHTML = recordedRuns.length ? recordedRuns.map((run) => `
       <tr>
         <td><strong>${escapeHtml(run.run_label)}</strong></td>
-        <td>${run.run_type === "checkpoint" ? "Checkpoint" : "15-minute check"}</td>
+        <td>${run.run_type === "checkpoint" ? "Checkpoint" : run.run_type === "hourly" ? "Hourly check" : "Earlier 15-minute check"}</td>
         <td>${run.meter_01_import_reading.toFixed(1)}</td>
         <td>${run.meter_02_export_reading.toFixed(1)}</td>
         <td>${escapeHtml(run.weather)}</td>
         <td>${run.cloud_cover_pct === null ? "\u2014" : `${run.cloud_cover_pct.toFixed(0)}%`}</td>
         <td>${formatMeterSimulationTimestamp(run.recorded_at)}</td>
       </tr>
-    `).join("") : `<tr><td colspan="7" class="text-muted">No quarter-hour monitoring checks have been recorded for this date yet.</td></tr>`;
+    `).join("") : `<tr><td colspan="7" class="text-muted">No hourly monitoring checks have been recorded for this date yet.</td></tr>`;
     summary.innerHTML = `
     Historical basis: <strong>${escapeHtml(simulation.basis)}</strong>
     (${simulation.sampleCount} usable day${simulation.sampleCount === 1 ? "" : "s"}).
@@ -25938,6 +25981,8 @@ This typically indicates that your device does not have a healthy Internet conne
     from <strong>${escapeHtml(simulation.overnightBasis)}</strong>.
     Solar window: <strong>${formatMeterSimulationRunLabel(simulation.solarCycle.sunriseMinute)}</strong>
     to <strong>${formatMeterSimulationRunLabel(simulation.solarCycle.sunsetMinute)}</strong>.
+    Weather behavior: <strong>${escapeHtml(simulation.weatherFactorBasis)}</strong>
+    (${Math.round(simulation.exportFactor * 100)}% of the historical export curve).
     Calibration: <strong>${escapeHtml(simulation.calibration.basis)}</strong>
     (${simulation.calibration.importOffset >= 0 ? "+" : ""}${simulation.calibration.importOffset.toFixed(1)} M01,
     ${simulation.calibration.exportOffset >= 0 ? "+" : ""}${simulation.calibration.exportOffset.toFixed(1)} M02).
@@ -25960,7 +26005,7 @@ This typically indicates that your device does not have a healthy Internet conne
   }
   function shouldAutoSimulateMeters(entry) {
     if (!entry || String(entry.entry_date) !== String(getTodayIsoDate())) return false;
-    return true;
+    return !entry.meter_values_confirmed;
   }
   async function persistMeterSimulation(db, entryDate, simulation, entries, { force = false } = {}) {
     const existingEntry = entries.find((entry) => String(entry.entry_date) === String(entryDate));
@@ -26034,7 +26079,7 @@ This typically indicates that your device does not have a healthy Internet conne
     return {
       minuteOfDay: runMinute,
       label: checkpoint?.label || formatMeterSimulationRunLabel(runMinute),
-      type: checkpoint ? "checkpoint" : "incremental",
+      type: checkpoint ? "checkpoint" : "hourly",
       checkpoint
     };
   }
@@ -26052,7 +26097,7 @@ This typically indicates that your device does not have a healthy Internet conne
       const creation = await ensureDailyPlaceholderRecord(db, state.entries, {
         forceCreate: true,
         entryDate: today,
-        sourceLabel: "15-minute meter monitoring"
+        sourceLabel: "hourly meter monitoring"
       });
       if (!creation.entry) return null;
       state = await loadFirestoreState(db);
@@ -26078,7 +26123,7 @@ This typically indicates that your device does not have a healthy Internet conne
     const simulation = {
       ...buildMeterSimulation(today, state.entries, { minuteOfDay: dueRun.minuteOfDay }),
       runKey,
-      runLabel: `${dueRun.label} ${dueRun.type === "checkpoint" ? "checkpoint" : "incremental check"}`,
+      runLabel: `${dueRun.label} ${dueRun.type === "checkpoint" ? "checkpoint" : "hourly check"}`,
       runType: dueRun.type,
       scheduleKey: dueRun.checkpoint ? runKey : "",
       scheduleLabel: dueRun.checkpoint?.label || ""
@@ -26409,17 +26454,31 @@ This typically indicates that your device does not have a healthy Internet conne
     const body = document.getElementById("entries-table-body");
     if (!body) return;
     entriesPageState.entries = [...entries];
-    const visibleEntries = getDisplayEntries(entries).slice().reverse();
+    const chronologicalEntries = getDisplayEntries(entries);
+    const meterDifferences = /* @__PURE__ */ new Map();
+    chronologicalEntries.forEach((entry, index) => {
+      const previousEntry = index > 0 ? chronologicalEntries[index - 1] : null;
+      meterDifferences.set(entry.entry_date, {
+        m01: previousEntry ? Number(entry.meter_01_import_reading || 0) - Number(previousEntry.meter_01_import_reading || 0) : null,
+        m02: previousEntry ? Number(entry.meter_02_export_reading || 0) - Number(previousEntry.meter_02_export_reading || 0) : null
+      });
+    });
+    const visibleEntries = chronologicalEntries.slice().reverse();
     const recordCount = document.getElementById("entries-record-count");
     if (recordCount) recordCount.textContent = String(visibleEntries.length);
-    const populatedRows = visibleEntries.map((entry) => `
+    const formatDifference = (value) => Number.isFinite(value) ? value.toFixed(1) : '<span class="text-muted">-</span>';
+    const populatedRows = visibleEntries.map((entry) => {
+      const differences = meterDifferences.get(entry.entry_date) || {};
+      return `
     <tr class="entry-history-row ${entry.entry_date === entriesPageState.selectedDate ? "entry-row-selected" : ""}"
         data-entry-date="${entry.entry_date}" tabindex="0" title="Select this record to edit">
       <td>${entry.entry_date}</td>
       <td>${Number(entry.production_kwh || 0).toFixed(1)}</td>
       <td>${Number(entry.irradiance_peak_wm2 || 0).toFixed(0)}</td>
       <td>${Number(entry.meter_01_import_reading || 0).toFixed(1)}</td>
+      <td class="meter-diff-cell" title="M01 change from the previous available date">${formatDifference(differences.m01)}</td>
       <td>${Number(entry.meter_02_export_reading || 0).toFixed(1)}</td>
+      <td class="meter-diff-cell" title="M02 change from the previous available date">${formatDifference(differences.m02)}</td>
       <td>${renderWeatherCell(entry)}</td>
       <td>${formatTemperatureCellValue(entry.temperature_high_f)}</td>
       <td>${formatTemperatureCellValue(entry.temperature_low_f)}</td>
@@ -26427,10 +26486,11 @@ This typically indicates that your device does not have a healthy Internet conne
       <td>${entry.estimated ? '<span class="entry-estimated-pill">Estimated</span>' : '<span class="entry-confirmed-pill">Actual</span>'}</td>
       <td><button type="button" class="btn btn-contract btn-sm entry-edit-button" data-entry-date="${entry.entry_date}">Edit</button></td>
     </tr>
-  `).join("");
+  `;
+    }).join("");
     const blankRows = Array.from(
       { length: Math.max(0, 18 - visibleEntries.length) },
-      () => `<tr class="entry-empty-row" aria-hidden="true">${"<td>&nbsp;</td>".repeat(11)}</tr>`
+      () => `<tr class="entry-empty-row" aria-hidden="true">${"<td>&nbsp;</td>".repeat(13)}</tr>`
     ).join("");
     body.innerHTML = populatedRows + blankRows;
     body.querySelectorAll(".entry-history-row").forEach((row) => {
@@ -26641,7 +26701,7 @@ This typically indicates that your device does not have a healthy Internet conne
       fillEntryForm(entry);
       renderStatusAlert(
         "entries-status",
-        existingEntry ? `Updated record for ${entry.entry_date}.` : `Saved new record for ${entry.entry_date}.`,
+        existingEntry ? `Updated and locked actual meter readings for ${entry.entry_date}. Automatic simulation will not overwrite M01 or M02.` : `Saved and locked actual meter readings for ${entry.entry_date}. Automatic simulation will not overwrite M01 or M02.`,
         "success"
       );
     });
@@ -26778,24 +26838,29 @@ This typically indicates that your device does not have a healthy Internet conne
         );
         meterSimulationLastAttemptedRunKey = "";
         const simulation = renderMeterSimulation(entryDate, { autoApply: true });
-        const savedEntry = await persistMeterSimulation(
-          db,
-          entryDate,
-          simulation,
-          entriesPageState.entries,
-          { force: true }
-        );
-        if (savedEntry) {
-          const index = entriesPageState.entries.findIndex(
-            (entry) => String(entry.entry_date) === String(entryDate)
+        let savedEntry = selectedEntry;
+        if (!selectedEntry?.meter_values_confirmed) {
+          savedEntry = await persistMeterSimulation(
+            db,
+            entryDate,
+            simulation,
+            entriesPageState.entries,
+            { force: true }
           );
-          if (index >= 0) entriesPageState.entries[index] = savedEntry;
-          populateEntriesTable(entriesPageState.entries);
+          if (savedEntry) {
+            const index = entriesPageState.entries.findIndex(
+              (entry) => String(entry.entry_date) === String(entryDate)
+            );
+            if (index >= 0) entriesPageState.entries[index] = savedEntry;
+            populateEntriesTable(entriesPageState.entries);
+          }
+        }
+        if (savedEntry) {
           fillEntryForm(savedEntry);
         }
         renderStatusAlert(
           "entries-status",
-          `Calibration checkpoint saved for ${entryDate} at ${checkpoint.checkpoint_time}. Observed error was M01 ${actualM01 - predictedM01 >= 0 ? "+" : ""}${(actualM01 - predictedM01).toFixed(1)} and M02 ${actualM02 - predictedM02 >= 0 ? "+" : ""}${(actualM02 - predictedM02).toFixed(1)}; the cumulative model is now anchored to the actual readings.`,
+          `Calibration checkpoint saved for ${entryDate} at ${checkpoint.checkpoint_time}. Observed error was M01 ${actualM01 - predictedM01 >= 0 ? "+" : ""}${(actualM01 - predictedM01).toFixed(1)} and M02 ${actualM02 - predictedM02 >= 0 ? "+" : ""}${(actualM02 - predictedM02).toFixed(1)}; the model is anchored while confirmed actual readings remain locked.`,
           "success"
         );
       });
