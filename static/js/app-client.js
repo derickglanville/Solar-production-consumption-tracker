@@ -427,6 +427,9 @@ function normalizeMeterSimulationCheckpoints(checkpoints) {
       actual_m02: Number(checkpoint.actual_m02),
       base_m01: parseOptionalNumber(checkpoint.base_m01),
       base_m02: parseOptionalNumber(checkpoint.base_m02),
+      irradiance_peak_wm2: parseOptionalNumber(checkpoint.irradiance_peak_wm2),
+      cloud_cover_pct: parseOptionalNumber(checkpoint.cloud_cover_pct),
+      humidity_pct: parseOptionalNumber(checkpoint.humidity_pct),
       import_error: Number(checkpoint.import_error),
       export_error: Number(checkpoint.export_error),
       recorded_at: String(checkpoint.recorded_at || "")
@@ -498,6 +501,7 @@ function normalizeEntry(entry) {
     lookup_source: entry.lookup_source || "",
     meter_values_estimated: Boolean(entry.meter_values_estimated),
     meter_values_confirmed: Boolean(entry.meter_values_confirmed),
+    meter_values_calibrated: Boolean(entry.meter_values_calibrated),
     meter_simulation_weather: entry.meter_simulation_weather || "",
     meter_simulation_basis: entry.meter_simulation_basis || "",
     meter_simulation_updated_at: entry.meter_simulation_updated_at || "",
@@ -2545,6 +2549,45 @@ function getWeatherMeterFactors(entry = {}) {
   };
 }
 
+function weightedMedian(samples) {
+  const usable = samples
+    .filter((sample) => Number.isFinite(sample.value) && Number.isFinite(sample.weight) && sample.weight > 0)
+    .sort((left, right) => left.value - right.value);
+  if (!usable.length) return 0;
+  const totalWeight = sum(usable.map((sample) => sample.weight));
+  let cumulativeWeight = 0;
+  for (const sample of usable) {
+    cumulativeWeight += sample.weight;
+    if (cumulativeWeight >= totalWeight / 2) return sample.value;
+  }
+  return usable[usable.length - 1].value;
+}
+
+function getCheckpointSimilarityWeight(checkpoint, entryDate, minuteOfDay, targetEntry = {}) {
+  const targetWeather = normalizeWeatherBucket(targetEntry.weather);
+  const timeDistance = Math.abs(checkpoint.minute_of_day - minuteOfDay);
+  const timeWeight = Math.exp(-timeDistance / 150);
+  const weatherWeight = checkpoint.weather_bucket === targetWeather
+    ? 1
+    : checkpoint.weather_bucket === "Unknown" || targetWeather === "Unknown"
+      ? 0.6
+      : 0.28;
+  const targetIrradiance = parseOptionalNumber(targetEntry.irradiance_peak_wm2);
+  const irradianceWeight = targetIrradiance !== null && checkpoint.irradiance_peak_wm2 !== null
+    ? Math.exp(-Math.abs(checkpoint.irradiance_peak_wm2 - targetIrradiance) / 220)
+    : 0.72;
+  const targetCloud = parseOptionalNumber(targetEntry.cloud_cover_pct);
+  const cloudWeight = targetCloud !== null && checkpoint.cloud_cover_pct !== null
+    ? Math.exp(-Math.abs(checkpoint.cloud_cover_pct - targetCloud) / 32)
+    : 0.78;
+  const ageDays = Math.max(
+    0,
+    Math.round((new Date(`${entryDate}T00:00:00`) - new Date(`${checkpoint.entry_date}T00:00:00`)) / 86400000)
+  );
+  const recencyWeight = 1 / (1 + ageDays / 45);
+  return timeWeight * weatherWeight * irradianceWeight * cloudWeight * recencyWeight;
+}
+
 function getMeterSimulationCorrection(
   entryDate,
   weather,
@@ -2596,26 +2639,107 @@ function getMeterSimulationCorrection(
     };
   }
 
-  const comparable = usable.filter((checkpoint) => (
-    checkpoint.entry_date < String(entryDate) &&
-    checkpoint.weather_bucket === weatherBucket &&
-    Math.abs(checkpoint.minute_of_day - minuteOfDay) <= 180
-  ));
-  const fallback = usable.filter((checkpoint) => (
-    checkpoint.entry_date < String(entryDate) &&
-    Math.abs(checkpoint.minute_of_day - minuteOfDay) <= 120
-  ));
-  const selected = comparable.length ? comparable : fallback;
+  const targetEntry = modelContext?.entry || { weather };
+  const weightedCandidates = usable
+    .filter((checkpoint) => checkpoint.entry_date < String(entryDate))
+    .map((checkpoint) => ({
+      checkpoint,
+      weight: getCheckpointSimilarityWeight(checkpoint, entryDate, minuteOfDay, targetEntry)
+    }))
+    .filter((candidate) => candidate.weight >= 0.025)
+    .sort((left, right) => right.weight - left.weight)
+    .slice(0, 12);
 
   return {
-    importOffset: selected.length ? signedMedian(selected.map((checkpoint) => checkpoint.import_error)) : 0,
-    exportOffset: selected.length ? signedMedian(selected.map((checkpoint) => checkpoint.export_error)) : 0,
-    basis: selected.length
-      ? `${comparable.length ? weatherBucket : "all-weather"} checkpoint history`
+    importOffset: weightedCandidates.length
+      ? weightedMedian(weightedCandidates.map(({ checkpoint, weight }) => ({ value: checkpoint.import_error, weight })))
+      : 0,
+    exportOffset: weightedCandidates.length
+      ? weightedMedian(weightedCandidates.map(({ checkpoint, weight }) => ({ value: checkpoint.export_error, weight })))
+      : 0,
+    basis: weightedCandidates.length
+      ? `${weatherBucket} weather + irradiance weighted history`
       : "no calibration checkpoints yet",
-    sampleCount: selected.length,
+    sampleCount: weightedCandidates.length,
     checkpointMinute: null
   };
+}
+
+function formatCalibrationError(value) {
+  const number = Number(value || 0);
+  const sign = number > 0 ? "+" : "";
+  const severity = Math.abs(number) <= 2 ? "calibration-error-good" : Math.abs(number) <= 7 ? "calibration-error-medium" : "calibration-error-high";
+  return `<span class="${severity}">${sign}${number.toFixed(1)}</span>`;
+}
+
+function renderCalibrationHistory() {
+  const body = document.getElementById("entry-meter-calibration-history");
+  const count = document.getElementById("entry-meter-calibration-count");
+  if (!body || !count) return;
+  const checkpoints = normalizeMeterSimulationCheckpoints(meterSimulationCheckpoints)
+    .sort((left, right) => {
+      const dateOrder = String(right.entry_date).localeCompare(String(left.entry_date));
+      return dateOrder || right.minute_of_day - left.minute_of_day;
+    });
+  count.textContent = `${checkpoints.length} record${checkpoints.length === 1 ? "" : "s"}`;
+  body.innerHTML = checkpoints.length
+    ? checkpoints.map((checkpoint) => `
+      <tr>
+        <td>${escapeHtml(checkpoint.entry_date)}</td>
+        <td>${escapeHtml(checkpoint.checkpoint_time)}</td>
+        <td>${escapeHtml(checkpoint.weather_bucket)}</td>
+        <td>${checkpoint.irradiance_peak_wm2 === null ? "-" : checkpoint.irradiance_peak_wm2.toFixed(0)}</td>
+        <td>${checkpoint.predicted_m01.toFixed(1)}</td>
+        <td>${checkpoint.actual_m01.toFixed(1)}</td>
+        <td>${formatCalibrationError(checkpoint.actual_m01 - checkpoint.predicted_m01)}</td>
+        <td>${checkpoint.predicted_m02.toFixed(1)}</td>
+        <td>${checkpoint.actual_m02.toFixed(1)}</td>
+        <td>${formatCalibrationError(checkpoint.actual_m02 - checkpoint.predicted_m02)}</td>
+      </tr>
+    `).join("")
+    : '<tr><td colspan="10" class="text-muted text-center py-3">No training checkpoints recorded yet.</td></tr>';
+}
+
+function setupCalibrationHistoryPopout() {
+  const history = document.querySelector(".meter-calibration-history");
+  const button = document.getElementById("entry-meter-calibration-popout");
+  if (!history || !button || button.dataset.popoutReady === "true") return;
+  button.dataset.popoutReady = "true";
+  let restorePlaceholder = null;
+
+  const closePopout = () => {
+    history.classList.remove("meter-calibration-history-popout");
+    document.body.classList.remove("meter-calibration-popout-open");
+    button.textContent = "Pop Out";
+    button.setAttribute("aria-expanded", "false");
+    if (restorePlaceholder?.parentNode) {
+      restorePlaceholder.parentNode.insertBefore(history, restorePlaceholder);
+      restorePlaceholder.remove();
+      restorePlaceholder = null;
+    }
+  };
+
+  button.setAttribute("aria-expanded", "false");
+  button.addEventListener("click", () => {
+    if (history.classList.contains("meter-calibration-history-popout")) {
+      closePopout();
+      return;
+    }
+    restorePlaceholder = document.createComment("prediction-history-popout-location");
+    history.parentNode.insertBefore(restorePlaceholder, history);
+    document.body.appendChild(history);
+    history.classList.add("meter-calibration-history-popout");
+    document.body.classList.add("meter-calibration-popout-open");
+    button.textContent = "Close";
+    button.setAttribute("aria-expanded", "true");
+    history.querySelector(".meter-calibration-history-window")?.scrollTo({ top: 0, left: 0 });
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && history.classList.contains("meter-calibration-history-popout")) {
+      closePopout();
+    }
+  });
 }
 
 function getClockMinutes(now = new Date()) {
@@ -2793,6 +2917,7 @@ function renderMeterSimulation(entryDate = entriesPageState.selectedDate, { auto
   const summary = document.getElementById("entry-meter-sim-summary");
   const body = document.getElementById("entry-meter-sim-body");
   const form = document.getElementById("entry-form");
+  renderCalibrationHistory();
   if (!summary || !body || !form || !entryDate) return null;
 
   const simulation = buildMeterSimulation(entryDate, entriesPageState.entries);
@@ -3328,8 +3453,17 @@ function formatLookupSourceLabel(sourceValue, estimated = false) {
 function setEntrySourceBadge(entry = null) {
   const badge = document.getElementById("entry-source-badge");
   if (!badge) return;
-  badge.textContent = formatLookupSourceLabel(entry?.lookup_source, Boolean(entry?.estimated));
-  badge.dataset.sourceKind = String(entry?.lookup_source || (entry?.estimated ? "estimated" : "manual"));
+  const simulationManaged = Boolean(
+    entry?.meter_values_calibrated &&
+    !entry?.meter_values_confirmed &&
+    String(entry?.entry_date || "") === String(getTodayIsoDate())
+  );
+  badge.textContent = simulationManaged
+    ? "Meters: Simulation + calibration"
+    : formatLookupSourceLabel(entry?.lookup_source, Boolean(entry?.estimated));
+  badge.dataset.sourceKind = simulationManaged
+    ? "meter-simulation-calibrated"
+    : String(entry?.lookup_source || (entry?.estimated ? "estimated" : "manual"));
   badge.classList.remove("d-none");
 }
 
@@ -3687,6 +3821,7 @@ async function handleEntryForm(db) {
   const dateField = form.elements.namedItem("entry_date");
 
   setupHistoricalEntriesWindow();
+  setupCalibrationHistoryPopout();
 
   if (viewDayEstimatesButton && simulationDialog) {
     viewDayEstimatesButton.addEventListener("click", () => {
@@ -3802,6 +3937,7 @@ async function handleEntryForm(db) {
       lookup_source: "manual",
       meter_values_estimated: false,
       meter_values_confirmed: true,
+      meter_values_calibrated: false,
       meter_simulation_weather: "",
       meter_simulation_basis: "",
       meter_simulation_updated_at: "",
@@ -3954,6 +4090,7 @@ async function handleEntryForm(db) {
         entriesPageState.entries,
         { minuteOfDay }
       );
+      const checkpointRecordedAt = new Date().toISOString();
       const checkpoint = {
         entry_date: entryDate,
         checkpoint_time: checkpointTime.value,
@@ -3965,15 +4102,19 @@ async function handleEntryForm(db) {
         actual_m02: actualM02,
         base_m01: checkpointSimulation.baseImport,
         base_m02: checkpointSimulation.baseExport,
+        irradiance_peak_wm2: parseOptionalNumber(selectedEntry?.irradiance_peak_wm2),
+        cloud_cover_pct: parseOptionalNumber(selectedEntry?.cloud_cover_pct),
+        humidity_pct: parseOptionalNumber(selectedEntry?.humidity_pct),
         import_error: Number((actualM01 - checkpointSimulation.rawCurrentImport).toFixed(1)),
         export_error: Number((actualM02 - checkpointSimulation.rawCurrentExport).toFixed(1)),
-        recorded_at: new Date().toISOString()
+        recorded_at: checkpointRecordedAt
       };
       const retained = meterSimulationCheckpoints.filter((existing) => !(
         existing.entry_date === checkpoint.entry_date &&
         existing.checkpoint_time === checkpoint.checkpoint_time
       ));
       meterSimulationCheckpoints = normalizeMeterSimulationCheckpoints([...retained, checkpoint]);
+      renderCalibrationHistory();
       await setDoc(
         doc(db, configCollectionName, configDocumentId),
         { meter_simulation_checkpoints: meterSimulationCheckpoints },
@@ -3981,30 +4122,38 @@ async function handleEntryForm(db) {
       );
       meterSimulationLastAttemptedRunKey = "";
 
-      const simulation = renderMeterSimulation(entryDate, { autoApply: true });
-      let savedEntry = selectedEntry;
-      if (!selectedEntry?.meter_values_confirmed) {
-        savedEntry = await persistMeterSimulation(
-          db,
-          entryDate,
-          simulation,
-          entriesPageState.entries,
-          { force: true }
-        );
-        if (savedEntry) {
-          const index = entriesPageState.entries.findIndex(
-            (entry) => String(entry.entry_date) === String(entryDate)
-          );
-          if (index >= 0) entriesPageState.entries[index] = savedEntry;
-          populateEntriesTable(entriesPageState.entries);
-        }
+      renderMeterSimulation(entryDate, { autoApply: true });
+
+      // A calibration reading is an observed meter value, so it becomes the
+      // latest source-of-truth reading for the selected Historical Entry.
+      const isCurrentDayCheckpoint = String(entryDate) === String(getTodayIsoDate());
+      const savedEntry = normalizeEntry({
+        ...selectedEntry,
+        entry_date: entryDate,
+        meter_01_import_reading: actualM01,
+        meter_02_export_reading: actualM02,
+        meter_values_estimated: isCurrentDayCheckpoint,
+        meter_values_confirmed: !isCurrentDayCheckpoint,
+        meter_values_calibrated: isCurrentDayCheckpoint,
+        meter_simulation_updated_at: checkpointRecordedAt,
+        updated_at: checkpointRecordedAt
+      });
+      await setDoc(doc(db, entryCollectionName, entryDate), savedEntry, { merge: true });
+      const savedIndex = entriesPageState.entries.findIndex(
+        (entry) => String(entry.entry_date) === String(entryDate)
+      );
+      if (savedIndex >= 0) {
+        entriesPageState.entries[savedIndex] = savedEntry;
+      } else {
+        entriesPageState.entries.push(savedEntry);
       }
+      populateEntriesTable(entriesPageState.entries);
       if (savedEntry) {
         fillEntryForm(savedEntry);
       }
       renderStatusAlert(
         "entries-status",
-        `Calibration checkpoint saved for ${entryDate} at ${checkpoint.checkpoint_time}. Observed error was M01 ${(actualM01 - predictedM01) >= 0 ? "+" : ""}${(actualM01 - predictedM01).toFixed(1)} and M02 ${(actualM02 - predictedM02) >= 0 ? "+" : ""}${(actualM02 - predictedM02).toFixed(1)}; the model is anchored while confirmed actual readings remain locked.`,
+        `Calibration checkpoint saved for ${entryDate} at ${checkpoint.checkpoint_time}. Historical Entries now uses actual M01 ${actualM01.toFixed(1)} and M02 ${actualM02.toFixed(1)}. Observed prediction error was M01 ${(actualM01 - predictedM01) >= 0 ? "+" : ""}${(actualM01 - predictedM01).toFixed(1)} and M02 ${(actualM02 - predictedM02) >= 0 ? "+" : ""}${(actualM02 - predictedM02).toFixed(1)}.${isCurrentDayCheckpoint ? " Today remains simulation-managed and will update at the next hourly run." : " This completed historical row is locked."}`,
         "success"
       );
     });
