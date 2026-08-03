@@ -169,7 +169,8 @@ let meterSimulationLastAttemptedRunKey = "";
 let meterSimulationCheckpoints = [];
 let entriesPageState = {
   entries: [],
-  selectedDate: ""
+  selectedDate: "",
+  config: mergeConfig()
 };
 const meterSimulationSchedule = [
   { label: "9:00 AM", hour: 9, minute: 0, importWeight: 0.00, exportWeight: 0.00 },
@@ -3478,6 +3479,8 @@ function populateEntriesTable(entries) {
   if (!body) return;
   entriesPageState.entries = [...entries];
   const chronologicalEntries = getDisplayEntries(entries);
+  updateEntriesNetMeterSummary(chronologicalEntries, entriesPageState.config);
+  updateEntriesMonthlyCostSummary(chronologicalEntries, entriesPageState.config);
   const meterDifferences = new Map();
   chronologicalEntries.forEach((entry, index) => {
     const previousEntry = index > 0 ? chronologicalEntries[index - 1] : null;
@@ -3537,6 +3540,81 @@ function populateEntriesTable(entries) {
   body.querySelectorAll(".entry-edit-button").forEach((button) => {
     button.addEventListener("click", () => selectHistoricalEntry(button.dataset.entryDate));
   });
+}
+
+function updateEntriesNetMeterSummary(entries, config = defaultConfig) {
+  const valueTarget = document.getElementById("entries-net-meter-value");
+  const descriptionTarget = document.getElementById("entries-net-meter-description");
+  if (!valueTarget || !descriptionTarget) return;
+
+  const latestEntry = entries.length ? entries[entries.length - 1] : null;
+  const electricRate = Number(config?.current_electric_rate || defaultConfig.current_electric_rate || 0);
+  if (!latestEntry) {
+    valueTarget.textContent = "$0.00";
+    descriptionTarget.textContent = "No meter readings available";
+    return;
+  }
+
+  const netMeterKwh = (
+    Number(latestEntry.meter_02_export_reading || 0) -
+    Number(latestEntry.meter_01_import_reading || 0)
+  );
+  const estimatedValue = netMeterKwh * electricRate;
+  valueTarget.textContent = formatCurrency(estimatedValue);
+  descriptionTarget.textContent = `${netMeterKwh.toFixed(1)} kWh x $${electricRate.toFixed(2)}/kWh`;
+}
+
+function updateEntriesMonthlyCostSummary(entries, config = defaultConfig) {
+  const summaryTarget = document.getElementById("entries-monthly-cost-summary");
+  const valueTarget = document.getElementById("entries-monthly-cost-value");
+  const descriptionTarget = document.getElementById("entries-monthly-cost-description");
+  const detailTarget = document.getElementById("entries-monthly-cost-detail");
+  if (!summaryTarget || !valueTarget || !descriptionTarget || !detailTarget) return;
+
+  if (!entries.length) {
+    valueTarget.textContent = "$0";
+    descriptionTarget.textContent = "No meter readings available";
+    detailTarget.textContent = "Import and export projection unavailable";
+    return;
+  }
+
+  const latestEntry = entries[entries.length - 1];
+  const latestDate = new Date(`${latestEntry.entry_date}T00:00:00`);
+  const monthPrefix = String(latestEntry.entry_date).slice(0, 7);
+  const monthEntries = entries.filter((entry) => String(entry.entry_date).startsWith(`${monthPrefix}-`));
+  const priorEntries = entries.filter((entry) => String(entry.entry_date) < `${monthPrefix}-01`);
+  const baselineEntry = priorEntries.length
+    ? priorEntries[priorEntries.length - 1]
+    : monthEntries[0];
+  const baselineDate = new Date(`${baselineEntry.entry_date}T00:00:00`);
+  const observedDays = Math.max(1, Math.round((latestDate - baselineDate) / 86400000));
+  const daysInMonth = new Date(latestDate.getFullYear(), latestDate.getMonth() + 1, 0).getDate();
+  const projectionFactor = daysInMonth / observedDays;
+  const importSoFar = Math.max(
+    0,
+    Number(latestEntry.meter_01_import_reading || 0) - Number(baselineEntry.meter_01_import_reading || 0)
+  );
+  const exportSoFar = Math.max(
+    0,
+    Number(latestEntry.meter_02_export_reading || 0) - Number(baselineEntry.meter_02_export_reading || 0)
+  );
+  const projectedImport = importSoFar * projectionFactor;
+  const projectedExport = exportSoFar * projectionFactor;
+  const projectedNetImport = Math.max(0, projectedImport - projectedExport);
+  const electricRate = Number(config?.current_electric_rate || defaultConfig.current_electric_rate || 0);
+  const fixedCharge = Number(config?.monthly_fixed_charges || defaultConfig.monthly_fixed_charges || 0);
+  const sunrunLease = Number(config?.monthly_lease_payment || defaultConfig.monthly_lease_payment || 0);
+  const projectedNysegCost = fixedCharge + projectedNetImport * electricRate;
+  const projectedTotalCost = projectedNysegCost + sunrunLease;
+  const monthLabel = latestDate.toLocaleDateString("en-US", { month: "short", year: "numeric" });
+
+  valueTarget.textContent = formatCurrency(projectedTotalCost);
+  descriptionTarget.textContent = `${formatCurrency(projectedNysegCost)} NYSEG + ${formatCurrency(sunrunLease)} Sunrun`;
+  detailTarget.textContent = `${projectedImport.toFixed(0)} import - ${projectedExport.toFixed(0)} export kWh projected`;
+  summaryTarget.title = `${monthLabel} estimate from ${observedDays} observed day${observedDays === 1 ? "" : "s"}: ` +
+    `${importSoFar.toFixed(1)} kWh imported and ${exportSoFar.toFixed(1)} kWh exported so far. ` +
+    `NYSEG = projected net imported energy at $${electricRate.toFixed(2)}/kWh + $${fixedCharge.toFixed(2)} fixed charge. ` +
+    `Sunrun lease = $${sunrunLease.toFixed(2)}. Export credits cannot reduce the NYSEG estimate below its fixed charge.`;
 }
 
 async function refreshEntryLookupFields(db, entryDate) {
@@ -3637,6 +3715,7 @@ async function handleEntryForm(db) {
       entryDate = getActiveEntryDate()
     } = options;
     const state = await loadFirestoreState(db);
+    entriesPageState.config = mergeConfig(state.config);
     const sunrunSync = await syncSunrunProductionIntoEntries(db, state.entries);
     let entries = sunrunSync.updated ? sunrunSync.entries : state.entries;
     let autoCreateMessage = "";

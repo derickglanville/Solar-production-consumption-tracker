@@ -1136,6 +1136,54 @@ body.chart-popout-active {
   flex-wrap: wrap;
 }
 
+.entries-net-meter-summary {
+  display: grid;
+  grid-template-columns: auto auto;
+  align-items: baseline;
+  gap: 0.05rem 0.5rem;
+  min-width: 210px;
+  padding: 0.35rem 0.65rem;
+  border: 1px solid rgba(45, 111, 86, 0.2);
+  border-radius: 10px;
+  background: rgba(225, 241, 233, 0.58);
+}
+
+.entries-net-meter-summary span {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.entries-net-meter-summary strong {
+  color: #235f49;
+  font-size: 1rem;
+  text-align: right;
+}
+
+.entries-net-meter-summary small {
+  grid-column: 1 / -1;
+  color: var(--muted);
+  font-size: 0.67rem;
+  line-height: 1.15;
+  white-space: nowrap;
+}
+
+.entries-monthly-cost-summary {
+  background: rgba(226, 238, 245, 0.64);
+  border-color: rgba(83, 125, 149, 0.22);
+}
+
+.entries-monthly-cost-summary strong {
+  color: #315f78;
+}
+
+.entries-monthly-cost-summary small + small {
+  margin-top: 0.05rem;
+  color: #48697a;
+}
+
 .entries-history-card .card-body {
   padding: 0.8rem;
 }

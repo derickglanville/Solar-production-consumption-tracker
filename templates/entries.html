@@ -151,6 +151,17 @@
             <h2 class="h5 mb-1">Historical Entries</h2>
             <p class="text-muted small mb-0"><span id="entries-record-count">{{ entries|length }}</span> records. Select any row to edit it.</p>
           </div>
+          <div class="entries-net-meter-summary" title="Simple estimate only; NYSEG fixed charges and billing adjustments are not included.">
+            <span>Net Meter Value</span>
+            <strong id="entries-net-meter-value">$0.00</strong>
+            <small id="entries-net-meter-description">Latest (M02 - M01) x electric rate</small>
+          </div>
+          <div class="entries-net-meter-summary entries-monthly-cost-summary" id="entries-monthly-cost-summary">
+            <span>Projected Monthly Cost</span>
+            <strong id="entries-monthly-cost-value">$0</strong>
+            <small id="entries-monthly-cost-description">NYSEG estimate + Sunrun lease</small>
+            <small id="entries-monthly-cost-detail">Import and export projection will appear with live data</small>
+          </div>
           <div class="entries-history-actions">
             <button type="button" class="btn btn-contract btn-sm" id="entries-previous-record" title="Select the previous record">Previous</button>
             <button type="button" class="btn btn-contract btn-sm" id="entries-next-record" title="Select the next record">Next</button>
