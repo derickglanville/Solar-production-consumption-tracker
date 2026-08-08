@@ -23998,6 +23998,8 @@ This typically indicates that your device does not have a healthy Internet conne
         minute_of_day: Number(run.minute_of_day || 0),
         meter_01_import_reading: Number(run.meter_01_import_reading || 0),
         meter_02_export_reading: Number(run.meter_02_export_reading || 0),
+        previous_meter_01_import_reading: parseOptionalNumber(run.previous_meter_01_import_reading),
+        previous_meter_02_export_reading: parseOptionalNumber(run.previous_meter_02_export_reading),
         weather: run.weather || "Unknown",
         irradiance_peak_wm2: Number(run.irradiance_peak_wm2 || 0),
         cloud_cover_pct: parseOptionalNumber(run.cloud_cover_pct),
@@ -26102,7 +26104,7 @@ This typically indicates that your device does not have a healthy Internet conne
   }
   function shouldAutoSimulateMeters(entry) {
     if (!entry || String(entry.entry_date) !== String(getTodayIsoDate())) return false;
-    return !entry.meter_values_confirmed;
+    return true;
   }
   async function persistMeterSimulation(db, entryDate, simulation, entries, { force = false } = {}) {
     const existingEntry = entries.find((entry) => String(entry.entry_date) === String(entryDate));
@@ -26110,14 +26112,24 @@ This typically indicates that your device does not have a healthy Internet conne
       return existingEntry || null;
     }
     const timestamp = (/* @__PURE__ */ new Date()).toISOString();
+    const simulatedImport = Math.max(
+      Number(existingEntry.meter_01_import_reading || 0),
+      Number(simulation.currentImport || 0)
+    );
+    const simulatedExport = Math.max(
+      Number(existingEntry.meter_02_export_reading || 0),
+      Number(simulation.currentExport || 0)
+    );
     const existingRuns = Array.isArray(existingEntry.meter_simulation_runs) ? existingEntry.meter_simulation_runs : [];
     const monitoringRun = simulation.runKey ? {
       run_key: simulation.runKey,
       run_label: simulation.runLabel,
       run_type: simulation.runType,
       minute_of_day: simulation.currentMinute,
-      meter_01_import_reading: simulation.currentImport,
-      meter_02_export_reading: simulation.currentExport,
+      meter_01_import_reading: simulatedImport,
+      meter_02_export_reading: simulatedExport,
+      previous_meter_01_import_reading: Number(existingEntry.meter_01_import_reading || 0),
+      previous_meter_02_export_reading: Number(existingEntry.meter_02_export_reading || 0),
       weather: existingEntry.weather || simulation.weatherBucket || "Unknown",
       irradiance_peak_wm2: Number(existingEntry.irradiance_peak_wm2 || 0),
       cloud_cover_pct: parseOptionalNumber(existingEntry.cloud_cover_pct),
@@ -26138,8 +26150,8 @@ This typically indicates that your device does not have a healthy Internet conne
     ].sort((left, right) => Number(left.minute_of_day || 0) - Number(right.minute_of_day || 0)) : existingRuns;
     const simulatedEntry = normalizeEntry({
       ...existingEntry,
-      meter_01_import_reading: simulation.currentImport,
-      meter_02_export_reading: simulation.currentExport,
+      meter_01_import_reading: simulatedImport,
+      meter_02_export_reading: simulatedExport,
       meter_values_estimated: true,
       meter_values_confirmed: false,
       meter_simulation_weather: simulation.weatherBucket,
@@ -26435,9 +26447,9 @@ This typically indicates that your device does not have a healthy Internet conne
     const badge = document.getElementById("entry-source-badge");
     if (!badge) return;
     const simulationManaged = Boolean(
-      entry?.meter_values_calibrated && !entry?.meter_values_confirmed && String(entry?.entry_date || "") === String(getTodayIsoDate())
+      entry?.meter_values_estimated && !entry?.meter_values_confirmed && String(entry?.entry_date || "") === String(getTodayIsoDate())
     );
-    badge.textContent = simulationManaged ? "Meters: Simulation + calibration" : formatLookupSourceLabel(entry?.lookup_source, Boolean(entry?.estimated));
+    badge.textContent = simulationManaged ? entry?.meter_values_calibrated ? "Meters: Simulation + calibration" : "Meters: Hourly simulation" : formatLookupSourceLabel(entry?.lookup_source, Boolean(entry?.estimated));
     badge.dataset.sourceKind = simulationManaged ? "meter-simulation-calibrated" : String(entry?.lookup_source || (entry?.estimated ? "estimated" : "manual"));
     badge.classList.remove("d-none");
   }
@@ -26565,6 +26577,7 @@ This typically indicates that your device does not have a healthy Internet conne
         m02: previousEntry ? Number(entry.meter_02_export_reading || 0) - Number(previousEntry.meter_02_export_reading || 0) : null
       });
     });
+    updateEntriesMeterDifferenceSummary(chronologicalEntries, meterDifferences);
     const visibleEntries = chronologicalEntries.slice().reverse();
     const recordCount = document.getElementById("entries-record-count");
     if (recordCount) recordCount.textContent = String(visibleEntries.length);
@@ -26611,6 +26624,34 @@ This typically indicates that your device does not have a healthy Internet conne
     body.querySelectorAll(".entry-edit-button").forEach((button) => {
       button.addEventListener("click", () => selectHistoricalEntry(button.dataset.entryDate));
     });
+  }
+  function updateEntriesMeterDifferenceSummary(entries, meterDifferences) {
+    const m01Target = document.getElementById("entries-m01-diff-total");
+    const m02Target = document.getElementById("entries-m02-diff-total");
+    const hourlyTarget = document.getElementById("entries-last-hourly-update");
+    const hourlyDetail = document.getElementById("entries-last-hourly-update-detail");
+    const hourlyPrevious = document.getElementById("entries-last-hourly-previous");
+    const totals = [...meterDifferences.values()].reduce((result, differences) => {
+      if (Number.isFinite(differences.m01)) result.m01 += differences.m01;
+      if (Number.isFinite(differences.m02)) result.m02 += differences.m02;
+      return result;
+    }, { m01: 0, m02: 0 });
+    if (m01Target) m01Target.textContent = `${totals.m01.toFixed(1)} kWh`;
+    if (m02Target) m02Target.textContent = `${totals.m02.toFixed(1)} kWh`;
+    const savedRuns = entries.flatMap((entry) => Array.isArray(entry.meter_simulation_runs) ? entry.meter_simulation_runs.filter((run) => ["hourly", "checkpoint"].includes(String(run.run_type || "")) && run.recorded_at).map((run) => ({ ...run, entry_date: entry.entry_date })) : []).sort((left, right) => new Date(right.recorded_at).getTime() - new Date(left.recorded_at).getTime());
+    const latestRun = savedRuns[0] || null;
+    const precedingRun = latestRun ? savedRuns.find((run) => run.entry_date === latestRun.entry_date && new Date(run.recorded_at).getTime() < new Date(latestRun.recorded_at).getTime()) || null : null;
+    const previousM01 = latestRun?.previous_meter_01_import_reading ?? precedingRun?.meter_01_import_reading ?? null;
+    const previousM02 = latestRun?.previous_meter_02_export_reading ?? precedingRun?.meter_02_export_reading ?? null;
+    if (hourlyTarget) {
+      hourlyTarget.textContent = latestRun ? formatMeterSimulationTimestamp(latestRun.recorded_at) : "Not run yet";
+    }
+    if (hourlyDetail) {
+      hourlyDetail.textContent = latestRun ? `${latestRun.run_label || "Hourly meter check"} \xB7 ${latestRun.entry_date}` : "Waiting for an hourly simulation";
+    }
+    if (hourlyPrevious) {
+      hourlyPrevious.textContent = Number.isFinite(previousM01) && Number.isFinite(previousM02) ? `Previous: M01 ${previousM01.toFixed(1)} \xB7 M02 ${previousM02.toFixed(1)}` : "Previous M01/M02 unavailable";
+    }
   }
   function updateEntriesNetMeterSummary(entries, config = defaultConfig) {
     const valueTarget = document.getElementById("entries-net-meter-value");
@@ -26866,7 +26907,7 @@ This typically indicates that your device does not have a healthy Internet conne
       fillEntryForm(entry);
       renderStatusAlert(
         "entries-status",
-        existingEntry ? `Updated and locked actual meter readings for ${entry.entry_date}. Automatic simulation will not overwrite M01 or M02.` : `Saved and locked actual meter readings for ${entry.entry_date}. Automatic simulation will not overwrite M01 or M02.`,
+        String(entry.entry_date) === String(getTodayIsoDate()) ? `Saved current readings for ${entry.entry_date}. They now anchor today's model, and hourly M01/M02 updates remain active.` : `${existingEntry ? "Updated" : "Saved"} and locked completed meter readings for ${entry.entry_date}.`,
         "success"
       );
     });

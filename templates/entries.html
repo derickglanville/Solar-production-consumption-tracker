@@ -98,7 +98,7 @@
                   <div>
                     <h2 class="h6 mb-1">Meter Simulation</h2>
                     <p class="text-muted small mb-0">
-                      Weather-adjusted M01/M02 monitoring once per hour, all day. M01 accumulates from sunset to sunrise; M02 accumulates from sunrise to sunset using the recorded solar window and gathered calibration data. Today's calibration checkpoints anchor the model without freezing the row; an explicit end-of-day form save locks the completed readings.
+                      Weather-adjusted M01/M02 monitoring once per hour, all day. M01 accumulates from sunset to sunrise; M02 accumulates from sunrise to sunset using the recorded solar window and gathered calibration data. Today's manual readings and calibration checkpoints anchor the model without freezing the row; completed prior dates remain locked.
                     </p>
                   </div>
                   <div class="d-flex flex-wrap gap-2">
@@ -197,6 +197,22 @@
             <button type="button" class="btn btn-contract btn-sm" id="entries-previous-record" title="Select the previous record">Previous</button>
             <button type="button" class="btn btn-contract btn-sm" id="entries-next-record" title="Select the next record">Next</button>
             <button type="button" class="btn btn-sun btn-sm" id="entries-history-popout">Pop Out</button>
+          </div>
+        </div>
+        <div class="entries-history-meter-strip" aria-label="Meter difference totals and latest hourly update">
+          <div class="entries-history-meter-stat" title="Sum of every displayed daily M01 difference">
+            <span>M01 Diff Total</span>
+            <strong id="entries-m01-diff-total">0.0 kWh</strong>
+          </div>
+          <div class="entries-history-meter-stat" title="Sum of every displayed daily M02 difference">
+            <span>M02 Diff Total</span>
+            <strong id="entries-m02-diff-total">0.0 kWh</strong>
+          </div>
+          <div class="entries-history-meter-stat entries-history-hourly-stat" title="Date and time of the most recently saved hourly meter-simulation run">
+            <span>Last Hourly Update</span>
+            <strong id="entries-last-hourly-update">Not run yet</strong>
+            <small id="entries-last-hourly-update-detail">Waiting for an hourly simulation</small>
+            <small id="entries-last-hourly-previous">Previous M01/M02 unavailable</small>
           </div>
         </div>
         <div class="table-responsive entries-history-window" id="entries-history-window">
