@@ -23803,6 +23803,16 @@ This typically indicates that your device does not have a healthy Internet conne
   function isPastIsoDate(entryDate) {
     return String(entryDate) < String(getTodayIsoDate());
   }
+  function daysBeforeToday(entryDate) {
+    const entryTime = Date.parse(`${entryDate}T12:00:00Z`);
+    const todayTime = Date.parse(`${getTodayIsoDate()}T12:00:00Z`);
+    if (!Number.isFinite(entryTime) || !Number.isFinite(todayTime)) return null;
+    return Math.round((todayTime - entryTime) / 864e5);
+  }
+  function useRecentForecastHistory(entryDate) {
+    const ageInDays = daysBeforeToday(entryDate);
+    return ageInDays !== null && ageInDays >= 0 && ageInDays <= 5;
+  }
   function mapWeatherCodeToLabel(code) {
     const value = Number(code);
     if ([0, 1].includes(value)) return "Sunny";
@@ -23835,13 +23845,15 @@ This typically indicates that your device does not have a healthy Internet conne
   async function fetchOpenMeteoLookupValues(entryDate) {
     const hourlyFields = [
       "shortwave_radiation",
+      "shortwave_radiation_instant",
       "temperature_2m",
       "relative_humidity_2m",
       "cloud_cover",
       "wind_speed_10m",
       "weather_code"
     ];
-    const baseUrl = isPastIsoDate(entryDate) ? "https://archive-api.open-meteo.com/v1/archive" : "https://api.open-meteo.com/v1/forecast";
+    const useArchive = isPastIsoDate(entryDate) && !useRecentForecastHistory(entryDate);
+    const baseUrl = useArchive ? "https://archive-api.open-meteo.com/v1/archive" : "https://api.open-meteo.com/v1/forecast";
     const url = new URL(baseUrl);
     url.searchParams.set("latitude", String(yorktownHeightsLocation.latitude));
     url.searchParams.set("longitude", String(yorktownHeightsLocation.longitude));
@@ -23870,21 +23882,35 @@ This typically indicates that your device does not have a healthy Internet conne
     if (!matchingIndexes.length) {
       throw new Error(`Open-Meteo returned no hourly rows for ${entryDate}`);
     }
-    const shortwaveValues = matchingIndexes.map((index) => Number(hourly.shortwave_radiation?.[index] ?? 0));
+    const shortwaveValues = matchingIndexes.map((index) => Number(
+      hourly.shortwave_radiation_instant?.[index] ?? hourly.shortwave_radiation?.[index] ?? 0
+    ));
     const temperatureValues = matchingIndexes.map((index) => Number(hourly.temperature_2m?.[index]));
     const humidityValues = matchingIndexes.map((index) => Number(hourly.relative_humidity_2m?.[index]));
     const cloudValues = matchingIndexes.map((index) => Number(hourly.cloud_cover?.[index]));
     const windValues = matchingIndexes.map((index) => Number(hourly.wind_speed_10m?.[index]));
+    const irradianceHourlyProfile = matchingIndexes.map((index) => {
+      const timestamp = String(hourly.time?.[index] || "");
+      const timeMatch = /T(\d{2}):(\d{2})/.exec(timestamp);
+      return {
+        minute_of_day: timeMatch ? Number(timeMatch[1]) * 60 + Number(timeMatch[2]) : 0,
+        irradiance_wm2: Number(
+          hourly.shortwave_radiation_instant?.[index] ?? hourly.shortwave_radiation?.[index] ?? 0
+        ),
+        cloud_cover_pct: parseOptionalNumber(hourly.cloud_cover?.[index])
+      };
+    });
     const daylightIndexes = matchingIndexes.filter((index) => Number(hourly.shortwave_radiation?.[index] ?? 0) > 0);
     const weatherIndexes = daylightIndexes.length ? daylightIndexes : matchingIndexes;
     const weatherLabels = weatherIndexes.map((index) => mapWeatherCodeToLabel(hourly.weather_code?.[index]));
     const peakIrradiance = Math.round(maxNumericValue(shortwaveValues) || 0);
-    const sourceKind = isPastIsoDate(entryDate) ? "historical archive" : "forecast";
+    const sourceKind = useArchive ? "historical archive" : isPastIsoDate(entryDate) ? "recent forecast-history" : "forecast";
     const dailyIndex = Array.isArray(payload?.daily?.time) ? payload.daily.time.findIndex((value) => String(value) === String(entryDate)) : -1;
     const sunriseTime = dailyIndex >= 0 ? String(payload.daily.sunrise?.[dailyIndex] || "") : "";
     const sunsetTime = dailyIndex >= 0 ? String(payload.daily.sunset?.[dailyIndex] || "") : "";
     return {
       irradiance_peak_wm2: peakIrradiance,
+      irradiance_hourly_profile: irradianceHourlyProfile,
       weather: pickDominantWeatherLabel(weatherLabels),
       temperature_f: roundToStep(averageNumericValues(temperatureValues), 1),
       temperature_high_f: roundToStep(maxNumericValue(temperatureValues), 1),
@@ -23895,7 +23921,7 @@ This typically indicates that your device does not have a healthy Internet conne
       sunrise_time: sunriseTime,
       sunset_time: sunsetTime,
       lookup_source: `open-meteo-${isPastIsoDate(entryDate) ? "historical" : "forecast"}`,
-      notes: `Auto-filled from Open-Meteo ${sourceKind} data for ${yorktownHeightsLocation.label}. Irradiance is the day's peak hourly shortwave radiation.`
+      notes: `Auto-filled from Open-Meteo ${sourceKind} data for ${yorktownHeightsLocation.label}. Irradiance is the full local day's peak instantaneous global horizontal irradiance (GHI).`
     };
   }
   function sortEntries(entries) {
@@ -23979,6 +24005,13 @@ This typically indicates that your device does not have a healthy Internet conne
       notes: entry.notes || "",
       estimated: Boolean(entry.estimated),
       lookup_source: entry.lookup_source || "",
+      irradiance_method: entry.irradiance_method || "",
+      irradiance_verified_at: entry.irradiance_verified_at || "",
+      irradiance_hourly_profile: (Array.isArray(entry.irradiance_hourly_profile) ? entry.irradiance_hourly_profile : []).map((point) => ({
+        minute_of_day: Number(point.minute_of_day || 0),
+        irradiance_wm2: Math.max(0, Number(point.irradiance_wm2 || 0)),
+        cloud_cover_pct: parseOptionalNumber(point.cloud_cover_pct)
+      })).filter((point) => Number.isFinite(point.minute_of_day) && Number.isFinite(point.irradiance_wm2)).sort((left, right) => left.minute_of_day - right.minute_of_day).slice(0, 48),
       meter_values_estimated: Boolean(entry.meter_values_estimated),
       meter_values_confirmed: Boolean(entry.meter_values_confirmed),
       meter_values_calibrated: Boolean(entry.meter_values_calibrated),
@@ -24310,6 +24343,61 @@ This typically indicates that your device does not have a healthy Internet conne
     return {
       entries: sortEntries([...updatedEntries.values()]),
       updated: true,
+      count: changedCount
+    };
+  }
+  function entryNeedsIrradianceRevalidation(entry) {
+    if (String(entry.entry_date) > String(getTodayIsoDate())) return false;
+    if (entry.irradiance_method === "open-meteo-hourly-instant-ghi-v3" && Array.isArray(entry.irradiance_hourly_profile) && entry.irradiance_hourly_profile.length >= 20) return false;
+    if (String(entry.entry_date) === String(getTodayIsoDate())) return true;
+    const irradiance = Number(entry.irradiance_peak_wm2 || 0);
+    const source = String(entry.lookup_source || "").toLowerCase();
+    return irradiance < 450 || source.startsWith("fallback");
+  }
+  async function revalidateSuspiciousIrradiancePeaks(db, entries) {
+    const candidates = sortEntries(entries).filter((entry) => entryNeedsIrradianceRevalidation(entry)).slice(-14);
+    if (!candidates.length) {
+      return { entries, updated: false, count: 0 };
+    }
+    const updatedEntries = new Map(entries.map((entry) => [entry.entry_date, normalizeEntry(entry)]));
+    let changedCount = 0;
+    for (const entry of candidates) {
+      try {
+        const lookupValues = await fetchOpenMeteoLookupValues(entry.entry_date);
+        const correctedPeak = Number(lookupValues.irradiance_peak_wm2 || 0);
+        if (correctedPeak <= 0 || Math.abs(correctedPeak - Number(entry.irradiance_peak_wm2 || 0)) < 1) {
+          continue;
+        }
+        const existingNotes = String(entry.notes || "");
+        const canReplaceNotes = !existingNotes || /auto-filled|fallback|placeholder/i.test(existingNotes);
+        const mergedEntry = normalizeEntry({
+          ...entry,
+          irradiance_peak_wm2: correctedPeak,
+          weather: lookupValues.weather || entry.weather || "Unknown",
+          temperature_f: lookupValues.temperature_f ?? entry.temperature_f ?? null,
+          temperature_high_f: lookupValues.temperature_high_f ?? entry.temperature_high_f ?? null,
+          temperature_low_f: lookupValues.temperature_low_f ?? entry.temperature_low_f ?? null,
+          humidity_pct: lookupValues.humidity_pct ?? entry.humidity_pct ?? null,
+          cloud_cover_pct: lookupValues.cloud_cover_pct ?? entry.cloud_cover_pct ?? null,
+          wind_mph: lookupValues.wind_mph ?? entry.wind_mph ?? null,
+          sunrise_time: lookupValues.sunrise_time || entry.sunrise_time || "",
+          sunset_time: lookupValues.sunset_time || entry.sunset_time || "",
+          lookup_source: lookupValues.lookup_source || entry.lookup_source || "manual",
+          irradiance_method: "open-meteo-hourly-instant-ghi-v3",
+          irradiance_verified_at: (/* @__PURE__ */ new Date()).toISOString(),
+          irradiance_hourly_profile: lookupValues.irradiance_hourly_profile || entry.irradiance_hourly_profile || [],
+          notes: canReplaceNotes ? lookupValues.notes : existingNotes,
+          updated_at: (/* @__PURE__ */ new Date()).toISOString()
+        });
+        await setDoc(doc(db, entryCollectionName, entry.entry_date), mergedEntry, { merge: true });
+        updatedEntries.set(entry.entry_date, mergedEntry);
+        changedCount += 1;
+      } catch (error) {
+      }
+    }
+    return {
+      entries: sortEntries([...updatedEntries.values()]),
+      updated: changedCount > 0,
       count: changedCount
     };
   }
@@ -25677,11 +25765,78 @@ This typically indicates that your device does not have a healthy Internet conne
     const daylightRange = Math.max(0.01, 1 - overnightShare);
     return Math.min(1, Math.max(0, (Number(profile[index] || 0) - overnightShare) / daylightRange));
   }
-  function getWeatherMeterFactors(entry = {}) {
+  function getHourlyIrradianceAtMinute(profile, minuteOfDay) {
+    const points = (Array.isArray(profile) ? profile : []).filter((point) => Number.isFinite(Number(point.minute_of_day)) && Number.isFinite(Number(point.irradiance_wm2))).sort((left, right) => Number(left.minute_of_day) - Number(right.minute_of_day));
+    if (!points.length) return null;
+    const targetMinute = Math.min(24 * 60 - 1, Math.max(0, Number(minuteOfDay || 0)));
+    if (targetMinute <= Number(points[0].minute_of_day)) return Number(points[0].irradiance_wm2 || 0);
+    if (targetMinute >= Number(points[points.length - 1].minute_of_day)) {
+      return Number(points[points.length - 1].irradiance_wm2 || 0);
+    }
+    for (let index = 1; index < points.length; index += 1) {
+      const previous = points[index - 1];
+      const next = points[index];
+      if (targetMinute > Number(next.minute_of_day)) continue;
+      const span = Math.max(1, Number(next.minute_of_day) - Number(previous.minute_of_day));
+      const progress = (targetMinute - Number(previous.minute_of_day)) / span;
+      return Number(previous.irradiance_wm2) + (Number(next.irradiance_wm2) - Number(previous.irradiance_wm2)) * progress;
+    }
+    return 0;
+  }
+  function getHourlyIrradianceMetrics(entry = {}, minuteOfDay = getClockMinutes()) {
+    const profile = Array.isArray(entry.irradiance_hourly_profile) ? entry.irradiance_hourly_profile : [];
+    if (profile.length < 20) {
+      return {
+        available: false,
+        currentIrradiance: Number(entry.irradiance_peak_wm2 || 0),
+        energyProgress: null,
+        dailyEnergyRatio: null,
+        lowLightProgress: null,
+        basis: "daily peak fallback"
+      };
+    }
+    const { sunriseMinute, sunsetMinute } = getSolarWindow(entry);
+    const boundedMinute = Math.min(24 * 60 - 1, Math.max(0, Number(minuteOfDay || 0)));
+    let totalActualEnergy = 0;
+    let cumulativeActualEnergy = 0;
+    let totalClearEnergy = 0;
+    let cumulativeLowLightBurden = 0;
+    let daylightSamples = 0;
+    for (let sampleMinute = sunriseMinute; sampleMinute <= sunsetMinute; sampleMinute += 15) {
+      const daylightFraction = Math.min(1, Math.max(
+        0,
+        (sampleMinute - sunriseMinute) / Math.max(1, sunsetMinute - sunriseMinute)
+      ));
+      const clearReference = Math.max(0, 900 * Math.sin(Math.PI * daylightFraction));
+      const actualIrradiance = Math.max(0, Number(
+        getHourlyIrradianceAtMinute(profile, sampleMinute) || 0
+      ));
+      totalActualEnergy += actualIrradiance;
+      totalClearEnergy += clearReference;
+      daylightSamples += 1;
+      if (sampleMinute <= boundedMinute) {
+        cumulativeActualEnergy += actualIrradiance;
+        if (clearReference >= 120) {
+          const availability = actualIrradiance / clearReference;
+          cumulativeLowLightBurden += Math.max(0, (0.35 - availability) / 0.35);
+        }
+      }
+    }
+    return {
+      available: true,
+      currentIrradiance: Math.max(0, Number(getHourlyIrradianceAtMinute(profile, boundedMinute) || 0)),
+      energyProgress: totalActualEnergy > 0 ? Math.min(1, Math.max(0, cumulativeActualEnergy / totalActualEnergy)) : 0,
+      dailyEnergyRatio: totalClearEnergy > 0 ? Math.min(1.2, Math.max(0, totalActualEnergy / totalClearEnergy)) : 0,
+      lowLightProgress: daylightSamples > 0 ? Math.min(1, Math.max(0, cumulativeLowLightBurden / daylightSamples)) : 0,
+      basis: "Open-Meteo hourly irradiance curve"
+    };
+  }
+  function getWeatherMeterFactors(entry = {}, minuteOfDay = getClockMinutes()) {
     const weatherBucket = normalizeWeatherBucket(entry.weather);
     const irradiance = Math.max(0, Number(entry.irradiance_peak_wm2 || 0));
     const cloudCover = Math.min(100, Math.max(0, Number(entry.cloud_cover_pct || 0)));
-    const irradianceRatio = Math.min(1, irradiance / 900);
+    const hourlyMetrics = getHourlyIrradianceMetrics(entry, minuteOfDay);
+    const irradianceRatio = hourlyMetrics.available ? hourlyMetrics.dailyEnergyRatio : Math.min(1, irradiance / 900);
     if (weatherBucket === "Wet") {
       return {
         exportFactor: Math.min(0.12, Math.max(0.03, irradianceRatio * 0.35)),
@@ -25726,7 +25881,8 @@ This typically indicates that your device does not have a healthy Internet conne
     const timeDistance = Math.abs(checkpoint.minute_of_day - minuteOfDay);
     const timeWeight = Math.exp(-timeDistance / 150);
     const weatherWeight = checkpoint.weather_bucket === targetWeather ? 1 : checkpoint.weather_bucket === "Unknown" || targetWeather === "Unknown" ? 0.6 : 0.28;
-    const targetIrradiance = parseOptionalNumber(targetEntry.irradiance_peak_wm2);
+    const targetHourlyIrradiance = getHourlyIrradianceMetrics(targetEntry, minuteOfDay);
+    const targetIrradiance = targetHourlyIrradiance.available ? targetHourlyIrradiance.currentIrradiance : parseOptionalNumber(targetEntry.irradiance_peak_wm2);
     const irradianceWeight = targetIrradiance !== null && checkpoint.irradiance_peak_wm2 !== null ? Math.exp(-Math.abs(checkpoint.irradiance_peak_wm2 - targetIrradiance) / 220) : 0.72;
     const targetCloud = parseOptionalNumber(targetEntry.cloud_cover_pct);
     const cloudWeight = targetCloud !== null && checkpoint.cloud_cover_pct !== null ? Math.exp(-Math.abs(checkpoint.cloud_cover_pct - targetCloud) / 32) : 0.78;
@@ -25744,9 +25900,15 @@ This typically indicates that your device does not have a healthy Internet conne
     if (sameDay.length) {
       const latest = sameDay[sameDay.length - 1];
       if (modelContext) {
-        const checkpointCycle = getSolarCycleProgress(latest.minute_of_day, modelContext.entry);
-        const checkpointRawImport = modelContext.baseImport + modelContext.overnightImport * checkpointCycle.preSunriseProgress + modelContext.overnightImport * checkpointCycle.postSunsetProgress + modelContext.daylightImportDelta * modelContext.daylightImportFactor * checkpointCycle.daylightProgress;
-        const checkpointRawExport = modelContext.baseExport + modelContext.exportDelta * modelContext.exportFactor * checkpointCycle.daylightProgress;
+        const checkpointWeatherFactors = getWeatherMeterFactors(modelContext.entry, latest.minute_of_day);
+        const checkpointProgress = getMeterProgressForMinute(
+          modelContext.entry,
+          latest.minute_of_day,
+          checkpointWeatherFactors
+        );
+        const checkpointCycle = checkpointProgress.solarCycle;
+        const checkpointRawImport = modelContext.baseImport + modelContext.overnightImport * checkpointCycle.preSunriseProgress + modelContext.overnightImport * checkpointCycle.postSunsetProgress + modelContext.daylightImportDelta * checkpointProgress.daylightImportProgress;
+        const checkpointRawExport = modelContext.baseExport + modelContext.exportDelta * checkpointWeatherFactors.exportFactor * checkpointProgress.exportProgress;
         return {
           importOffset: latest.actual_m01 - checkpointRawImport,
           exportOffset: latest.actual_m02 - checkpointRawExport,
@@ -25885,6 +26047,19 @@ This typically indicates that your device does not have a healthy Internet conne
       postSunsetProgress
     };
   }
+  function getMeterProgressForMinute(entry, minuteOfDay, weatherFactors) {
+    const solarCycle = getSolarCycleProgress(minuteOfDay, entry);
+    const hourlyIrradiance = getHourlyIrradianceMetrics(entry, minuteOfDay);
+    return {
+      solarCycle,
+      hourlyIrradiance,
+      exportProgress: hourlyIrradiance.available ? hourlyIrradiance.energyProgress : solarCycle.daylightProgress,
+      daylightImportProgress: hourlyIrradiance.available ? Math.max(
+        weatherFactors.daylightImportFactor * solarCycle.daylightProgress,
+        hourlyIrradiance.lowLightProgress
+      ) : weatherFactors.daylightImportFactor * solarCycle.daylightProgress
+    };
+  }
   function buildMeterSimulation(entryDate, entries, options = {}) {
     const previousEntry = getMostRecentEntryBefore(entries, entryDate);
     const targetEntry = entries.find((entry) => String(entry.entry_date) === String(entryDate));
@@ -25895,17 +26070,18 @@ This typically indicates that your device does not have a healthy Internet conne
     const baseImport = Number(previousEntry?.meter_01_import_reading || 0);
     const baseExport = Number(previousEntry?.meter_02_export_reading || 0);
     const currentMinute = Number.isFinite(Number(options.minuteOfDay)) ? Number(options.minuteOfDay) : getClockMinutes();
-    const solarCycle = getSolarCycleProgress(currentMinute, targetEntry);
-    const weatherFactors = getWeatherMeterFactors(targetEntry);
+    const weatherFactors = getWeatherMeterFactors(targetEntry, currentMinute);
+    const currentProgress = getMeterProgressForMinute(targetEntry, currentMinute, weatherFactors);
+    const solarCycle = currentProgress.solarCycle;
     const isToday = String(entryDate) === String(getTodayIsoDate());
     const currentPreSunriseImport = overnightImport.value * solarCycle.preSunriseProgress;
     const currentPostSunsetImport = overnightImport.value * solarCycle.postSunsetProgress;
-    const currentDaylightImport = daylightImportDelta * weatherFactors.daylightImportFactor * solarCycle.daylightProgress;
+    const currentDaylightImport = daylightImportDelta * currentProgress.daylightImportProgress;
     const rawCurrentImport = Number(
       (baseImport + (isToday ? currentPreSunriseImport + currentPostSunsetImport + currentDaylightImport : expectedTotalImport)).toFixed(1)
     );
     const rawCurrentExport = Number(
-      (baseExport + deltas.exportDelta * weatherFactors.exportFactor * (isToday ? solarCycle.daylightProgress : 1)).toFixed(1)
+      (baseExport + deltas.exportDelta * weatherFactors.exportFactor * (isToday ? currentProgress.exportProgress : 1)).toFixed(1)
     );
     const correctionModelContext = {
       entry: targetEntry,
@@ -25938,6 +26114,9 @@ This typically indicates that your device does not have a healthy Internet conne
       exportFactor: weatherFactors.exportFactor,
       daylightImportFactor: weatherFactors.daylightImportFactor,
       weatherFactorBasis: weatherFactors.basis,
+      solarProfileBasis: currentProgress.hourlyIrradiance.basis,
+      currentIrradiance: currentProgress.hourlyIrradiance.currentIrradiance,
+      irradianceEnergyProgress: currentProgress.exportProgress,
       weatherBucket: deltas.weatherBucket,
       basis: deltas.basis,
       sampleCount: deltas.sampleCount,
@@ -25949,7 +26128,9 @@ This typically indicates that your device does not have a healthy Internet conne
       currentExport: Number((rawCurrentExport + correction.exportOffset).toFixed(1)),
       rows: meterSimulationSchedule.map((point) => {
         const pointMinute = point.hour * 60 + point.minute;
-        const pointSolarCycle = getSolarCycleProgress(pointMinute, targetEntry);
+        const pointWeatherFactors = getWeatherMeterFactors(targetEntry, pointMinute);
+        const pointProgress = getMeterProgressForMinute(targetEntry, pointMinute, pointWeatherFactors);
+        const pointSolarCycle = pointProgress.solarCycle;
         const pointCorrection = getMeterSimulationCorrection(
           entryDate,
           targetEntry?.weather,
@@ -25959,13 +26140,13 @@ This typically indicates that your device does not have a healthy Internet conne
         );
         return {
           ...point,
-          importWeight: pointSolarCycle.postSunsetProgress,
-          exportWeight: pointSolarCycle.daylightProgress,
+          importWeight: Math.max(pointSolarCycle.postSunsetProgress, pointProgress.daylightImportProgress),
+          exportWeight: pointProgress.exportProgress,
           meter01: Number(
-            (baseImport + overnightImport.value * pointSolarCycle.preSunriseProgress + overnightImport.value * pointSolarCycle.postSunsetProgress + daylightImportDelta * weatherFactors.daylightImportFactor * pointSolarCycle.daylightProgress + pointCorrection.importOffset).toFixed(1)
+            (baseImport + overnightImport.value * pointSolarCycle.preSunriseProgress + overnightImport.value * pointSolarCycle.postSunsetProgress + daylightImportDelta * pointProgress.daylightImportProgress + pointCorrection.importOffset).toFixed(1)
           ),
           meter02: Number(
-            (baseExport + deltas.exportDelta * weatherFactors.exportFactor * pointSolarCycle.daylightProgress + pointCorrection.exportOffset).toFixed(1)
+            (baseExport + deltas.exportDelta * pointWeatherFactors.exportFactor * pointProgress.exportProgress + pointCorrection.exportOffset).toFixed(1)
           )
         };
       })
@@ -25993,6 +26174,8 @@ This typically indicates that your device does not have a healthy Internet conne
     M01 accumulates outside that window; M02 accumulates during it.
     Weather behavior: <strong>${escapeHtml(simulation.weatherFactorBasis)}</strong>
     (${Math.round(simulation.exportFactor * 100)}% of the historical export curve).
+    Solar activity: <strong>${escapeHtml(simulation.solarProfileBasis)}</strong>
+    (${simulation.currentIrradiance.toFixed(0)} W/m\xB2 now; ${Math.round(simulation.irradianceEnergyProgress * 100)}% of today's modeled solar energy reached).
     Calibration: <strong>${escapeHtml(simulation.calibration.basis)}</strong>
     (${simulation.calibration.importOffset >= 0 ? "+" : ""}${simulation.calibration.importOffset.toFixed(1)} M01,
     ${simulation.calibration.exportOffset >= 0 ? "+" : ""}${simulation.calibration.exportOffset.toFixed(1)} M02).
@@ -26082,6 +26265,8 @@ This typically indicates that your device does not have a healthy Internet conne
     to <strong>${formatMeterSimulationRunLabel(simulation.solarCycle.sunsetMinute)}</strong>.
     Weather behavior: <strong>${escapeHtml(simulation.weatherFactorBasis)}</strong>
     (${Math.round(simulation.exportFactor * 100)}% of the historical export curve).
+    Solar activity: <strong>${escapeHtml(simulation.solarProfileBasis)}</strong>
+    (${simulation.currentIrradiance.toFixed(0)} W/m\xB2 at the selected time; ${Math.round(simulation.irradianceEnergyProgress * 100)}% of the modeled daily solar energy reached).
     Calibration: <strong>${escapeHtml(simulation.calibration.basis)}</strong>
     (${simulation.calibration.importOffset >= 0 ? "+" : ""}${simulation.calibration.importOffset.toFixed(1)} M01,
     ${simulation.calibration.exportOffset >= 0 ? "+" : ""}${simulation.calibration.exportOffset.toFixed(1)} M02).
@@ -26213,17 +26398,15 @@ This typically indicates that your device does not have a healthy Internet conne
       todayEntry = state.entries.find((entry2) => String(entry2.entry_date) === String(today));
     }
     if (!todayEntry) return null;
-    if (!todayEntry.sunrise_time || !todayEntry.sunset_time) {
-      try {
-        const refreshedEntry = await refreshEntryLookupFields(db, today);
-        todayEntry = refreshedEntry;
-        state = {
-          ...state,
-          entries: state.entries.map((entry2) => String(entry2.entry_date) === String(today) ? refreshedEntry : entry2)
-        };
-      } catch (error) {
-        console.warn("Sunrise/sunset refresh was unavailable; using the fallback solar window.", error);
-      }
+    try {
+      const refreshedEntry = await refreshEntryLookupFields(db, today);
+      todayEntry = refreshedEntry;
+      state = {
+        ...state,
+        entries: state.entries.map((entry2) => String(entry2.entry_date) === String(today) ? refreshedEntry : entry2)
+      };
+    } catch (error) {
+      console.warn("Hourly Open-Meteo refresh was unavailable; using the last saved solar curve.", error);
     }
     if (!shouldAutoSimulateMeters(todayEntry)) {
       meterSimulationLastAttemptedRunKey = runKey;
@@ -26247,6 +26430,9 @@ This typically indicates that your device does not have a healthy Internet conne
       simulation.solarCycle?.sunriseMinute ?? "",
       simulation.solarCycle?.sunsetMinute ?? "",
       simulation.solarCycle?.basis || "",
+      simulation.currentIrradiance.toFixed(1),
+      simulation.irradianceEnergyProgress.toFixed(4),
+      simulation.solarProfileBasis,
       simulation.calibration?.basis || "",
       simulation.calibration?.importOffset?.toFixed(2) || "0.00",
       simulation.calibration?.exportOffset?.toFixed(2) || "0.00"
@@ -26330,7 +26516,11 @@ This typically indicates that your device does not have a healthy Internet conne
     const progressMultiplier = isToday ? progress.productionShare : 1;
     return {
       entry_date: entryDate,
-      irradiance_peak_wm2: Math.round(projectedIrradiance * (isToday ? Math.max(progress.exportShare, 0.12) : 1)),
+      // This field is a daily peak, so never scale it by time-of-day progress.
+      irradiance_peak_wm2: Math.round(projectedIrradiance),
+      irradiance_hourly_profile: estimatedValues.irradiance_hourly_profile || [],
+      irradiance_method: estimatedValues.irradiance_hourly_profile?.length ? "open-meteo-hourly-instant-ghi-v3" : "",
+      irradiance_verified_at: estimatedValues.irradiance_hourly_profile?.length ? (/* @__PURE__ */ new Date()).toISOString() : "",
       production_kwh: Number((projectedProduction * progressMultiplier).toFixed(1)),
       meter_01_import_reading: Number((baseImport + importDelta * (isToday ? progress.importShare : 1)).toFixed(1)),
       meter_02_export_reading: Number((baseExport + exportDelta * (isToday ? progress.exportShare : 1)).toFixed(1)),
@@ -26731,6 +26921,9 @@ This typically indicates that your device does not have a healthy Internet conne
         created_at: (/* @__PURE__ */ new Date()).toISOString()
       },
       irradiance_peak_wm2: lookupValues.irradiance_peak_wm2 ?? existingEntry?.irradiance_peak_wm2 ?? 0,
+      irradiance_hourly_profile: lookupValues.irradiance_hourly_profile || existingEntry?.irradiance_hourly_profile || [],
+      irradiance_method: lookupValues.irradiance_hourly_profile?.length ? "open-meteo-hourly-instant-ghi-v3" : existingEntry?.irradiance_method || "",
+      irradiance_verified_at: lookupValues.irradiance_hourly_profile?.length ? (/* @__PURE__ */ new Date()).toISOString() : existingEntry?.irradiance_verified_at || "",
       production_kwh: sunrunRecord?.available ? Number(sunrunRecord.production_kwh || 0) : existingEntry?.production_kwh ?? 0,
       weather: lookupValues.weather || existingEntry?.weather || "Unknown",
       temperature_f: lookupValues.temperature_f ?? existingEntry?.temperature_f ?? null,
@@ -26881,6 +27074,9 @@ This typically indicates that your device does not have a healthy Internet conne
         notes: formData.get("notes") || "",
         estimated: false,
         lookup_source: "manual",
+        irradiance_method: existingEntry?.irradiance_method || "",
+        irradiance_verified_at: existingEntry?.irradiance_verified_at || "",
+        irradiance_hourly_profile: existingEntry?.irradiance_hourly_profile || [],
         meter_values_estimated: false,
         meter_values_confirmed: true,
         meter_values_calibrated: false,
@@ -27032,7 +27228,7 @@ This typically indicates that your device does not have a healthy Internet conne
           actual_m02: actualM02,
           base_m01: checkpointSimulation.baseImport,
           base_m02: checkpointSimulation.baseExport,
-          irradiance_peak_wm2: parseOptionalNumber(selectedEntry?.irradiance_peak_wm2),
+          irradiance_peak_wm2: checkpointSimulation.currentIrradiance,
           cloud_cover_pct: parseOptionalNumber(selectedEntry?.cloud_cover_pct),
           humidity_pct: parseOptionalNumber(selectedEntry?.humidity_pct),
           import_error: Number((actualM01 - checkpointSimulation.rawCurrentImport).toFixed(1)),
@@ -27141,6 +27337,10 @@ This typically indicates that your device does not have a healthy Internet conne
       if (temperatureBackfill.updated) {
         state = { ...state, entries: temperatureBackfill.entries };
       }
+      const irradianceRevalidation = await revalidateSuspiciousIrradiancePeaks(db, state.entries);
+      if (irradianceRevalidation.updated) {
+        state = { ...state, entries: irradianceRevalidation.entries };
+      }
       await renderDashboardUnified(
         state.entries.length ? state.entries : sampleEntries,
         state.config,
@@ -27182,6 +27382,10 @@ This typically indicates that your device does not have a healthy Internet conne
       if (temperatureBackfill.updated) {
         state = { ...state, entries: temperatureBackfill.entries };
       }
+      const irradianceRevalidation = await revalidateSuspiciousIrradiancePeaks(db, state.entries);
+      if (irradianceRevalidation.updated) {
+        state = { ...state, entries: irradianceRevalidation.entries };
+      }
       if (backfillResult.backfilled) {
         renderStatusAlert("entries-status", "Starter history was restored into Firebase, and live entries were refreshed.", "success");
       } else if (sunrunSync.updated) {
@@ -27192,6 +27396,8 @@ This typically indicates that your device does not have a healthy Internet conne
         );
       } else if (temperatureBackfill.updated) {
         renderStatusAlert("entries-status", `Filled missing High/Low temperatures for ${temperatureBackfill.count} record${temperatureBackfill.count === 1 ? "" : "s"}.`, "success");
+      } else if (irradianceRevalidation.updated) {
+        renderStatusAlert("entries-status", `Corrected daily peak irradiance for ${irradianceRevalidation.count} record${irradianceRevalidation.count === 1 ? "" : "s"} from Open-Meteo.`, "success");
       }
       await entryTools.refreshEntries({ showMessage: false, runAutoCreate: true, forceCreate: false });
       const url = new URL(window.location.href);

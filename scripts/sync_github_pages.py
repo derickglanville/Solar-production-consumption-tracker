@@ -17,7 +17,7 @@ from solar_tracker.routes import build_bootstrap_data
 
 
 DOCS = ROOT / "docs"
-ASSET_VERSION = "20260808-sync68"
+ASSET_VERSION = "20260808-sync71"
 
 ROUTE_REPLACEMENTS = {
     'href="/"': 'href="index.html"',
@@ -128,6 +128,11 @@ def update_static_shells() -> None:
         html = re.sub(
             r'<script type="module" src="assets/js/app-client\.js\?v=[^"]+"></script>',
             f'<script defer src="assets/js/app-bundle.js?v={ASSET_VERSION}"></script>',
+            html,
+        )
+        html = re.sub(
+            r'assets/js/app-bundle\.js\?v=[^"]+',
+            f"assets/js/app-bundle.js?v={ASSET_VERSION}",
             html,
         )
         html_path.write_text(html, encoding="utf-8")
