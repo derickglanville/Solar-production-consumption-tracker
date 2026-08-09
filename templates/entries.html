@@ -194,6 +194,18 @@
             <small id="entries-monthly-cost-detail">Import and export projection will appear with live data</small>
           </div>
           <div class="entries-history-actions">
+            <label class="entries-month-filter" for="entries-month-filter">
+              <span>Month</span>
+              <select id="entries-month-filter" class="form-select form-select-sm" title="Show Historical Entries for one month">
+                <option value="All">All months</option>
+              </select>
+            </label>
+            <label class="entries-weather-filter" for="entries-weather-filter">
+              <span>Weather</span>
+              <select id="entries-weather-filter" class="form-select form-select-sm" title="Show Historical Entries for one weather condition">
+                <option value="All">All weather</option>
+              </select>
+            </label>
             <button type="button" class="btn btn-contract btn-sm" id="entries-previous-record" title="Select the previous record">Previous</button>
             <button type="button" class="btn btn-contract btn-sm" id="entries-next-record" title="Select the next record">Next</button>
             <button type="button" class="btn btn-sun btn-sm" id="entries-history-popout">Pop Out</button>

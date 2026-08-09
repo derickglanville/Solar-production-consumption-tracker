@@ -1263,6 +1263,37 @@ body.chart-popout-active {
   gap: 0.35rem;
 }
 
+.entries-weather-filter,
+.entries-month-filter {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin: 0;
+}
+
+.entries-weather-filter span,
+.entries-month-filter span {
+  color: var(--muted);
+  font-size: 0.67rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.entries-weather-filter .form-select,
+.entries-month-filter .form-select {
+  width: 116px;
+  min-height: 28px;
+  padding-top: 0.15rem;
+  padding-bottom: 0.15rem;
+  padding-left: 0.48rem;
+  font-size: 0.72rem;
+}
+
+.entries-month-filter .form-select {
+  width: 132px;
+}
+
 .entries-history-actions .btn,
 .entries-history-table .btn {
   min-height: 26px;

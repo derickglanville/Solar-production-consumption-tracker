@@ -170,6 +170,8 @@ let meterSimulationCheckpoints = [];
 let entriesPageState = {
   entries: [],
   selectedDate: "",
+  monthFilter: "All",
+  weatherFilter: "All",
   config: mergeConfig()
 };
 const meterSimulationSchedule = [
@@ -3836,13 +3838,25 @@ function selectHistoricalEntry(entryDate, { scrollForm = true } = {}) {
   }
 }
 
+function entryMatchesHistoryFilters(entry) {
+  const entryDate = String(entry.entry_date || "");
+  const weather = String(entry.weather || "Unknown");
+  return (
+    (entriesPageState.monthFilter === "All" || entryDate.startsWith(`${entriesPageState.monthFilter}-`)) &&
+    (entriesPageState.weatherFilter === "All" || weather === entriesPageState.weatherFilter)
+  );
+}
+
 function moveHistoricalSelection(direction) {
   const entries = getDisplayEntries(entriesPageState.entries)
+    .filter((entry) => entryMatchesHistoryFilters(entry))
     .slice()
     .sort((left, right) => String(right.entry_date).localeCompare(String(left.entry_date)));
   if (!entries.length) return;
   const currentIndex = entries.findIndex((entry) => entry.entry_date === entriesPageState.selectedDate);
-  const nextIndex = Math.min(entries.length - 1, Math.max(0, (currentIndex < 0 ? 0 : currentIndex) + direction));
+  const nextIndex = currentIndex < 0
+    ? 0
+    : Math.min(entries.length - 1, Math.max(0, currentIndex + direction));
   selectHistoricalEntry(entries[nextIndex].entry_date, { scrollForm: false });
   document.querySelector(`[data-entry-date="${entries[nextIndex].entry_date}"]`)?.scrollIntoView({
     behavior: "smooth",
@@ -3863,6 +3877,16 @@ function setupHistoricalEntriesWindow() {
   });
   document.getElementById("entries-previous-record")?.addEventListener("click", () => moveHistoricalSelection(1));
   document.getElementById("entries-next-record")?.addEventListener("click", () => moveHistoricalSelection(-1));
+  document.getElementById("entries-month-filter")?.addEventListener("change", (event) => {
+    entriesPageState.monthFilter = String(event.target.value || "All");
+    populateEntriesTable(entriesPageState.entries);
+    document.getElementById("entries-history-window")?.scrollTo({ top: 0, behavior: "smooth" });
+  });
+  document.getElementById("entries-weather-filter")?.addEventListener("change", (event) => {
+    entriesPageState.weatherFilter = String(event.target.value || "All");
+    populateEntriesTable(entriesPageState.entries);
+    document.getElementById("entries-history-window")?.scrollTo({ top: 0, behavior: "smooth" });
+  });
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && card.classList.contains("entries-history-popout")) {
       card.classList.remove("entries-history-popout");
@@ -3879,6 +3903,44 @@ function populateEntriesTable(entries) {
   const chronologicalEntries = getDisplayEntries(entries);
   updateEntriesNetMeterSummary(chronologicalEntries, entriesPageState.config);
   updateEntriesMonthlyCostSummary(chronologicalEntries, entriesPageState.config);
+  const monthFilter = document.getElementById("entries-month-filter");
+  if (monthFilter) {
+    const monthOptions = [...new Set(
+      chronologicalEntries
+        .map((entry) => String(entry.entry_date || "").slice(0, 7))
+        .filter((month) => /^\d{4}-\d{2}$/.test(month))
+    )].sort((left, right) => right.localeCompare(left));
+    if (
+      entriesPageState.monthFilter !== "All" &&
+      !monthOptions.includes(entriesPageState.monthFilter)
+    ) {
+      entriesPageState.monthFilter = "All";
+    }
+    monthFilter.replaceChildren(new Option("All months", "All"));
+    monthOptions.forEach((month) => {
+      const label = new Date(`${month}-01T00:00:00`).toLocaleDateString("en-US", {
+        month: "long",
+        year: "numeric"
+      });
+      monthFilter.add(new Option(label, month));
+    });
+    monthFilter.value = entriesPageState.monthFilter;
+  }
+  const weatherFilter = document.getElementById("entries-weather-filter");
+  if (weatherFilter) {
+    const weatherOptions = [...new Set(
+      chronologicalEntries.map((entry) => String(entry.weather || "Unknown"))
+    )].sort((left, right) => left.localeCompare(right));
+    if (
+      entriesPageState.weatherFilter !== "All" &&
+      !weatherOptions.includes(entriesPageState.weatherFilter)
+    ) {
+      entriesPageState.weatherFilter = "All";
+    }
+    weatherFilter.replaceChildren(new Option("All weather", "All"));
+    weatherOptions.forEach((weather) => weatherFilter.add(new Option(weather, weather)));
+    weatherFilter.value = entriesPageState.weatherFilter;
+  }
   const meterDifferences = new Map();
   chronologicalEntries.forEach((entry, index) => {
     const previousEntry = index > 0 ? chronologicalEntries[index - 1] : null;
@@ -3892,9 +3954,14 @@ function populateEntriesTable(entries) {
     });
   });
   updateEntriesMeterDifferenceSummary(chronologicalEntries, meterDifferences);
-  const visibleEntries = chronologicalEntries.slice().reverse();
+  const filteredEntries = chronologicalEntries.filter((entry) => entryMatchesHistoryFilters(entry));
+  const visibleEntries = filteredEntries.slice().reverse();
   const recordCount = document.getElementById("entries-record-count");
-  if (recordCount) recordCount.textContent = String(visibleEntries.length);
+  if (recordCount) {
+    recordCount.textContent = entriesPageState.weatherFilter === "All" && entriesPageState.monthFilter === "All"
+      ? String(visibleEntries.length)
+      : `${visibleEntries.length} of ${chronologicalEntries.length}`;
+  }
   const formatDifference = (value) => Number.isFinite(value) ? value.toFixed(1) : '<span class="text-muted">-</span>';
   const populatedRows = visibleEntries.map((entry) => {
     const differences = meterDifferences.get(entry.entry_date) || {};
