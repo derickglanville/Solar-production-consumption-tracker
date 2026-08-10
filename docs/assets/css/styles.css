@@ -1170,6 +1170,25 @@ body.chart-popout-active {
   white-space: nowrap;
 }
 
+.entries-history-diff-stat {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.02rem 0.55rem;
+}
+
+.entries-history-diff-stat strong,
+.entries-history-diff-stat small {
+  text-align: right;
+}
+
+.entries-history-diff-stat small {
+  grid-column: 1 / -1;
+  color: var(--muted);
+  font-size: 0.65rem;
+  line-height: 1.05;
+  white-space: nowrap;
+}
+
 .entries-history-hourly-stat {
   display: grid;
   grid-template-columns: auto 1fr;

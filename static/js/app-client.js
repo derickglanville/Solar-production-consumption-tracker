@@ -3953,8 +3953,8 @@ function populateEntriesTable(entries) {
         : null
     });
   });
-  updateEntriesMeterDifferenceSummary(chronologicalEntries, meterDifferences);
   const filteredEntries = chronologicalEntries.filter((entry) => entryMatchesHistoryFilters(entry));
+  updateEntriesMeterDifferenceSummary(filteredEntries, meterDifferences, chronologicalEntries);
   const visibleEntries = filteredEntries.slice().reverse();
   const recordCount = document.getElementById("entries-record-count");
   if (recordCount) {
@@ -4008,22 +4008,41 @@ function populateEntriesTable(entries) {
   });
 }
 
-function updateEntriesMeterDifferenceSummary(entries, meterDifferences) {
+function updateEntriesMeterDifferenceSummary(entries, meterDifferences, allEntries = entries) {
   const m01Target = document.getElementById("entries-m01-diff-total");
   const m02Target = document.getElementById("entries-m02-diff-total");
+  const m01AverageTarget = document.getElementById("entries-m01-diff-average");
+  const m02AverageTarget = document.getElementById("entries-m02-diff-average");
   const hourlyTarget = document.getElementById("entries-last-hourly-update");
   const hourlyDetail = document.getElementById("entries-last-hourly-update-detail");
   const hourlyPrevious = document.getElementById("entries-last-hourly-previous");
 
-  const totals = [...meterDifferences.values()].reduce((result, differences) => {
-    if (Number.isFinite(differences.m01)) result.m01 += differences.m01;
-    if (Number.isFinite(differences.m02)) result.m02 += differences.m02;
+  const displayedDifferences = entries.map((entry) => meterDifferences.get(entry.entry_date) || {});
+  const totals = displayedDifferences.reduce((result, differences) => {
+    if (Number.isFinite(differences.m01)) {
+      result.m01 += differences.m01;
+      result.m01Count += 1;
+    }
+    if (Number.isFinite(differences.m02)) {
+      result.m02 += differences.m02;
+      result.m02Count += 1;
+    }
     return result;
-  }, { m01: 0, m02: 0 });
+  }, { m01: 0, m02: 0, m01Count: 0, m02Count: 0 });
   if (m01Target) m01Target.textContent = `${totals.m01.toFixed(1)} kWh`;
   if (m02Target) m02Target.textContent = `${totals.m02.toFixed(1)} kWh`;
+  if (m01AverageTarget) {
+    m01AverageTarget.textContent = totals.m01Count
+      ? `Average: ${(totals.m01 / totals.m01Count).toFixed(1)} kWh/day`
+      : "Average: —";
+  }
+  if (m02AverageTarget) {
+    m02AverageTarget.textContent = totals.m02Count
+      ? `Average: ${(totals.m02 / totals.m02Count).toFixed(1)} kWh/day`
+      : "Average: —";
+  }
 
-  const savedRuns = entries.flatMap((entry) => (
+  const savedRuns = allEntries.flatMap((entry) => (
     Array.isArray(entry.meter_simulation_runs)
       ? entry.meter_simulation_runs
         .filter((run) => ["hourly", "checkpoint"].includes(String(run.run_type || "")) && run.recorded_at)

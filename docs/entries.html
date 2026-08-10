@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/styles.css?v=20260809-sync73">
+  <link rel="stylesheet" href="assets/css/styles.css?v=20260809-sync74">
   <script src="https://cdn.plot.ly/plotly-3.4.0.min.js"></script>
 </head>
 <body data-page="entries" data-local-snapshot-mode="false">
@@ -261,13 +261,15 @@
           </div>
         </div>
         <div class="entries-history-meter-strip" aria-label="Meter difference totals and latest hourly update">
-          <div class="entries-history-meter-stat" title="Sum of every displayed daily M01 difference">
+          <div class="entries-history-meter-stat entries-history-diff-stat" title="Sum and average of the filtered daily M01 differences">
             <span>M01 Diff Total</span>
             <strong id="entries-m01-diff-total">0.0 kWh</strong>
+            <small id="entries-m01-diff-average">Average: 0.0 kWh/day</small>
           </div>
-          <div class="entries-history-meter-stat" title="Sum of every displayed daily M02 difference">
+          <div class="entries-history-meter-stat entries-history-diff-stat" title="Sum and average of the filtered daily M02 differences">
             <span>M02 Diff Total</span>
             <strong id="entries-m02-diff-total">0.0 kWh</strong>
+            <small id="entries-m02-diff-average">Average: 0.0 kWh/day</small>
           </div>
           <div class="entries-history-meter-stat entries-history-hourly-stat" title="Date and time of the most recently saved hourly meter-simulation run">
             <span>Last Hourly Update</span>
@@ -774,9 +776,9 @@
     </div>
   </main>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/js/bootstrap.bundle.min.js"></script>
-  <script src="assets/js/site-bootstrap.js?v=20260809-sync73"></script>
-  <script src="assets/js/firebase-config.js?v=20260809-sync73"></script>
-  <script defer src="assets/js/app-bundle.js?v=20260809-sync73"></script>
+  <script src="assets/js/site-bootstrap.js?v=20260809-sync74"></script>
+  <script src="assets/js/firebase-config.js?v=20260809-sync74"></script>
+  <script defer src="assets/js/app-bundle.js?v=20260809-sync74"></script>
 
 </body>
 </html>
