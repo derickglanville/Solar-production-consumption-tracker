@@ -1088,7 +1088,7 @@ body.chart-popout-active {
 .entries-history-table {
   table-layout: fixed;
   width: 100%;
-  min-width: 875px;
+  min-width: 920px;
   margin-bottom: 0;
   font-size: 0.82rem;
   line-height: 1.15;
@@ -1537,7 +1537,10 @@ body.meter-calibration-popout-open::before {
 }
 
 .entries-history-table th:nth-child(2),
-.entries-history-table td:nth-child(2),
+.entries-history-table td:nth-child(2) {
+  width: 44px;
+}
+
 .entries-history-table th:nth-child(3),
 .entries-history-table td:nth-child(3),
 .entries-history-table th:nth-child(4),
@@ -1547,18 +1550,15 @@ body.meter-calibration-popout-open::before {
 .entries-history-table th:nth-child(6),
 .entries-history-table td:nth-child(6),
 .entries-history-table th:nth-child(7),
-.entries-history-table td:nth-child(7) {
-  width: 65px;
-}
-
+.entries-history-table td:nth-child(7),
 .entries-history-table th:nth-child(8),
 .entries-history-table td:nth-child(8) {
-  width: 75px;
+  width: 65px;
 }
 
 .entries-history-table th:nth-child(9),
 .entries-history-table td:nth-child(9) {
-  width: 50px;
+  width: 75px;
 }
 
 .entries-history-table th:nth-child(10),
@@ -1568,17 +1568,22 @@ body.meter-calibration-popout-open::before {
 
 .entries-history-table th:nth-child(11),
 .entries-history-table td:nth-child(11) {
-  width: 75px;
-  max-width: 75px;
+  width: 50px;
 }
 
 .entries-history-table th:nth-child(12),
 .entries-history-table td:nth-child(12) {
-  width: 85px;
+  width: 75px;
+  max-width: 75px;
 }
 
 .entries-history-table th:nth-child(13),
 .entries-history-table td:nth-child(13) {
+  width: 85px;
+}
+
+.entries-history-table th:nth-child(14),
+.entries-history-table td:nth-child(14) {
   width: 60px;
 }
 

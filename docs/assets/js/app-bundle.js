@@ -23772,6 +23772,14 @@ This typically indicates that your device does not have a healthy Internet conne
     const day = String(dateValue.getDate()).padStart(2, "0");
     return `${year}-${month}-${day}`;
   }
+  function formatIsoWeekday(isoDate) {
+    const match = String(isoDate || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!match) return "-";
+    const [, year, month, day] = match;
+    return new Date(Number(year), Number(month) - 1, Number(day)).toLocaleDateString("en-US", {
+      weekday: "short"
+    });
+  }
   function shouldHideEntryFromDisplay(entry) {
     if (!entry) return true;
     const entryDate = String(entry.entry_date || "");
@@ -26828,6 +26836,7 @@ This typically indicates that your device does not have a healthy Internet conne
     <tr class="entry-history-row ${entry.entry_date === entriesPageState.selectedDate ? "entry-row-selected" : ""}"
         data-entry-date="${entry.entry_date}" tabindex="0" title="Select this record to edit">
       <td>${entry.entry_date}</td>
+      <td>${formatIsoWeekday(entry.entry_date)}</td>
       <td>${Number(entry.production_kwh || 0).toFixed(1)}</td>
       <td>${Number(entry.irradiance_peak_wm2 || 0).toFixed(0)}</td>
       <td>${Number(entry.meter_01_import_reading || 0).toFixed(1)}</td>
@@ -26845,7 +26854,7 @@ This typically indicates that your device does not have a healthy Internet conne
     }).join("");
     const blankRows = Array.from(
       { length: Math.max(0, 18 - visibleEntries.length) },
-      () => `<tr class="entry-empty-row" aria-hidden="true">${"<td>&nbsp;</td>".repeat(13)}</tr>`
+      () => `<tr class="entry-empty-row" aria-hidden="true">${"<td>&nbsp;</td>".repeat(14)}</tr>`
     ).join("");
     body.innerHTML = populatedRows + blankRows;
     body.querySelectorAll(".entry-history-row").forEach((row) => {

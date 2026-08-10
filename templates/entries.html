@@ -234,6 +234,7 @@
             <thead>
               <tr>
                 <th>Date</th>
+                <th>Day</th>
                 <th>Prod.</th>
                 <th>Irradiance</th>
                 <th>M01</th>
@@ -253,6 +254,7 @@
               {% set previous_entry = entries[loop.index0 + 1] if not loop.last else none %}
               <tr class="entry-history-row" data-entry-date="{{ entry.entry_date.strftime('%Y-%m-%d') }}" tabindex="0" title="Select this record to edit">
                 <td>{{ entry.entry_date.strftime("%Y-%m-%d") }}</td>
+                <td>{{ entry.entry_date.strftime("%a") }}</td>
                 <td>{{ "%.1f"|format(entry.production_kwh) }}</td>
                 <td>{{ "%.0f"|format(entry.irradiance_peak_wm2) }}</td>
                 <td>{{ "%.1f"|format(entry.meter_01_import_reading) }}</td>
@@ -270,7 +272,7 @@
               {% if entries|length < 18 %}
               {% for _ in range(18 - entries|length) %}
               <tr class="entry-empty-row" aria-hidden="true">
-                {% for _ in range(13) %}<td>&nbsp;</td>{% endfor %}
+                {% for _ in range(14) %}<td>&nbsp;</td>{% endfor %}
               </tr>
               {% endfor %}
               {% endif %}
