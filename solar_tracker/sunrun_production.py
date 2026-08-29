@@ -35,7 +35,7 @@ def load_sunrun_daily_production() -> dict:
             "latest_available_date": None,
         }
 
-    rows: list[SunrunProductionRow] = []
+    parsed_rows: list[tuple[date, float, float]] = []
     with SUNRUN_CSV_PATH.open("r", encoding="utf-8-sig", newline="") as handle:
         reader = csv.DictReader(handle)
         for record in reader:
@@ -47,17 +47,29 @@ def load_sunrun_daily_production() -> dict:
             production_kwh = _parse_float(record.get("Solar Produced (kWh)"))
             end_meter_kwh = _parse_float(record.get("End-of-Day Meter Reading (kWh)"))
 
-            # Treat rows where both values are zero as unavailable placeholder rows,
-            # not real production history.
-            available = not (production_kwh == 0.0 and end_meter_kwh == 0.0)
-            rows.append(
-                SunrunProductionRow(
-                    entry_date=entry_date,
-                    production_kwh=production_kwh,
-                    end_of_day_meter_kwh=end_meter_kwh,
-                    available=available,
-                )
+            parsed_rows.append((entry_date, production_kwh, end_meter_kwh))
+
+    rows: list[SunrunProductionRow] = []
+    previous_end_meter_kwh: float | None = None
+    for entry_date, production_kwh, end_meter_kwh in sorted(parsed_rows):
+        meter_increased = (
+            previous_end_meter_kwh is not None
+            and end_meter_kwh > previous_end_meter_kwh + 0.001
+        )
+
+        # Sunrun carries the cumulative meter forward into placeholder rows. A
+        # non-zero cumulative value alone therefore does not mean that day's
+        # production is available.
+        available = production_kwh > 0.0 or meter_increased
+        rows.append(
+            SunrunProductionRow(
+                entry_date=entry_date,
+                production_kwh=production_kwh,
+                end_of_day_meter_kwh=end_meter_kwh,
+                available=available,
             )
+        )
+        previous_end_meter_kwh = end_meter_kwh
 
     available_rows = [row for row in rows if row.available]
     by_date = {

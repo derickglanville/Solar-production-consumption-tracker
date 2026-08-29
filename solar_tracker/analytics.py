@@ -364,11 +364,37 @@ def build_alerts(df, config):
     alerts = []
     latest = df.iloc[-1]
     guaranteed_daily = config.production_guarantee_kwh / 365.0
+    projection_df = df[~df["estimated"].fillna(False)]
+    if projection_df.empty:
+        projection_df = df
+    projection = float(projection_df["production_kwh"].mean() * 365.0)
+    projection_difference = projection - config.production_guarantee_kwh
+    projection_difference_pct = (
+        projection_difference / config.production_guarantee_kwh * 100
+        if config.production_guarantee_kwh
+        else 0.0
+    )
+    overall_position = (
+        f"ahead by {projection_difference:,.0f} kWh ({projection_difference_pct:,.1f}%)"
+        if projection_difference >= 0
+        else f"behind by {abs(projection_difference):,.0f} kWh ({abs(projection_difference_pct):,.1f}%)"
+    )
 
-    if latest["production_kwh"] < guaranteed_daily:
-        alerts.append("Production below expected daily guarantee.")
     if bool(latest["estimated"]):
-        alerts.append("Latest production row is estimated. Replace it with actual Sunrun production before drawing conclusions.")
+        alerts.append(
+            f"Latest day ({latest['entry_date']:%Y-%m-%d}) is estimated or awaiting final SunRun data, "
+            f"so its {latest['production_kwh']:,.1f} kWh should not be treated as final. "
+            f"Confirmed production projects to {projection:,.0f} kWh/year, {overall_position} "
+            f"versus the {config.production_guarantee_kwh:,.0f} kWh guarantee."
+        )
+    elif latest["production_kwh"] < guaranteed_daily:
+        daily_shortfall = guaranteed_daily - latest["production_kwh"]
+        alerts.append(
+            f"Daily context ({latest['entry_date']:%Y-%m-%d}): {latest['production_kwh']:,.1f} kWh was "
+            f"{daily_shortfall:,.1f} kWh below the {guaranteed_daily:,.1f} kWh daily guarantee pace. "
+            f"Overall production still projects to {projection:,.0f} kWh/year, {overall_position}. "
+            "A single low day does not indicate contract underperformance."
+        )
     if latest["daily_import_kwh"] > mean(df["daily_import_kwh"].tail(7).tolist()) * 1.5:
         alerts.append("Large import increase detected versus recent average.")
     if latest["weather"] == "Sunny" and latest["daily_export_kwh"] <= 0:
@@ -383,12 +409,12 @@ def build_alerts(df, config):
     if poor_days >= 5:
         alerts.append("Five consecutive low-production days.")
 
-    projection_df = df[~df["estimated"].fillna(False)]
-    if projection_df.empty:
-        projection_df = df
-    projection = projection_df["production_kwh"].mean() * 365.0
     if projection < config.production_guarantee_kwh:
-        alerts.append("Annual projection is below contract guarantee.")
+        alerts.append(
+            f"Contract pace warning: confirmed production projects to {projection:,.0f} kWh/year, "
+            f"{abs(projection_difference):,.0f} kWh ({abs(projection_difference_pct):,.1f}%) below "
+            f"the {config.production_guarantee_kwh:,.0f} kWh guarantee."
+        )
 
     return alerts
 

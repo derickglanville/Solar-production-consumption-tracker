@@ -24072,7 +24072,8 @@ This typically indicates that your device does not have a healthy Internet conne
     }
     return normalizeEntry({
       ...normalized,
-      production_kwh: Number(sunrunRecord.production_kwh || normalized.production_kwh || 0)
+      production_kwh: Number(sunrunRecord.production_kwh || normalized.production_kwh || 0),
+      estimated: false
     });
   }
   function applySunrunProductionToEntries(entries) {
@@ -24286,24 +24287,93 @@ This typically indicates that your device does not have a healthy Internet conne
     if (!sunrunProductionBootstrap?.available) {
       return { entries, updated: false, count: 0 };
     }
+    const todayIsoDate = getTodayIsoDate();
+    const existingDates = new Set(entries.map((entry) => String(entry.entry_date)));
+    const missingSunrunRecords = Object.values(sunrunProductionBootstrap.by_date || {}).filter((record) => record?.available && String(record.entry_date || "") <= todayIsoDate && !existingDates.has(String(record.entry_date || ""))).sort((left, right) => String(left.entry_date).localeCompare(String(right.entry_date)));
+    const workingEntries = sortEntries(entries.map((entry) => normalizeEntry(entry)));
+    const sunrunRowsByDate = new Map(
+      (sunrunProductionBootstrap.rows || []).map((record) => [String(record.entry_date || ""), record])
+    );
     const updates = [];
-    for (const entry of entries) {
+    for (const entry of workingEntries) {
       const sunrunRecord = getSunrunProductionRecord(entry.entry_date);
       if (!sunrunRecord || !sunrunRecord.available) {
+        const sourceRow = sunrunRowsByDate.get(String(entry.entry_date));
+        const wasIncorrectlyConfirmedPlaceholder = sourceRow && !sourceRow.available && Number(entry.production_kwh || 0) === 0 && !entry.estimated;
+        if (wasIncorrectlyConfirmedPlaceholder) {
+          let pendingProduction = 0;
+          if (String(entry.entry_date) === todayIsoDate) {
+            const pendingValues = buildFallbackLookupValues(entry.entry_date, workingEntries);
+            const progress = getIntradayProgressShares(
+              entry.entry_date,
+              getClockMinutes(),
+              entry.weather || pendingValues.weather
+            );
+            pendingProduction = Number((Number(pendingValues.production_kwh || 0) * progress.productionShare).toFixed(1));
+          }
+          updates.push(normalizeEntry({
+            ...entry,
+            production_kwh: pendingProduction,
+            estimated: true,
+            notes: String(entry.entry_date) === todayIsoDate ? "Pending final production data from SunRun; the displayed production is an intraday estimate." : entry.notes,
+            updated_at: (/* @__PURE__ */ new Date()).toISOString()
+          }));
+        }
         continue;
       }
       const sunrunProduction = Number(sunrunRecord.production_kwh || 0);
       const currentProduction = Number(entry.production_kwh || 0);
-      if (Math.abs(sunrunProduction - currentProduction) < 0.05) {
+      if (Math.abs(sunrunProduction - currentProduction) < 0.05 && !entry.estimated) {
         continue;
       }
       updates.push(
         normalizeEntry({
           ...entry,
           production_kwh: sunrunProduction,
+          estimated: false,
           updated_at: (/* @__PURE__ */ new Date()).toISOString()
         })
       );
+    }
+    for (const sunrunRecord of missingSunrunRecords) {
+      const entryDate = String(sunrunRecord.entry_date);
+      const estimatedValues = await buildEstimatedLookupValues(entryDate, workingEntries);
+      const generatedEntry = buildIntradayEstimatedEntry(
+        entryDate,
+        workingEntries,
+        estimatedValues,
+        "SunRun CSV recovery"
+      );
+      const previousEntry = getMostRecentEntryBefore(workingEntries, entryDate);
+      const nextEntry = workingEntries.find((entry) => String(entry.entry_date) > entryDate) || null;
+      let meter01 = Number(generatedEntry.meter_01_import_reading || 0);
+      let meter02 = Number(generatedEntry.meter_02_export_reading || 0);
+      let meterBasis = "estimated from the preceding cumulative readings";
+      if (previousEntry && nextEntry) {
+        const previousTime = Date.parse(`${previousEntry.entry_date}T12:00:00Z`);
+        const nextTime = Date.parse(`${nextEntry.entry_date}T12:00:00Z`);
+        const entryTime = Date.parse(`${entryDate}T12:00:00Z`);
+        const span = nextTime - previousTime;
+        const progress = span > 0 ? (entryTime - previousTime) / span : 0;
+        meter01 = Number((Number(previousEntry.meter_01_import_reading || 0) + (Number(nextEntry.meter_01_import_reading || 0) - Number(previousEntry.meter_01_import_reading || 0)) * progress).toFixed(1));
+        meter02 = Number((Number(previousEntry.meter_02_export_reading || 0) + (Number(nextEntry.meter_02_export_reading || 0) - Number(previousEntry.meter_02_export_reading || 0)) * progress).toFixed(1));
+        meterBasis = `interpolated between ${previousEntry.entry_date} and ${nextEntry.entry_date}`;
+      }
+      const recoveredEntry = normalizeEntry({
+        ...generatedEntry,
+        production_kwh: Number(sunrunRecord.production_kwh || 0),
+        meter_01_import_reading: meter01,
+        meter_02_export_reading: meter02,
+        estimated: false,
+        meter_values_estimated: true,
+        meter_values_confirmed: false,
+        lookup_source: "sunrun-csv",
+        notes: `Production recovered from the SunRun CSV. M01/M02 are ${meterBasis} and should be replaced if actual smart meter readings become available.`,
+        updated_at: (/* @__PURE__ */ new Date()).toISOString()
+      });
+      updates.push(recoveredEntry);
+      workingEntries.push(recoveredEntry);
+      workingEntries.sort((left, right) => String(left.entry_date).localeCompare(String(right.entry_date)));
     }
     if (!updates.length) {
       return { entries: applySunrunProductionToEntries(entries), updated: false, count: 0 };
@@ -24715,15 +24785,26 @@ This typically indicates that your device does not have a healthy Internet conne
     const latest = entries[entries.length - 1];
     const guarantee = Number(config.production_guarantee_kwh || 0);
     const guaranteedDaily = guarantee ? guarantee / 365 : 0;
+    const confirmedEntries = entries.filter((entry) => !entry.estimated);
+    const projectionEntries = confirmedEntries.length ? confirmedEntries : entries;
+    const annualProjection = mean(projectionEntries.map((entry) => Number(entry.production_kwh || 0))) * 365;
+    const projectionDifference = annualProjection - guarantee;
+    const projectionDifferencePct = guarantee ? projectionDifference / guarantee * 100 : 0;
+    const overallPosition = projectionDifference >= 0 ? `ahead by ${formatNumber(projectionDifference, 0, 0)} kWh (${formatNumber(projectionDifferencePct, 1, 1)}%)` : `behind by ${formatNumber(Math.abs(projectionDifference), 0, 0)} kWh (${formatNumber(Math.abs(projectionDifferencePct), 1, 1)}%)`;
     const alerts = [];
-    if (latest.production_kwh < guaranteedDaily) alerts.push("Production below expected daily guarantee.");
+    if (latest.estimated) {
+      alerts.push(`Latest day (${latest.entry_date}) is estimated or awaiting final SunRun data, so its ${formatNumber(latest.production_kwh, 1, 1)} kWh should not be treated as final. Confirmed production projects to ${formatNumber(annualProjection, 0, 0)} kWh/year, ${overallPosition} versus the ${formatNumber(guarantee, 0, 0)} kWh guarantee.`);
+    } else if (latest.production_kwh < guaranteedDaily) {
+      const dailyShortfall = guaranteedDaily - Number(latest.production_kwh || 0);
+      alerts.push(`Daily context (${latest.entry_date}): ${formatNumber(latest.production_kwh, 1, 1)} kWh was ${formatNumber(dailyShortfall, 1, 1)} kWh below the ${formatNumber(guaranteedDaily, 1, 1)} kWh daily guarantee pace. Overall production still projects to ${formatNumber(annualProjection, 0, 0)} kWh/year, ${overallPosition}. A single low day does not indicate contract underperformance.`);
+    }
     const recentImportMean = mean(entries.slice(-7).map((entry) => entry.daily_import_kwh));
     if (recentImportMean > 0 && latest.daily_import_kwh > recentImportMean * 1.5) {
       alerts.push("Large import increase detected versus recent average.");
     }
     if (latest.weather === "Sunny" && latest.daily_export_kwh <= 0) alerts.push("No exports recorded on a sunny day.");
-    if (mean(entries.map((entry) => entry.production_kwh)) * 365 < guarantee) {
-      alerts.push("Annual projection is below contract guarantee.");
+    if (annualProjection < guarantee) {
+      alerts.push(`Contract pace warning: confirmed production projects to ${formatNumber(annualProjection, 0, 0)} kWh/year, ${formatNumber(Math.abs(projectionDifference), 0, 0)} kWh (${formatNumber(Math.abs(projectionDifferencePct), 1, 1)}%) below the ${formatNumber(guarantee, 0, 0)} kWh guarantee.`);
     }
     return alerts;
   }
@@ -25308,7 +25389,7 @@ This typically indicates that your device does not have a healthy Internet conne
           </div>
         </section>
         ${firebaseStatus?.message ? `<section class="mb-4"><div class="status-banner ${firebaseStatus.kind === "success" ? "status-banner-success" : ""}"><div><p class="status-title mb-1">${firebaseStatusTitle}</p><p class="mb-0">${firebaseStatus.message}</p></div>${firebaseStatusPill ? `<span class="status-pill">${firebaseStatusPill}</span>` : ""}</div></section>` : ""}
-        ${alerts.length ? `<section class="mb-4"><div class="card tracker-card"><div class="card-body"><h2 class="h5 mb-3">Alerts</h2><div class="d-flex flex-wrap gap-2">${alerts.map((alert) => `<span class="badge text-bg-warning p-2">${alert}</span>`).join("")}</div></div></div></section>` : ""}
+        ${alerts.length ? `<section class="mb-4"><div class="card tracker-card"><div class="card-body"><h2 class="h5 mb-3">Alerts &amp; Context</h2><div class="d-flex flex-column gap-2">${alerts.map((alert) => `<div class="badge text-bg-warning p-2 text-wrap text-start lh-base">${alert}</div>`).join("")}</div></div></div></section>` : ""}
         ${buildAiPanelHtml(dashboardAiState.openaiConfigured)}
         <section class="row g-2 mb-4 dashboard-summary-row">
           <div class="col-md-6 col-xl-3"><div class="metric-card dashboard-summary-metric sun" title="${metrics.today_pending_sunrun ? "Today's value is pending final data from SunRun. " : ""}Yesterday: ${formatNumber(metrics.yesterday_production, 1, 1)} kWh${metrics.yesterday_pending_sunrun ? "; yesterday is also pending final SunRun data" : ""}."><span>Today's Production</span><strong>${formatNumber(metrics.today_production, 1, 1)} kWh</strong>${metrics.today_pending_sunrun ? '<span class="metric-status-dot" aria-label="Pending final SunRun data"></span>' : ""}</div></div>
@@ -26408,6 +26489,11 @@ This typically indicates that your device does not have a healthy Internet conne
       todayEntry = state.entries.find((entry2) => String(entry2.entry_date) === String(today));
     }
     if (!todayEntry) return null;
+    const latestTodayCheckpoint = normalizeMeterSimulationCheckpoints(meterSimulationCheckpoints).filter((checkpoint) => checkpoint.entry_date === String(today)).sort((left, right) => left.minute_of_day - right.minute_of_day).at(-1);
+    if (latestTodayCheckpoint?.minute_of_day > dueRun.minuteOfDay) {
+      meterSimulationLastAttemptedRunKey = runKey;
+      return { entry: todayEntry, simulation: null, updated: false };
+    }
     try {
       const refreshedEntry = await refreshEntryLookupFields(db, today);
       todayEntry = refreshedEntry;
@@ -27317,7 +27403,8 @@ This typically indicates that your device does not have a healthy Internet conne
           { meter_simulation_checkpoints: meterSimulationCheckpoints },
           { merge: true }
         );
-        meterSimulationLastAttemptedRunKey = "";
+        const latestDueRun = getLatestDueMeterSimulationRun();
+        meterSimulationLastAttemptedRunKey = latestDueRun ? `${getTodayIsoDate()}T${String(Math.floor(latestDueRun.minuteOfDay / 60)).padStart(2, "0")}:${String(latestDueRun.minuteOfDay % 60).padStart(2, "0")}` : "";
         renderMeterSimulation(entryDate, { autoApply: true });
         const isCurrentDayCheckpoint = String(entryDate) === String(getTodayIsoDate());
         const savedEntry = normalizeEntry({

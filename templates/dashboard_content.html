@@ -164,10 +164,10 @@
     <section class="mb-4">
       <div class="card tracker-card">
         <div class="card-body">
-          <h2 class="h5 mb-3">Alerts</h2>
-          <div class="d-flex flex-wrap gap-2">
+          <h2 class="h5 mb-3">Alerts &amp; Context</h2>
+          <div class="d-flex flex-column gap-2">
             {% for alert in alerts %}
-              <span class="badge text-bg-warning p-2">{{ alert }}</span>
+              <div class="badge text-bg-warning p-2 text-wrap text-start lh-base">{{ alert }}</div>
             {% endfor %}
           </div>
         </div>
