@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Solar Tracker</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/styles.css?v=20260829-sync80">
+  <script src="https://cdn.plot.ly/plotly-3.4.0.min.js"></script>
+</head>
+<body data-page="sunrun-production" data-local-snapshot-mode="false">
+  <nav class="navbar navbar-expand-lg tracker-nav">
+    <div class="container">
+      <a class="navbar-brand fw-semibold" href="index.html">Solar Production & Consumption Tracker</a>
+      <div class="navbar-nav ms-auto">
+
+        <a class="nav-link" href="index.html">Dashboard</a>
+        <a class="nav-link" href="entries.html">Daily Entry</a>
+        <a class="nav-link" href="sunrun-production.html">SunRun Data</a>
+        <a class="nav-link" href="appliances.html">Appliances</a>
+        <a class="nav-link" href="contract-summary.html">Contract Summary</a>
+        <a class="nav-link" href="settings.html">Settings</a>
+        <a class="nav-link nav-link-button" href="dictionary.html">Dictionary</a>
+        <a class="nav-link" href="solar_tracker_demo_export.csv">CSV Export</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="py-4">
+    <div class="container">
+
+
+
+
+<section class="card tracker-card mb-3 sunrun-data-hero">
+  <div class="card-body d-flex flex-wrap justify-content-between align-items-start gap-3">
+    <div>
+      <p class="eyebrow mb-2">SUNRUN SOURCE DATA</p>
+      <h1 class="h3 mb-1">Daily Production File</h1>
+      <p class="text-muted mb-0">Review and update daily SunRun production. Cumulative meter totals are recalculated automatically when the file is saved.</p>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+      <button type="button" id="sunrun-production-new" class="btn btn-contract btn-sm">New Row</button>
+      <button type="button" id="sunrun-production-recalculate" class="btn btn-contract btn-sm">Recalculate Totals</button>
+      <button type="button" id="sunrun-production-reload" class="btn btn-contract btn-sm">Reload File</button>
+      <button type="button" id="sunrun-production-save" class="btn btn-sun btn-sm">Save Production File</button>
+      <button type="button" id="sunrun-production-download" class="btn btn-contract btn-sm">Download CSV</button>
+    </div>
+  </div>
+</section>
+
+<div id="sunrun-production-status" aria-live="polite"></div>
+
+<section class="row g-2 mb-3 sunrun-production-summary" aria-label="SunRun production summary">
+  <div class="col-6 col-lg-3"><div class="metric-card"><span>Total Production</span><strong id="sunrun-total-production">0.0 kWh</strong><small>All saved daily production</small></div></div>
+  <div class="col-6 col-lg-3"><div class="metric-card"><span>Current Month</span><strong id="sunrun-month-production">0.0 kWh</strong><small id="sunrun-month-label">Selected month</small></div></div>
+  <div class="col-6 col-lg-3"><div class="metric-card"><span>Latest Confirmed Day</span><strong id="sunrun-latest-date">N/A</strong><small id="sunrun-latest-production">No confirmed production</small></div></div>
+  <div class="col-6 col-lg-3"><div class="metric-card"><span>Records</span><strong id="sunrun-record-count">0</strong><small id="sunrun-validation-summary">Checking file</small></div></div>
+</section>
+
+<section class="card tracker-card sunrun-production-card">
+  <div class="card-body">
+    <div class="sunrun-records-heading">
+      <div>
+        <h2 class="h5 mb-1">Production Records</h2>
+        <p class="text-muted mb-0">Daily production is editable. End-of-day meter readings are calculated from the complete chronological series.</p>
+      </div>
+      <div class="sunrun-sheet-tools" aria-label="Production record navigation">
+        <button type="button" id="sunrun-month-previous" class="btn btn-contract btn-sm" title="Show the previous month">Previous</button>
+        <label class="sunrun-month-filter">Month
+          <select id="sunrun-production-month" class="form-select form-select-sm">
+            <option value="all">All months</option>
+          </select>
+        </label>
+        <button type="button" id="sunrun-month-next" class="btn btn-contract btn-sm" title="Show the next month">Next</button>
+        <button type="button" id="sunrun-show-latest" class="btn btn-contract btn-sm" title="Jump to the newest production record">Latest</button>
+        <label class="sunrun-record-find">Find date
+          <input id="sunrun-production-find" type="search" class="form-control form-control-sm" placeholder="YYYY-MM-DD" autocomplete="off">
+        </label>
+        <label class="sunrun-sort-control">Sort
+          <select id="sunrun-production-sort" class="form-select form-select-sm">
+            <option value="newest">Newest first</option>
+            <option value="oldest">Oldest first</option>
+          </select>
+        </label>
+      </div>
+    </div>
+    <div class="sunrun-sheet-caption">
+      <span id="sunrun-visible-count">0 records shown</span>
+      <span>Use <kbd>Up</kbd> and <kbd>Down</kbd> to move between editable cells.</span>
+    </div>
+    <div class="sunrun-production-table-scroll">
+      <table class="table table-sm align-middle sunrun-production-table">
+        <thead>
+          <tr>
+            <th class="sunrun-row-number-heading" scope="col">#</th>
+            <th>Date</th>
+            <th class="text-end">Solar Produced (kWh)</th>
+            <th class="text-end">End-of-Day Meter (kWh)</th>
+            <th>Status</th>
+            <th class="text-end">Action</th>
+          </tr>
+        </thead>
+        <tbody id="sunrun-production-body"></tbody>
+        <tfoot id="sunrun-production-foot"></tfoot>
+      </table>
+    </div>
+  </div>
+</section>
+
+<script>
+  window.SUNRUN_PRODUCTION_BOOTSTRAP = {"available": true, "by_date": {"2026-07-10": {"available": true, "end_of_day_meter_kwh": 59.369, "entry_date": "2026-07-10", "production_kwh": 59.369}, "2026-07-11": {"available": true, "end_of_day_meter_kwh": 133.199, "entry_date": "2026-07-11", "production_kwh": 73.83}, "2026-07-12": {"available": true, "end_of_day_meter_kwh": 214.085, "entry_date": "2026-07-12", "production_kwh": 80.886}, "2026-07-13": {"available": true, "end_of_day_meter_kwh": 285.192, "entry_date": "2026-07-13", "production_kwh": 71.107}, "2026-07-14": {"available": true, "end_of_day_meter_kwh": 362.815, "entry_date": "2026-07-14", "production_kwh": 77.623}, "2026-07-15": {"available": true, "end_of_day_meter_kwh": 412.074, "entry_date": "2026-07-15", "production_kwh": 49.259}, "2026-07-16": {"available": true, "end_of_day_meter_kwh": 456.49, "entry_date": "2026-07-16", "production_kwh": 44.416}, "2026-07-17": {"available": true, "end_of_day_meter_kwh": 547.278, "entry_date": "2026-07-17", "production_kwh": 90.788}, "2026-07-18": {"available": true, "end_of_day_meter_kwh": 572.776, "entry_date": "2026-07-18", "production_kwh": 25.498}, "2026-07-19": {"available": true, "end_of_day_meter_kwh": 665.638, "entry_date": "2026-07-19", "production_kwh": 92.862}, "2026-07-20": {"available": true, "end_of_day_meter_kwh": 759.679, "entry_date": "2026-07-20", "production_kwh": 94.041}, "2026-07-21": {"available": true, "end_of_day_meter_kwh": 782.293, "entry_date": "2026-07-21", "production_kwh": 22.614}, "2026-07-22": {"available": true, "end_of_day_meter_kwh": 860.335, "entry_date": "2026-07-22", "production_kwh": 78.042}, "2026-07-23": {"available": true, "end_of_day_meter_kwh": 953.485, "entry_date": "2026-07-23", "production_kwh": 93.15}, "2026-07-24": {"available": true, "end_of_day_meter_kwh": 1026.875, "entry_date": "2026-07-24", "production_kwh": 73.39}, "2026-07-25": {"available": true, "end_of_day_meter_kwh": 1117.304, "entry_date": "2026-07-25", "production_kwh": 90.429}, "2026-07-26": {"available": true, "end_of_day_meter_kwh": 1191.841, "entry_date": "2026-07-26", "production_kwh": 74.537}, "2026-07-27": {"available": true, "end_of_day_meter_kwh": 1274.83, "entry_date": "2026-07-27", "production_kwh": 82.989}, "2026-07-28": {"available": true, "end_of_day_meter_kwh": 1311.399, "entry_date": "2026-07-28", "production_kwh": 36.569}, "2026-07-29": {"available": true, "end_of_day_meter_kwh": 1371.646, "entry_date": "2026-07-29", "production_kwh": 60.247}, "2026-07-30": {"available": true, "end_of_day_meter_kwh": 1420.267, "entry_date": "2026-07-30", "production_kwh": 48.621}, "2026-07-31": {"available": true, "end_of_day_meter_kwh": 1483.707, "entry_date": "2026-07-31", "production_kwh": 63.44}, "2026-08-01": {"available": true, "end_of_day_meter_kwh": 1557.098, "entry_date": "2026-08-01", "production_kwh": 73.391}, "2026-08-02": {"available": true, "end_of_day_meter_kwh": 1609.548, "entry_date": "2026-08-02", "production_kwh": 52.45}, "2026-08-03": {"available": true, "end_of_day_meter_kwh": 1649.593, "entry_date": "2026-08-03", "production_kwh": 40.045}, "2026-08-04": {"available": true, "end_of_day_meter_kwh": 1737.392, "entry_date": "2026-08-04", "production_kwh": 87.799}, "2026-08-05": {"available": true, "end_of_day_meter_kwh": 1804.879, "entry_date": "2026-08-05", "production_kwh": 67.487}, "2026-08-06": {"available": true, "end_of_day_meter_kwh": 1879.702, "entry_date": "2026-08-06", "production_kwh": 74.823}, "2026-08-07": {"available": true, "end_of_day_meter_kwh": 1943.198, "entry_date": "2026-08-07", "production_kwh": 63.496}, "2026-08-08": {"available": true, "end_of_day_meter_kwh": 2014.698, "entry_date": "2026-08-08", "production_kwh": 71.5}, "2026-08-09": {"available": true, "end_of_day_meter_kwh": 2095.598, "entry_date": "2026-08-09", "production_kwh": 80.9}, "2026-08-10": {"available": true, "end_of_day_meter_kwh": 2155.598, "entry_date": "2026-08-10", "production_kwh": 60.0}, "2026-08-11": {"available": true, "end_of_day_meter_kwh": 2213.298, "entry_date": "2026-08-11", "production_kwh": 57.7}, "2026-08-12": {"available": true, "end_of_day_meter_kwh": 2291.498, "entry_date": "2026-08-12", "production_kwh": 78.2}, "2026-08-13": {"available": true, "end_of_day_meter_kwh": 2356.398, "entry_date": "2026-08-13", "production_kwh": 64.9}, "2026-08-14": {"available": true, "end_of_day_meter_kwh": 2428.098, "entry_date": "2026-08-14", "production_kwh": 71.7}, "2026-08-15": {"available": true, "end_of_day_meter_kwh": 2506.998, "entry_date": "2026-08-15", "production_kwh": 78.9}, "2026-08-16": {"available": true, "end_of_day_meter_kwh": 2547.078, "entry_date": "2026-08-16", "production_kwh": 40.08}, "2026-08-17": {"available": true, "end_of_day_meter_kwh": 2584.778, "entry_date": "2026-08-17", "production_kwh": 37.7}, "2026-08-18": {"available": true, "end_of_day_meter_kwh": 2654.338, "entry_date": "2026-08-18", "production_kwh": 69.56}, "2026-08-19": {"available": true, "end_of_day_meter_kwh": 2733.788, "entry_date": "2026-08-19", "production_kwh": 79.45}, "2026-08-20": {"available": true, "end_of_day_meter_kwh": 2764.868, "entry_date": "2026-08-20", "production_kwh": 31.08}, "2026-08-21": {"available": true, "end_of_day_meter_kwh": 2832.278, "entry_date": "2026-08-21", "production_kwh": 67.41}, "2026-08-22": {"available": true, "end_of_day_meter_kwh": 2889.648, "entry_date": "2026-08-22", "production_kwh": 57.37}, "2026-08-23": {"available": true, "end_of_day_meter_kwh": 2955.568, "entry_date": "2026-08-23", "production_kwh": 65.92}, "2026-08-24": {"available": true, "end_of_day_meter_kwh": 3026.228, "entry_date": "2026-08-24", "production_kwh": 70.66}, "2026-08-25": {"available": true, "end_of_day_meter_kwh": 3098.858, "entry_date": "2026-08-25", "production_kwh": 72.63}, "2026-08-26": {"available": true, "end_of_day_meter_kwh": 3163.808, "entry_date": "2026-08-26", "production_kwh": 64.95}, "2026-08-27": {"available": true, "end_of_day_meter_kwh": 3189.838, "entry_date": "2026-08-27", "production_kwh": 26.03}, "2026-08-28": {"available": true, "end_of_day_meter_kwh": 3261.438, "entry_date": "2026-08-28", "production_kwh": 71.6}, "2026-08-29": {"available": true, "end_of_day_meter_kwh": 3288.458, "entry_date": "2026-08-29", "production_kwh": 27.02}}, "latest_available_date": "2026-08-29", "rows": [{"available": false, "end_of_day_meter_kwh": 0.0, "entry_date": "2026-07-09", "production_kwh": 0.0}, {"available": true, "end_of_day_meter_kwh": 59.369, "entry_date": "2026-07-10", "production_kwh": 59.369}, {"available": true, "end_of_day_meter_kwh": 133.199, "entry_date": "2026-07-11", "production_kwh": 73.83}, {"available": true, "end_of_day_meter_kwh": 214.085, "entry_date": "2026-07-12", "production_kwh": 80.886}, {"available": true, "end_of_day_meter_kwh": 285.192, "entry_date": "2026-07-13", "production_kwh": 71.107}, {"available": true, "end_of_day_meter_kwh": 362.815, "entry_date": "2026-07-14", "production_kwh": 77.623}, {"available": true, "end_of_day_meter_kwh": 412.074, "entry_date": "2026-07-15", "production_kwh": 49.259}, {"available": true, "end_of_day_meter_kwh": 456.49, "entry_date": "2026-07-16", "production_kwh": 44.416}, {"available": true, "end_of_day_meter_kwh": 547.278, "entry_date": "2026-07-17", "production_kwh": 90.788}, {"available": true, "end_of_day_meter_kwh": 572.776, "entry_date": "2026-07-18", "production_kwh": 25.498}, {"available": true, "end_of_day_meter_kwh": 665.638, "entry_date": "2026-07-19", "production_kwh": 92.862}, {"available": true, "end_of_day_meter_kwh": 759.679, "entry_date": "2026-07-20", "production_kwh": 94.041}, {"available": true, "end_of_day_meter_kwh": 782.293, "entry_date": "2026-07-21", "production_kwh": 22.614}, {"available": true, "end_of_day_meter_kwh": 860.335, "entry_date": "2026-07-22", "production_kwh": 78.042}, {"available": true, "end_of_day_meter_kwh": 953.485, "entry_date": "2026-07-23", "production_kwh": 93.15}, {"available": true, "end_of_day_meter_kwh": 1026.875, "entry_date": "2026-07-24", "production_kwh": 73.39}, {"available": true, "end_of_day_meter_kwh": 1117.304, "entry_date": "2026-07-25", "production_kwh": 90.429}, {"available": true, "end_of_day_meter_kwh": 1191.841, "entry_date": "2026-07-26", "production_kwh": 74.537}, {"available": true, "end_of_day_meter_kwh": 1274.83, "entry_date": "2026-07-27", "production_kwh": 82.989}, {"available": true, "end_of_day_meter_kwh": 1311.399, "entry_date": "2026-07-28", "production_kwh": 36.569}, {"available": true, "end_of_day_meter_kwh": 1371.646, "entry_date": "2026-07-29", "production_kwh": 60.247}, {"available": true, "end_of_day_meter_kwh": 1420.267, "entry_date": "2026-07-30", "production_kwh": 48.621}, {"available": true, "end_of_day_meter_kwh": 1483.707, "entry_date": "2026-07-31", "production_kwh": 63.44}, {"available": true, "end_of_day_meter_kwh": 1557.098, "entry_date": "2026-08-01", "production_kwh": 73.391}, {"available": true, "end_of_day_meter_kwh": 1609.548, "entry_date": "2026-08-02", "production_kwh": 52.45}, {"available": true, "end_of_day_meter_kwh": 1649.593, "entry_date": "2026-08-03", "production_kwh": 40.045}, {"available": true, "end_of_day_meter_kwh": 1737.392, "entry_date": "2026-08-04", "production_kwh": 87.799}, {"available": true, "end_of_day_meter_kwh": 1804.879, "entry_date": "2026-08-05", "production_kwh": 67.487}, {"available": true, "end_of_day_meter_kwh": 1879.702, "entry_date": "2026-08-06", "production_kwh": 74.823}, {"available": true, "end_of_day_meter_kwh": 1943.198, "entry_date": "2026-08-07", "production_kwh": 63.496}, {"available": true, "end_of_day_meter_kwh": 2014.698, "entry_date": "2026-08-08", "production_kwh": 71.5}, {"available": true, "end_of_day_meter_kwh": 2095.598, "entry_date": "2026-08-09", "production_kwh": 80.9}, {"available": true, "end_of_day_meter_kwh": 2155.598, "entry_date": "2026-08-10", "production_kwh": 60.0}, {"available": true, "end_of_day_meter_kwh": 2213.298, "entry_date": "2026-08-11", "production_kwh": 57.7}, {"available": true, "end_of_day_meter_kwh": 2291.498, "entry_date": "2026-08-12", "production_kwh": 78.2}, {"available": true, "end_of_day_meter_kwh": 2356.398, "entry_date": "2026-08-13", "production_kwh": 64.9}, {"available": true, "end_of_day_meter_kwh": 2428.098, "entry_date": "2026-08-14", "production_kwh": 71.7}, {"available": true, "end_of_day_meter_kwh": 2506.998, "entry_date": "2026-08-15", "production_kwh": 78.9}, {"available": true, "end_of_day_meter_kwh": 2547.078, "entry_date": "2026-08-16", "production_kwh": 40.08}, {"available": true, "end_of_day_meter_kwh": 2584.778, "entry_date": "2026-08-17", "production_kwh": 37.7}, {"available": true, "end_of_day_meter_kwh": 2654.338, "entry_date": "2026-08-18", "production_kwh": 69.56}, {"available": true, "end_of_day_meter_kwh": 2733.788, "entry_date": "2026-08-19", "production_kwh": 79.45}, {"available": true, "end_of_day_meter_kwh": 2764.868, "entry_date": "2026-08-20", "production_kwh": 31.08}, {"available": true, "end_of_day_meter_kwh": 2832.278, "entry_date": "2026-08-21", "production_kwh": 67.41}, {"available": true, "end_of_day_meter_kwh": 2889.648, "entry_date": "2026-08-22", "production_kwh": 57.37}, {"available": true, "end_of_day_meter_kwh": 2955.568, "entry_date": "2026-08-23", "production_kwh": 65.92}, {"available": true, "end_of_day_meter_kwh": 3026.228, "entry_date": "2026-08-24", "production_kwh": 70.66}, {"available": true, "end_of_day_meter_kwh": 3098.858, "entry_date": "2026-08-25", "production_kwh": 72.63}, {"available": true, "end_of_day_meter_kwh": 3163.808, "entry_date": "2026-08-26", "production_kwh": 64.95}, {"available": true, "end_of_day_meter_kwh": 3189.838, "entry_date": "2026-08-27", "production_kwh": 26.03}, {"available": true, "end_of_day_meter_kwh": 3261.438, "entry_date": "2026-08-28", "production_kwh": 71.6}, {"available": true, "end_of_day_meter_kwh": 3288.458, "entry_date": "2026-08-29", "production_kwh": 27.02}]};
+</script>
+
+    </div>
+  </main>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="assets/js/site-bootstrap.js?v=20260829-sync80"></script>
+  <script src="assets/js/firebase-config.js?v=20260829-sync80"></script>
+  <script defer src="assets/js/app-bundle.js?v=20260829-sync80"></script>
+
+<script defer src="assets/js/sunrun-production.js?v=20260829-sync80"></script>
+
+</body>
+</html>

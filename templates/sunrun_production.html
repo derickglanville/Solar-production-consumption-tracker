@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="card tracker-card mb-3 sunrun-data-hero">
+  <div class="card-body d-flex flex-wrap justify-content-between align-items-start gap-3">
+    <div>
+      <p class="eyebrow mb-2">SUNRUN SOURCE DATA</p>
+      <h1 class="h3 mb-1">Daily Production File</h1>
+      <p class="text-muted mb-0">Review and update daily SunRun production. Cumulative meter totals are recalculated automatically when the file is saved.</p>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+      <button type="button" id="sunrun-production-new" class="btn btn-contract btn-sm">New Row</button>
+      <button type="button" id="sunrun-production-recalculate" class="btn btn-contract btn-sm">Recalculate Totals</button>
+      <button type="button" id="sunrun-production-reload" class="btn btn-contract btn-sm">Reload File</button>
+      <button type="button" id="sunrun-production-save" class="btn btn-sun btn-sm">Save Production File</button>
+      <button type="button" id="sunrun-production-download" class="btn btn-contract btn-sm">Download CSV</button>
+    </div>
+  </div>
+</section>
+
+<div id="sunrun-production-status" aria-live="polite"></div>
+
+<section class="row g-2 mb-3 sunrun-production-summary" aria-label="SunRun production summary">
+  <div class="col-6 col-lg-3"><div class="metric-card"><span>Total Production</span><strong id="sunrun-total-production">0.0 kWh</strong><small>All saved daily production</small></div></div>
+  <div class="col-6 col-lg-3"><div class="metric-card"><span>Current Month</span><strong id="sunrun-month-production">0.0 kWh</strong><small id="sunrun-month-label">Selected month</small></div></div>
+  <div class="col-6 col-lg-3"><div class="metric-card"><span>Latest Confirmed Day</span><strong id="sunrun-latest-date">N/A</strong><small id="sunrun-latest-production">No confirmed production</small></div></div>
+  <div class="col-6 col-lg-3"><div class="metric-card"><span>Records</span><strong id="sunrun-record-count">0</strong><small id="sunrun-validation-summary">Checking file</small></div></div>
+</section>
+
+<section class="card tracker-card sunrun-production-card">
+  <div class="card-body">
+    <div class="sunrun-records-heading">
+      <div>
+        <h2 class="h5 mb-1">Production Records</h2>
+        <p class="text-muted mb-0">Daily production is editable. End-of-day meter readings are calculated from the complete chronological series.</p>
+      </div>
+      <div class="sunrun-sheet-tools" aria-label="Production record navigation">
+        <button type="button" id="sunrun-month-previous" class="btn btn-contract btn-sm" title="Show the previous month">Previous</button>
+        <label class="sunrun-month-filter">Month
+          <select id="sunrun-production-month" class="form-select form-select-sm">
+            <option value="all">All months</option>
+          </select>
+        </label>
+        <button type="button" id="sunrun-month-next" class="btn btn-contract btn-sm" title="Show the next month">Next</button>
+        <button type="button" id="sunrun-show-latest" class="btn btn-contract btn-sm" title="Jump to the newest production record">Latest</button>
+        <label class="sunrun-record-find">Find date
+          <input id="sunrun-production-find" type="search" class="form-control form-control-sm" placeholder="YYYY-MM-DD" autocomplete="off">
+        </label>
+        <label class="sunrun-sort-control">Sort
+          <select id="sunrun-production-sort" class="form-select form-select-sm">
+            <option value="newest">Newest first</option>
+            <option value="oldest">Oldest first</option>
+          </select>
+        </label>
+      </div>
+    </div>
+    <div class="sunrun-sheet-caption">
+      <span id="sunrun-visible-count">0 records shown</span>
+      <span>Use <kbd>Up</kbd> and <kbd>Down</kbd> to move between editable cells.</span>
+    </div>
+    <div class="sunrun-production-table-scroll">
+      <table class="table table-sm align-middle sunrun-production-table">
+        <thead>
+          <tr>
+            <th class="sunrun-row-number-heading" scope="col">#</th>
+            <th>Date</th>
+            <th class="text-end">Solar Produced (kWh)</th>
+            <th class="text-end">End-of-Day Meter (kWh)</th>
+            <th>Status</th>
+            <th class="text-end">Action</th>
+          </tr>
+        </thead>
+        <tbody id="sunrun-production-body"></tbody>
+        <tfoot id="sunrun-production-foot"></tfoot>
+      </table>
+    </div>
+  </div>
+</section>
+
+<script>
+  window.SUNRUN_PRODUCTION_BOOTSTRAP = {{ sunrun_production|tojson }};
+</script>
+{% endblock %}
+
+{% block extra_scripts %}
+<script defer src="{{ url_for('static', filename='js/sunrun-production.js') }}?v=20260829-sync80"></script>
+{% endblock %}

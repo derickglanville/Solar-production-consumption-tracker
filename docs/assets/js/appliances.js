@@ -3,7 +3,6 @@ const applianceConfig = window.SOLAR_BOOTSTRAP?.default_config || {};
 let appliancesPopoutOpen = false;
 let appliancesTableHomeParent = null;
 let appliancesTableHomeNextSibling = null;
-const appliancesStaticStorageKey = "solar-pages-appliances-records";
 
 function escapeHtml(value) {
   return String(value ?? "")
@@ -312,17 +311,6 @@ function applyLoadBands() {
 }
 
 async function loadAppliances() {
-  if (window.SOLAR_STATIC_SITE) {
-    try {
-      const saved = window.localStorage.getItem(appliancesStaticStorageKey);
-      if (saved) {
-        return { records: JSON.parse(saved) };
-      }
-    } catch (error) {
-      // Ignore storage issues and fall back to embedded data.
-    }
-    return { records: applianceBootstrap.records || [] };
-  }
   const response = await fetch("/api/appliances");
   if (!response.ok) {
     throw new Error(`Appliance workbook request failed with status ${response.status}`);
@@ -331,14 +319,6 @@ async function loadAppliances() {
 }
 
 async function saveAppliances(records) {
-  if (window.SOLAR_STATIC_SITE) {
-    try {
-      window.localStorage.setItem(appliancesStaticStorageKey, JSON.stringify(records));
-    } catch (error) {
-      throw new Error("Unable to save the appliance snapshot in this browser.");
-    }
-    return { records };
-  }
   const response = await fetch("/api/appliances/save", {
     method: "POST",
     headers: { "Content-Type": "application/json" },

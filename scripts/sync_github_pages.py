@@ -17,11 +17,12 @@ from solar_tracker.routes import build_bootstrap_data
 
 
 DOCS = ROOT / "docs"
-ASSET_VERSION = "20260829-sync78"
+ASSET_VERSION = "20260829-sync80"
 
 ROUTE_REPLACEMENTS = {
     'href="/"': 'href="index.html"',
     'href="/entries"': 'href="entries.html"',
+    'href="/sunrun-production"': 'href="sunrun-production.html"',
     'href="/appliances"': 'href="appliances.html"',
     'href="/contract-summary"': 'href="contract-summary.html"',
     'href="/settings"': 'href="settings.html"',
@@ -50,6 +51,15 @@ def render_static_page(path: str) -> str:
         f'href="assets/css/styles.css?v={ASSET_VERSION}"',
         html,
     )
+    html = html.replace(
+        'src="/static/js/appliances.js"',
+        f'src="assets/js/appliances.js?v={ASSET_VERSION}"',
+    )
+    html = re.sub(
+        r'src="/static/js/sunrun-production\.js\?v=[^"]+"',
+        f'src="assets/js/sunrun-production.js?v={ASSET_VERSION}"',
+        html,
+    )
     html = re.sub(
         r'src="/static/js/firebase-config\.js\?v=[^"]+"',
         f'src="assets/js/firebase-config.js?v={ASSET_VERSION}"',
@@ -73,6 +83,8 @@ def sync_assets() -> None:
     copies = {
         ROOT / "static" / "css" / "styles.css": DOCS / "assets" / "css" / "styles.css",
         ROOT / "static" / "js" / "app-bundle.js": DOCS / "assets" / "js" / "app-bundle.js",
+        ROOT / "static" / "js" / "appliances.js": DOCS / "assets" / "js" / "appliances.js",
+        ROOT / "static" / "js" / "sunrun-production.js": DOCS / "assets" / "js" / "sunrun-production.js",
         ROOT / "static" / "images" / "solar-home-side.png": DOCS / "assets" / "images" / "solar-home-side.png",
         ROOT / "static" / "images" / "solar-farm-side.png": DOCS / "assets" / "images" / "solar-farm-side.png",
     }
@@ -141,10 +153,17 @@ def update_static_shells() -> None:
 def main() -> None:
     sync_assets()
     write_static_bootstrap()
-    (DOCS / "entries.html").write_text(
-        render_static_page("/entries"),
-        encoding="utf-8",
-    )
+    static_pages = {
+        "index.html": "/",
+        "entries.html": "/entries",
+        "sunrun-production.html": "/sunrun-production",
+        "appliances.html": "/appliances",
+        "contract-summary.html": "/contract-summary",
+        "dictionary.html": "/dictionary",
+        "settings.html": "/settings",
+    }
+    for filename, route in static_pages.items():
+        (DOCS / filename).write_text(render_static_page(route), encoding="utf-8")
     update_static_shells()
     print(f"GitHub Pages synchronized at {DOCS}")
 

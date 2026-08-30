@@ -16,7 +16,11 @@ from .firestore import AppConfig, DailySolarEntry
 from .historical_usage import historical_usage_to_dict, load_historical_usage_summary
 from .monthly_bill import load_monthly_bill_summary, monthly_bill_to_dict
 from .seed import build_sample_entries
-from .sunrun_production import load_sunrun_daily_production
+from .sunrun_production import (
+    SUNRUN_CSV_PATH,
+    load_sunrun_daily_production,
+    save_sunrun_daily_production,
+)
 from .time_utils import tracker_today
 
 
@@ -480,6 +484,19 @@ def appliances():
     )
 
 
+@main_blueprint.route("/sunrun-production")
+def sunrun_production():
+    production_data = load_sunrun_daily_production()
+    production_data.pop("source_path", None)
+    return render_template(
+        "sunrun_production.html",
+        page_name="sunrun-production",
+        local_snapshot_mode=False,
+        bootstrap_data=build_bootstrap_data(),
+        sunrun_production=production_data,
+    )
+
+
 @main_blueprint.route("/api/render/dashboard", methods=["POST"])
 def render_dashboard_api():
     payload = request.get_json(force=True)
@@ -532,6 +549,21 @@ def appliances_save_api():
     payload = request.get_json(force=True)
     records = payload.get("records", [])
     return jsonify(save_appliance_records(records))
+
+
+@main_blueprint.route("/api/sunrun-production")
+def sunrun_production_api():
+    return jsonify(load_sunrun_daily_production())
+
+
+@main_blueprint.route("/api/sunrun-production/save", methods=["POST"])
+def sunrun_production_save_api():
+    payload = request.get_json(force=True)
+    try:
+        result = save_sunrun_daily_production(payload.get("records", []))
+    except ValueError as error:
+        return jsonify({"error": str(error)}), 400
+    return jsonify(result)
 
 
 @main_blueprint.route("/api/validate-local-dashboard")
@@ -657,6 +689,16 @@ def appliances_document():
         str(APPLIANCE_WORKBOOK_PATH.parent),
         APPLIANCE_WORKBOOK_PATH.name,
         as_attachment=True,
+    )
+
+
+@main_blueprint.route("/documents/sunrun-production")
+def sunrun_production_document():
+    return send_file(
+        SUNRUN_CSV_PATH,
+        as_attachment=True,
+        download_name=SUNRUN_CSV_PATH.name,
+        mimetype="text/csv",
     )
 
 

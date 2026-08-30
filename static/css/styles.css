@@ -1604,6 +1604,288 @@ body.meter-calibration-popout-open::before {
   cursor: help;
 }
 
+.sunrun-data-hero .card-body {
+  padding: 1.1rem 1.25rem;
+}
+
+.sunrun-production-summary .metric-card {
+  min-height: 112px;
+  padding: 0.9rem 1rem;
+}
+
+.sunrun-production-summary .metric-card strong {
+  font-size: 1.35rem;
+}
+
+.sunrun-production-summary .metric-card small {
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+.sunrun-month-filter {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.sunrun-month-filter .form-select {
+  min-width: 152px;
+  padding: 0.32rem 1.8rem 0.32rem 0.55rem;
+}
+
+.sunrun-records-heading {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: end;
+  gap: 0.75rem 1.25rem;
+  margin-bottom: 0.55rem;
+}
+
+.sunrun-sheet-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 0.4rem;
+}
+
+.sunrun-sheet-tools .btn {
+  min-height: 31px;
+  padding: 0.3rem 0.65rem;
+}
+
+.sunrun-record-find,
+.sunrun-sort-control {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.sunrun-record-find .form-control {
+  width: 132px;
+  min-height: 31px;
+  padding: 0.28rem 0.5rem;
+}
+
+.sunrun-sort-control .form-select {
+  width: 132px;
+  min-height: 31px;
+  padding: 0.28rem 1.7rem 0.28rem 0.5rem;
+}
+
+.sunrun-sheet-caption {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.35rem 0.15rem;
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.sunrun-sheet-caption kbd {
+  padding: 0.05rem 0.28rem;
+  border: 1px solid rgba(95, 114, 128, 0.25);
+  border-radius: 3px;
+  background: #f4f7f7;
+  color: var(--text);
+  box-shadow: none;
+  font-size: 0.67rem;
+}
+
+.sunrun-production-table-scroll {
+  max-height: calc(100vh - 330px);
+  min-height: 360px;
+  overflow: auto;
+  border: 1px solid rgba(95, 114, 128, 0.14);
+  border-radius: 7px;
+  background: #fff;
+}
+
+.sunrun-production-table {
+  min-width: 720px;
+  margin-bottom: 0;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.79rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.sunrun-production-table thead {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: #f4f7f7;
+}
+
+.sunrun-production-table th,
+.sunrun-production-table td {
+  height: 32px;
+  padding: 0.2rem 0.42rem;
+  border-right: 1px solid rgba(95, 114, 128, 0.12);
+  border-bottom: 1px solid rgba(95, 114, 128, 0.14);
+  white-space: nowrap;
+}
+
+.sunrun-production-table tbody tr:nth-child(even) td {
+  background: #f8faf9;
+}
+
+.sunrun-production-table tbody tr:hover td,
+.sunrun-production-table tbody tr.sunrun-row-selected td {
+  background: #eef6f2;
+}
+
+.sunrun-production-table th:first-child,
+.sunrun-production-table td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+}
+
+.sunrun-production-table th:nth-child(2),
+.sunrun-production-table td:nth-child(2) {
+  position: sticky;
+  left: 38px;
+  z-index: 1;
+  box-shadow: 1px 0 rgba(95, 114, 128, 0.16);
+}
+
+.sunrun-production-table thead th:first-child,
+.sunrun-production-table thead th:nth-child(2) {
+  z-index: 3;
+  background: #f4f7f7;
+}
+
+.sunrun-production-table tbody td:first-child,
+.sunrun-production-table tbody td:nth-child(2) {
+  background: #fff;
+}
+
+.sunrun-production-table tbody tr:nth-child(even) td:first-child,
+.sunrun-production-table tbody tr:nth-child(even) td:nth-child(2) {
+  background: #f8faf9;
+}
+
+.sunrun-production-table tbody tr:hover td:first-child,
+.sunrun-production-table tbody tr:hover td:nth-child(2),
+.sunrun-production-table tbody tr.sunrun-row-selected td:first-child,
+.sunrun-production-table tbody tr.sunrun-row-selected td:nth-child(2) {
+  background: #eef6f2;
+}
+
+.sunrun-row-number-heading,
+.sunrun-row-number {
+  width: 38px;
+  min-width: 38px;
+  text-align: center;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.sunrun-production-table .form-control {
+  min-height: 25px;
+  height: 25px;
+  padding: 0.12rem 0.3rem;
+  border-color: transparent;
+  border-radius: 3px;
+  background: transparent;
+  font-size: 0.79rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.sunrun-production-table .form-control:hover {
+  border-color: rgba(95, 114, 128, 0.24);
+  background: #fff;
+}
+
+.sunrun-production-table .form-control:focus {
+  border-color: #5d8ca3;
+  background: #fff;
+  box-shadow: 0 0 0 2px rgba(93, 140, 163, 0.13);
+}
+
+.sunrun-date-input {
+  width: 132px;
+}
+
+.sunrun-production-input {
+  width: 125px;
+  margin-left: auto;
+}
+
+.sunrun-row-status {
+  display: inline-block;
+  min-width: 82px;
+  padding: 0.16rem 0.45rem;
+  border-radius: 999px;
+  text-align: center;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.sunrun-production-table .sunrun-delete-row {
+  min-height: 25px;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.72rem;
+}
+
+.sunrun-production-table tfoot {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  background: #edf3f2;
+  font-weight: 700;
+}
+
+@media (max-width: 767px) {
+  .sunrun-sheet-tools {
+    width: 100%;
+  }
+
+  .sunrun-sheet-caption span:last-child {
+    display: none;
+  }
+
+  .sunrun-production-table-scroll {
+    max-height: 62vh;
+  }
+}
+
+.sunrun-row-confirmed {
+  background: rgba(76, 142, 105, 0.14);
+  color: #356b4c;
+}
+
+.sunrun-row-pending {
+  background: rgba(217, 164, 65, 0.16);
+  color: #855f15;
+}
+
+.sunrun-row-invalid {
+  background: rgba(201, 80, 68, 0.1);
+}
+
+.sunrun-production-table tbody tr.sunrun-row-invalid td,
+.sunrun-production-table tbody tr.sunrun-row-invalid td:first-child,
+.sunrun-production-table tbody tr.sunrun-row-invalid td:nth-child(2) {
+  background: #fff0ee;
+}
+
+.sunrun-row-invalid .sunrun-date-input {
+  border-color: #c95044;
+  box-shadow: 0 0 0 0.15rem rgba(201, 80, 68, 0.12);
+}
+
 .btn-sun:disabled {
   opacity: 0.6;
   cursor: not-allowed;
