@@ -211,7 +211,7 @@
             <button type="button" class="btn btn-sun btn-sm" id="entries-history-popout">Pop Out</button>
           </div>
         </div>
-        <div class="entries-history-meter-strip" aria-label="Meter difference totals and latest hourly update">
+        <div class="entries-history-meter-strip" aria-label="Meter differences, estimated consumption, and latest hourly update">
           <div class="entries-history-meter-stat entries-history-diff-stat" title="Sum and average of the filtered daily M01 differences">
             <span>M01 Diff Total</span>
             <strong id="entries-m01-diff-total">0.0 kWh</strong>
@@ -222,12 +222,23 @@
             <strong id="entries-m02-diff-total">0.0 kWh</strong>
             <small id="entries-m02-diff-average">Average: 0.0 kWh/day</small>
           </div>
+          <div class="entries-history-meter-stat entries-history-consumption-stat" title="Average of Solar Production + M01 daily import - M02 daily export for the filtered rows">
+            <span>Average Daily Consumption</span>
+            <strong id="entries-average-daily-consumption">0.0 kWh</strong>
+            <small id="entries-consumption-count">No calculated days</small>
+          </div>
           <div class="entries-history-meter-stat entries-history-hourly-stat" title="Date and time of the most recently saved hourly meter-simulation run">
             <span>Last Hourly Update</span>
             <strong id="entries-last-hourly-update">Not run yet</strong>
             <small id="entries-last-hourly-update-detail">Waiting for an hourly simulation</small>
             <small id="entries-last-hourly-previous">Previous M01/M02 unavailable</small>
           </div>
+        </div>
+        <div class="calculation-color-legend" aria-label="Calculation color key">
+          <span><i class="calculation-positive" aria-hidden="true"></i>Positive</span>
+          <span><i class="calculation-negative" aria-hidden="true"></i>Negative</span>
+          <span><i class="calculation-neutral" aria-hidden="true"></i>Neutral</span>
+          <small>Colors indicate the numeric sign.</small>
         </div>
         <div class="table-responsive entries-history-window" id="entries-history-window">
           <table class="table align-middle entries-history-table">
@@ -241,6 +252,9 @@
                 <th title="Current M01 minus the previous date's M01 reading">Diff</th>
                 <th>M02</th>
                 <th title="Current M02 minus the previous date's M02 reading">Diff</th>
+                <th title="Estimated Daily Consumption: production + M01 Diff - M02 Diff">EDC</th>
+                <th title="Current Estimated Daily Consumption minus the previous day's estimate">EDC Diff</th>
+                <th title="Production minus EDC. Positive means a net energy surplus; negative means net grid dependence.">Day Balance</th>
                 <th>Weather</th>
                 <th>High</th>
                 <th>Low</th>
@@ -252,15 +266,31 @@
             <tbody id="entries-table-body">
               {% for entry in entries %}
               {% set previous_entry = entries[loop.index0 + 1] if not loop.last else none %}
+              {% set previous_previous_entry = entries[loop.index0 + 2] if loop.index0 + 2 < entries|length else none %}
+              {% if previous_entry %}
+                {% set current_m01_diff = entry.meter_01_import_reading - previous_entry.meter_01_import_reading %}
+                {% set current_m02_diff = entry.meter_02_export_reading - previous_entry.meter_02_export_reading %}
+                {% set current_edc = entry.production_kwh + current_m01_diff - current_m02_diff %}
+                {% set current_day_balance = entry.production_kwh - current_edc %}
+              {% endif %}
+              {% if previous_entry and previous_previous_entry %}
+                {% set previous_m01_diff = previous_entry.meter_01_import_reading - previous_previous_entry.meter_01_import_reading %}
+                {% set previous_m02_diff = previous_entry.meter_02_export_reading - previous_previous_entry.meter_02_export_reading %}
+                {% set previous_edc = previous_entry.production_kwh + previous_m01_diff - previous_m02_diff %}
+              {% endif %}
               <tr class="entry-history-row" data-entry-date="{{ entry.entry_date.strftime('%Y-%m-%d') }}" tabindex="0" title="Select this record to edit">
                 <td>{{ entry.entry_date.strftime("%Y-%m-%d") }}</td>
                 <td>{{ entry.entry_date.strftime("%a") }}</td>
                 <td>{{ "%.1f"|format(entry.production_kwh) }}</td>
                 <td>{{ "%.0f"|format(entry.irradiance_peak_wm2) }}</td>
                 <td>{{ "%.1f"|format(entry.meter_01_import_reading) }}</td>
-                <td class="meter-diff-cell" title="M01 change from the previous available date">{% if previous_entry %}{{ "%.1f"|format(entry.meter_01_import_reading - previous_entry.meter_01_import_reading) }}{% else %}<span class="text-muted">-</span>{% endif %}</td>
+                <td class="meter-diff-cell {% if previous_entry %}{% if current_m01_diff > 0.05 %}calculation-positive{% elif current_m01_diff < -0.05 %}calculation-negative{% else %}calculation-neutral{% endif %}{% endif %}" title="M01 change from the previous available date">{% if previous_entry %}{{ "%.1f"|format(current_m01_diff) }}{% else %}<span class="text-muted">-</span>{% endif %}</td>
                 <td>{{ "%.1f"|format(entry.meter_02_export_reading) }}</td>
-                <td class="meter-diff-cell" title="M02 change from the previous available date">{% if previous_entry %}{{ "%.1f"|format(entry.meter_02_export_reading - previous_entry.meter_02_export_reading) }}{% else %}<span class="text-muted">-</span>{% endif %}</td>
+                <td class="meter-diff-cell {% if previous_entry %}{% if current_m02_diff > 0.05 %}calculation-positive{% elif current_m02_diff < -0.05 %}calculation-negative{% else %}calculation-neutral{% endif %}{% endif %}" title="M02 change from the previous available date">{% if previous_entry %}{{ "%.1f"|format(current_m02_diff) }}{% else %}<span class="text-muted">-</span>{% endif %}</td>
+                <td class="estimated-consumption-cell {% if previous_entry %}{% if current_edc > 0.05 %}calculation-positive{% elif current_edc < -0.05 %}calculation-negative{% else %}calculation-neutral{% endif %}{% endif %}" {% if previous_entry %}title="Estimated home energy used on {{ entry.entry_date.strftime('%b %d, %Y') }}.&#10;{{ '%.1f'|format(entry.production_kwh) }} solar production + {{ '%.1f'|format(current_m01_diff) }} grid import - {{ '%.1f'|format(current_m02_diff) }} grid export = {{ '%.1f'|format(current_edc) }} kWh EDC.&#10;Import is added because the home used it. Export is subtracted because it was sent to the grid."{% else %}title="EDC requires a previous meter reading so daily import and export can be calculated."{% endif %}>{% if previous_entry %}{{ "%.1f"|format(current_edc) }}{% else %}<span class="text-muted">-</span>{% endif %}</td>
+                {% set current_edc_diff = current_edc - previous_edc if previous_entry and previous_previous_entry else none %}
+                <td class="estimated-consumption-diff-cell {% if current_edc_diff is not none %}{% if current_edc_diff > 0.05 %}calculation-positive{% elif current_edc_diff < -0.05 %}calculation-negative{% else %}calculation-neutral{% endif %}{% endif %}" {% if previous_entry and previous_previous_entry %}title="EDC change compared with {{ previous_entry.entry_date.strftime('%b %d, %Y') }}.&#10;{{ '%.1f'|format(current_edc) }} current EDC - {{ '%.1f'|format(previous_edc) }} previous EDC = {{ '%.1f'|format(current_edc_diff) }} kWh.&#10;{% if current_edc_diff < 0 %}You consumed an estimated {{ '%.1f'|format(-current_edc_diff) }} kWh LESS than the previous day.{% elif current_edc_diff > 0 %}You consumed an estimated {{ '%.1f'|format(current_edc_diff) }} kWh MORE than the previous day.{% else %}Estimated consumption was unchanged from the previous day.{% endif %} Negative means less consumption; positive means more."{% else %}title="EDC Diff requires two calculated consumption days. Negative means less consumption; positive means more."{% endif %}>{% if current_edc_diff is not none %}{{ "%.1f"|format(current_edc_diff) }}{% else %}<span class="text-muted">-</span>{% endif %}</td>
+                <td class="daily-energy-balance-cell {% if previous_entry %}{% if current_day_balance > 0.05 %}calculation-positive{% elif current_day_balance < -0.05 %}calculation-negative{% else %}calculation-neutral{% endif %}{% endif %}" {% if previous_entry %}title="Daily Energy Balance for {{ entry.entry_date.strftime('%b %d, %Y') }}.&#10;{{ '%.1f'|format(entry.production_kwh) }} production - {{ '%.1f'|format(current_edc) }} EDC = {{ '%+.1f'|format(current_day_balance) }} kWh.&#10;Cross-check: {{ '%.1f'|format(current_m02_diff) }} export - {{ '%.1f'|format(current_m01_diff) }} import = {{ '%+.1f'|format(current_m02_diff - current_m01_diff) }} kWh.&#10;{% if current_day_balance > 0.05 %}Net surplus: solar produced more than the home consumed.{% elif current_day_balance < -0.05 %}Net deficit: the home consumed more than solar produced and relied on net grid energy.{% else %}Balanced day: production approximately matched consumption.{% endif %}"{% else %}title="Day Balance requires daily import and export differences."{% endif %}>{% if previous_entry %}{{ "%+.1f"|format(current_day_balance) }}{% else %}<span class="text-muted">-</span>{% endif %}</td>
                 <td>{{ entry.weather }}</td>
                 <td>{% if entry.temperature_high_f is not none %}{{ "%.0f"|format(entry.temperature_high_f) }}°F{% else %}<span class="text-muted">-</span>{% endif %}</td>
                 <td>{% if entry.temperature_low_f is not none %}{{ "%.0f"|format(entry.temperature_low_f) }}°F{% else %}<span class="text-muted">-</span>{% endif %}</td>
@@ -272,7 +302,7 @@
               {% if entries|length < 18 %}
               {% for _ in range(18 - entries|length) %}
               <tr class="entry-empty-row" aria-hidden="true">
-                {% for _ in range(14) %}<td>&nbsp;</td>{% endfor %}
+                {% for _ in range(17) %}<td>&nbsp;</td>{% endfor %}
               </tr>
               {% endfor %}
               {% endif %}

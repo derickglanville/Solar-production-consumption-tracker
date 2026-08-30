@@ -4,11 +4,13 @@ import csv
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
+from threading import Lock
 from typing import Iterable
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 SUNRUN_CSV_PATH = PROJECT_ROOT / "SunRun Data" / "Sunrun_Daily_Production_Data.csv"
+_DAILY_ROW_LOCK = Lock()
 
 
 @dataclass
@@ -148,3 +150,23 @@ def save_sunrun_daily_production(records: Iterable[dict]) -> dict:
 
     temporary_path.replace(SUNRUN_CSV_PATH)
     return load_sunrun_daily_production()
+
+
+def ensure_sunrun_production_date(entry_date: date) -> tuple[dict, bool]:
+    """Create one pending production row for entry_date without altering existing data."""
+    with _DAILY_ROW_LOCK:
+        production_data = load_sunrun_daily_production()
+        existing_rows = production_data.get("rows", [])
+        if any(row.get("entry_date") == entry_date.isoformat() for row in existing_rows):
+            return production_data, False
+
+        records = [
+            {
+                "entry_date": row.get("entry_date"),
+                "production_kwh": row.get("production_kwh", 0),
+            }
+            for row in existing_rows
+        ]
+        records.append({"entry_date": entry_date.isoformat(), "production_kwh": 0})
+        production_data = save_sunrun_daily_production(records)
+        return production_data, True

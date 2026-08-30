@@ -23780,6 +23780,16 @@ This typically indicates that your device does not have a healthy Internet conne
       weekday: "short"
     });
   }
+  function formatIsoDateForDisplay(isoDate) {
+    const match = String(isoDate || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!match) return String(isoDate || "Unknown date");
+    const [, year, month, day] = match;
+    return new Date(Number(year), Number(month) - 1, Number(day)).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric"
+    });
+  }
   function shouldHideEntryFromDisplay(entry) {
     if (!entry) return true;
     const entryDate = String(entry.entry_date || "");
@@ -24793,10 +24803,14 @@ This typically indicates that your device does not have a healthy Internet conne
     const overallPosition = projectionDifference >= 0 ? `ahead by ${formatNumber(projectionDifference, 0, 0)} kWh (${formatNumber(projectionDifferencePct, 1, 1)}%)` : `behind by ${formatNumber(Math.abs(projectionDifference), 0, 0)} kWh (${formatNumber(Math.abs(projectionDifferencePct), 1, 1)}%)`;
     const alerts = [];
     if (latest.estimated) {
-      alerts.push(`Latest day (${latest.entry_date}) is estimated or awaiting final SunRun data, so its ${formatNumber(latest.production_kwh, 1, 1)} kWh should not be treated as final. Confirmed production projects to ${formatNumber(annualProjection, 0, 0)} kWh/year, ${overallPosition} versus the ${formatNumber(guarantee, 0, 0)} kWh guarantee.`);
+      alerts.push(
+        `Latest day (${latest.entry_date}) is estimated or awaiting final SunRun data, so its ${formatNumber(latest.production_kwh, 1, 1)} kWh should not be treated as final. Confirmed production projects to ${formatNumber(annualProjection, 0, 0)} kWh/year, ${overallPosition} versus the ${formatNumber(guarantee, 0, 0)} kWh guarantee.`
+      );
     } else if (latest.production_kwh < guaranteedDaily) {
       const dailyShortfall = guaranteedDaily - Number(latest.production_kwh || 0);
-      alerts.push(`Daily context (${latest.entry_date}): ${formatNumber(latest.production_kwh, 1, 1)} kWh was ${formatNumber(dailyShortfall, 1, 1)} kWh below the ${formatNumber(guaranteedDaily, 1, 1)} kWh daily guarantee pace. Overall production still projects to ${formatNumber(annualProjection, 0, 0)} kWh/year, ${overallPosition}. A single low day does not indicate contract underperformance.`);
+      alerts.push(
+        `Daily context (${latest.entry_date}): ${formatNumber(latest.production_kwh, 1, 1)} kWh was ${formatNumber(dailyShortfall, 1, 1)} kWh below the ${formatNumber(guaranteedDaily, 1, 1)} kWh daily guarantee pace. Overall production still projects to ${formatNumber(annualProjection, 0, 0)} kWh/year, ${overallPosition}. A single low day does not indicate contract underperformance.`
+      );
     }
     const recentImportMean = mean(entries.slice(-7).map((entry) => entry.daily_import_kwh));
     if (recentImportMean > 0 && latest.daily_import_kwh > recentImportMean * 1.5) {
@@ -24804,7 +24818,9 @@ This typically indicates that your device does not have a healthy Internet conne
     }
     if (latest.weather === "Sunny" && latest.daily_export_kwh <= 0) alerts.push("No exports recorded on a sunny day.");
     if (annualProjection < guarantee) {
-      alerts.push(`Contract pace warning: confirmed production projects to ${formatNumber(annualProjection, 0, 0)} kWh/year, ${formatNumber(Math.abs(projectionDifference), 0, 0)} kWh (${formatNumber(Math.abs(projectionDifferencePct), 1, 1)}%) below the ${formatNumber(guarantee, 0, 0)} kWh guarantee.`);
+      alerts.push(
+        `Contract pace warning: confirmed production projects to ${formatNumber(annualProjection, 0, 0)} kWh/year, ${formatNumber(Math.abs(projectionDifference), 0, 0)} kWh (${formatNumber(Math.abs(projectionDifferencePct), 1, 1)}%) below the ${formatNumber(guarantee, 0, 0)} kWh guarantee.`
+      );
     }
     return alerts;
   }
@@ -26903,9 +26919,18 @@ This typically indicates that your device does not have a healthy Internet conne
     const meterDifferences = /* @__PURE__ */ new Map();
     chronologicalEntries.forEach((entry, index) => {
       const previousEntry = index > 0 ? chronologicalEntries[index - 1] : null;
+      const previousCalculation = index > 0 ? meterDifferences.get(previousEntry.entry_date) : null;
+      const m01 = previousEntry ? Number(entry.meter_01_import_reading || 0) - Number(previousEntry.meter_01_import_reading || 0) : null;
+      const m02 = previousEntry ? Number(entry.meter_02_export_reading || 0) - Number(previousEntry.meter_02_export_reading || 0) : null;
+      const edc = Number.isFinite(m01) && Number.isFinite(m02) ? Number(entry.production_kwh || 0) + m01 - m02 : null;
       meterDifferences.set(entry.entry_date, {
-        m01: previousEntry ? Number(entry.meter_01_import_reading || 0) - Number(previousEntry.meter_01_import_reading || 0) : null,
-        m02: previousEntry ? Number(entry.meter_02_export_reading || 0) - Number(previousEntry.meter_02_export_reading || 0) : null
+        m01,
+        m02,
+        edc,
+        dayBalance: Number.isFinite(edc) ? Number(entry.production_kwh || 0) - edc : null,
+        previousEdc: previousCalculation?.edc ?? null,
+        previousDate: previousEntry?.entry_date ?? null,
+        edcDiff: Number.isFinite(edc) && Number.isFinite(previousCalculation?.edc) ? edc - previousCalculation.edc : null
       });
     });
     const filteredEntries = chronologicalEntries.filter((entry) => entryMatchesHistoryFilters(entry));
@@ -26916,8 +26941,29 @@ This typically indicates that your device does not have a healthy Internet conne
       recordCount.textContent = entriesPageState.weatherFilter === "All" && entriesPageState.monthFilter === "All" ? String(visibleEntries.length) : `${visibleEntries.length} of ${chronologicalEntries.length}`;
     }
     const formatDifference = (value) => Number.isFinite(value) ? value.toFixed(1) : '<span class="text-muted">-</span>';
+    const calculationSignClass = (value) => {
+      if (!Number.isFinite(value)) return "";
+      if (value > 0.05) return "calculation-positive";
+      if (value < -0.05) return "calculation-negative";
+      return "calculation-neutral";
+    };
     const populatedRows = visibleEntries.map((entry) => {
       const differences = meterDifferences.get(entry.entry_date) || {};
+      const entryDateLabel = formatIsoDateForDisplay(entry.entry_date);
+      const edcTooltip = Number.isFinite(differences.edc) ? `Estimated home energy used on ${entryDateLabel}.
+${Number(entry.production_kwh || 0).toFixed(1)} solar production + ${differences.m01.toFixed(1)} grid import - ${differences.m02.toFixed(1)} grid export = ${differences.edc.toFixed(1)} kWh EDC.
+Import is added because the home used it. Export is subtracted because it was sent to the grid.` : "EDC requires a previous meter reading so daily import and export can be calculated.";
+      const previousEdc = differences.previousEdc;
+      const previousDateLabel = differences.previousDate ? formatIsoDateForDisplay(differences.previousDate) : "the previous day";
+      const consumptionDirection = Number.isFinite(differences.edcDiff) ? differences.edcDiff < 0 ? `You consumed an estimated ${Math.abs(differences.edcDiff).toFixed(1)} kWh LESS than the previous day.` : differences.edcDiff > 0 ? `You consumed an estimated ${differences.edcDiff.toFixed(1)} kWh MORE than the previous day.` : "Estimated consumption was unchanged from the previous day." : "";
+      const edcDiffTooltip = Number.isFinite(differences.edcDiff) ? `EDC change compared with ${previousDateLabel}.
+${differences.edc.toFixed(1)} current EDC - ${previousEdc.toFixed(1)} previous EDC = ${differences.edcDiff.toFixed(1)} kWh.
+${consumptionDirection} Negative means less consumption; positive means more.` : "EDC Diff requires two calculated consumption days. Negative means less consumption; positive means more.";
+      const balanceInterpretation = Number.isFinite(differences.dayBalance) ? differences.dayBalance > 0.05 ? "Net surplus: solar produced more than the home consumed." : differences.dayBalance < -0.05 ? "Net deficit: the home consumed more than solar produced and relied on net grid energy." : "Balanced day: production approximately matched consumption." : "Day Balance requires daily import and export differences.";
+      const balanceTooltip = Number.isFinite(differences.dayBalance) ? `Daily Energy Balance for ${entryDateLabel}.
+${Number(entry.production_kwh || 0).toFixed(1)} production - ${differences.edc.toFixed(1)} EDC = ${differences.dayBalance >= 0 ? "+" : ""}${differences.dayBalance.toFixed(1)} kWh.
+Cross-check: ${differences.m02.toFixed(1)} export - ${differences.m01.toFixed(1)} import = ${differences.m02 - differences.m01 >= 0 ? "+" : ""}${(differences.m02 - differences.m01).toFixed(1)} kWh.
+${balanceInterpretation}` : balanceInterpretation;
       return `
     <tr class="entry-history-row ${entry.entry_date === entriesPageState.selectedDate ? "entry-row-selected" : ""}"
         data-entry-date="${entry.entry_date}" tabindex="0" title="Select this record to edit">
@@ -26926,9 +26972,12 @@ This typically indicates that your device does not have a healthy Internet conne
       <td>${Number(entry.production_kwh || 0).toFixed(1)}</td>
       <td>${Number(entry.irradiance_peak_wm2 || 0).toFixed(0)}</td>
       <td>${Number(entry.meter_01_import_reading || 0).toFixed(1)}</td>
-      <td class="meter-diff-cell" title="M01 change from the previous available date">${formatDifference(differences.m01)}</td>
+      <td class="meter-diff-cell ${calculationSignClass(differences.m01)}" title="M01 change from the previous available date">${formatDifference(differences.m01)}</td>
       <td>${Number(entry.meter_02_export_reading || 0).toFixed(1)}</td>
-      <td class="meter-diff-cell" title="M02 change from the previous available date">${formatDifference(differences.m02)}</td>
+      <td class="meter-diff-cell ${calculationSignClass(differences.m02)}" title="M02 change from the previous available date">${formatDifference(differences.m02)}</td>
+      <td class="estimated-consumption-cell ${calculationSignClass(differences.edc)}" title="${escapeHtml(edcTooltip)}">${formatDifference(differences.edc)}</td>
+      <td class="estimated-consumption-diff-cell ${calculationSignClass(differences.edcDiff)}" title="${escapeHtml(edcDiffTooltip)}">${formatDifference(differences.edcDiff)}</td>
+      <td class="daily-energy-balance-cell ${calculationSignClass(differences.dayBalance)}" title="${escapeHtml(balanceTooltip)}">${Number.isFinite(differences.dayBalance) ? `${differences.dayBalance >= 0 ? "+" : ""}${differences.dayBalance.toFixed(1)}` : '<span class="text-muted">-</span>'}</td>
       <td>${renderWeatherCell(entry)}</td>
       <td>${formatTemperatureCellValue(entry.temperature_high_f)}</td>
       <td>${formatTemperatureCellValue(entry.temperature_low_f)}</td>
@@ -26940,7 +26989,7 @@ This typically indicates that your device does not have a healthy Internet conne
     }).join("");
     const blankRows = Array.from(
       { length: Math.max(0, 18 - visibleEntries.length) },
-      () => `<tr class="entry-empty-row" aria-hidden="true">${"<td>&nbsp;</td>".repeat(14)}</tr>`
+      () => `<tr class="entry-empty-row" aria-hidden="true">${"<td>&nbsp;</td>".repeat(17)}</tr>`
     ).join("");
     body.innerHTML = populatedRows + blankRows;
     body.querySelectorAll(".entry-history-row").forEach((row) => {
@@ -26965,6 +27014,8 @@ This typically indicates that your device does not have a healthy Internet conne
     const m02Target = document.getElementById("entries-m02-diff-total");
     const m01AverageTarget = document.getElementById("entries-m01-diff-average");
     const m02AverageTarget = document.getElementById("entries-m02-diff-average");
+    const consumptionAverageTarget = document.getElementById("entries-average-daily-consumption");
+    const consumptionCountTarget = document.getElementById("entries-consumption-count");
     const hourlyTarget = document.getElementById("entries-last-hourly-update");
     const hourlyDetail = document.getElementById("entries-last-hourly-update-detail");
     const hourlyPrevious = document.getElementById("entries-last-hourly-previous");
@@ -26987,6 +27038,14 @@ This typically indicates that your device does not have a healthy Internet conne
     }
     if (m02AverageTarget) {
       m02AverageTarget.textContent = totals.m02Count ? `Average: ${(totals.m02 / totals.m02Count).toFixed(1)} kWh/day` : "Average: \u2014";
+    }
+    const consumptionValues = displayedDifferences.map((differences) => differences.edc).filter((value) => Number.isFinite(value));
+    const averageDailyConsumption = consumptionValues.length ? consumptionValues.reduce((sum2, value) => sum2 + value, 0) / consumptionValues.length : 0;
+    if (consumptionAverageTarget) {
+      consumptionAverageTarget.textContent = consumptionValues.length ? `${averageDailyConsumption.toFixed(1)} kWh/day` : "\u2014";
+    }
+    if (consumptionCountTarget) {
+      consumptionCountTarget.textContent = consumptionValues.length ? `Based on ${consumptionValues.length} calculated day${consumptionValues.length === 1 ? "" : "s"}` : "No calculated days";
     }
     const savedRuns = allEntries.flatMap((entry) => Array.isArray(entry.meter_simulation_runs) ? entry.meter_simulation_runs.filter((run) => ["hourly", "checkpoint"].includes(String(run.run_type || "")) && run.recorded_at).map((run) => ({ ...run, entry_date: entry.entry_date })) : []).sort((left, right) => new Date(right.recorded_at).getTime() - new Date(left.recorded_at).getTime());
     const latestRun = savedRuns[0] || null;
@@ -27943,7 +28002,7 @@ firebase/app/dist/esm/index.esm.js:
   SPDX-License-Identifier: Apache-2.0
   *)
   (** @license
-
+  
    Copyright The Closure Library Authors.
    SPDX-License-Identifier: Apache-2.0
   *)

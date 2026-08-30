@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/styles.css?v=20260829-sync80">
+  <link rel="stylesheet" href="assets/css/styles.css?v=20260830-sync86">
   <script src="https://cdn.plot.ly/plotly-3.4.0.min.js"></script>
 </head>
 <body data-page="entries" data-local-snapshot-mode="false">
@@ -261,7 +261,7 @@
             <button type="button" class="btn btn-sun btn-sm" id="entries-history-popout">Pop Out</button>
           </div>
         </div>
-        <div class="entries-history-meter-strip" aria-label="Meter difference totals and latest hourly update">
+        <div class="entries-history-meter-strip" aria-label="Meter differences, estimated consumption, and latest hourly update">
           <div class="entries-history-meter-stat entries-history-diff-stat" title="Sum and average of the filtered daily M01 differences">
             <span>M01 Diff Total</span>
             <strong id="entries-m01-diff-total">0.0 kWh</strong>
@@ -272,12 +272,23 @@
             <strong id="entries-m02-diff-total">0.0 kWh</strong>
             <small id="entries-m02-diff-average">Average: 0.0 kWh/day</small>
           </div>
+          <div class="entries-history-meter-stat entries-history-consumption-stat" title="Average of Solar Production + M01 daily import - M02 daily export for the filtered rows">
+            <span>Average Daily Consumption</span>
+            <strong id="entries-average-daily-consumption">0.0 kWh</strong>
+            <small id="entries-consumption-count">No calculated days</small>
+          </div>
           <div class="entries-history-meter-stat entries-history-hourly-stat" title="Date and time of the most recently saved hourly meter-simulation run">
             <span>Last Hourly Update</span>
             <strong id="entries-last-hourly-update">Not run yet</strong>
             <small id="entries-last-hourly-update-detail">Waiting for an hourly simulation</small>
             <small id="entries-last-hourly-previous">Previous M01/M02 unavailable</small>
           </div>
+        </div>
+        <div class="calculation-color-legend" aria-label="Calculation color key">
+          <span><i class="calculation-positive" aria-hidden="true"></i>Positive</span>
+          <span><i class="calculation-negative" aria-hidden="true"></i>Negative</span>
+          <span><i class="calculation-neutral" aria-hidden="true"></i>Neutral</span>
+          <small>Colors indicate the numeric sign.</small>
         </div>
         <div class="table-responsive entries-history-window" id="entries-history-window">
           <table class="table align-middle entries-history-table">
@@ -291,6 +302,9 @@
                 <th title="Current M01 minus the previous date's M01 reading">Diff</th>
                 <th>M02</th>
                 <th title="Current M02 minus the previous date's M02 reading">Diff</th>
+                <th title="Estimated Daily Consumption: production + M01 Diff - M02 Diff">EDC</th>
+                <th title="Current Estimated Daily Consumption minus the previous day's estimate">EDC Diff</th>
+                <th title="Production minus EDC. Positive means a net energy surplus; negative means net grid dependence.">Day Balance</th>
                 <th>Weather</th>
                 <th>High</th>
                 <th>Low</th>
@@ -302,15 +316,31 @@
             <tbody id="entries-table-body">
 
 
+
+
+
+
+
+
+
+
+
+
+
+
               <tr class="entry-history-row" data-entry-date="2026-07-25" tabindex="0" title="Select this record to edit">
                 <td>2026-07-25</td>
                 <td>Sat</td>
                 <td>78.0</td>
                 <td>922</td>
                 <td>181.3</td>
-                <td class="meter-diff-cell" title="M01 change from the previous available date">19.0</td>
+                <td class="meter-diff-cell calculation-positive" title="M01 change from the previous available date">19.0</td>
                 <td>419.4</td>
-                <td class="meter-diff-cell" title="M02 change from the previous available date">55.0</td>
+                <td class="meter-diff-cell calculation-positive" title="M02 change from the previous available date">55.0</td>
+                <td class="estimated-consumption-cell calculation-positive" title="Estimated home energy used on Jul 25, 2026.&#10;78.0 solar production + 19.0 grid import - 55.0 grid export = 42.0 kWh EDC.&#10;Import is added because the home used it. Export is subtracted because it was sent to the grid.">42.0</td>
+
+                <td class="estimated-consumption-diff-cell calculation-positive" title="EDC change compared with Jul 24, 2026.&#10;42.0 current EDC - 26.6 previous EDC = 15.4 kWh.&#10;You consumed an estimated 15.4 kWh MORE than the previous day. Negative means less consumption; positive means more.">15.4</td>
+                <td class="daily-energy-balance-cell calculation-positive" title="Daily Energy Balance for Jul 25, 2026.&#10;78.0 production - 42.0 EDC = +36.0 kWh.&#10;Cross-check: 55.0 export - 19.0 import = +36.0 kWh.&#10;Net surplus: solar produced more than the home consumed.">+36.0</td>
                 <td>Sunny</td>
                 <td>79°F</td>
                 <td>66°F</td>
@@ -320,15 +350,31 @@
               </tr>
 
 
+
+
+
+
+
+
+
+
+
+
+
+
               <tr class="entry-history-row" data-entry-date="2026-07-24" tabindex="0" title="Select this record to edit">
                 <td>2026-07-24</td>
                 <td>Fri</td>
                 <td>22.6</td>
                 <td>460</td>
                 <td>162.3</td>
-                <td class="meter-diff-cell" title="M01 change from the previous available date">25.0</td>
+                <td class="meter-diff-cell calculation-positive" title="M01 change from the previous available date">25.0</td>
                 <td>364.4</td>
-                <td class="meter-diff-cell" title="M02 change from the previous available date">21.0</td>
+                <td class="meter-diff-cell calculation-positive" title="M02 change from the previous available date">21.0</td>
+                <td class="estimated-consumption-cell calculation-positive" title="Estimated home energy used on Jul 24, 2026.&#10;22.6 solar production + 25.0 grid import - 21.0 grid export = 26.6 kWh EDC.&#10;Import is added because the home used it. Export is subtracted because it was sent to the grid.">26.6</td>
+
+                <td class="estimated-consumption-diff-cell calculation-negative" title="EDC change compared with Jul 23, 2026.&#10;26.6 current EDC - 66.1 previous EDC = -39.4 kWh.&#10;You consumed an estimated 39.4 kWh LESS than the previous day. Negative means less consumption; positive means more.">-39.4</td>
+                <td class="daily-energy-balance-cell calculation-negative" title="Daily Energy Balance for Jul 24, 2026.&#10;22.6 production - 26.6 EDC = -4.0 kWh.&#10;Cross-check: 21.0 export - 25.0 import = -4.0 kWh.&#10;Net deficit: the home consumed more than solar produced and relied on net grid energy.">-4.0</td>
                 <td>Overcast</td>
                 <td>76°F</td>
                 <td>65°F</td>
@@ -338,15 +384,31 @@
               </tr>
 
 
+
+
+
+
+
+
+
+
+
+
+
+
               <tr class="entry-history-row" data-entry-date="2026-07-23" tabindex="0" title="Select this record to edit">
                 <td>2026-07-23</td>
                 <td>Thu</td>
                 <td>93.2</td>
                 <td>367</td>
                 <td>137.3</td>
-                <td class="meter-diff-cell" title="M01 change from the previous available date">11.3</td>
+                <td class="meter-diff-cell calculation-positive" title="M01 change from the previous available date">11.3</td>
                 <td>343.4</td>
-                <td class="meter-diff-cell" title="M02 change from the previous available date">38.4</td>
+                <td class="meter-diff-cell calculation-positive" title="M02 change from the previous available date">38.4</td>
+                <td class="estimated-consumption-cell calculation-positive" title="Estimated home energy used on Jul 23, 2026.&#10;93.2 solar production + 11.3 grid import - 38.4 grid export = 66.1 kWh EDC.&#10;Import is added because the home used it. Export is subtracted because it was sent to the grid.">66.1</td>
+
+                <td class="estimated-consumption-diff-cell calculation-positive" title="EDC change compared with Jul 22, 2026.&#10;66.1 current EDC - 42.0 previous EDC = 24.0 kWh.&#10;You consumed an estimated 24.0 kWh MORE than the previous day. Negative means less consumption; positive means more.">24.0</td>
+                <td class="daily-energy-balance-cell calculation-positive" title="Daily Energy Balance for Jul 23, 2026.&#10;93.2 production - 66.1 EDC = +27.1 kWh.&#10;Cross-check: 38.4 export - 11.3 import = +27.1 kWh.&#10;Net surplus: solar produced more than the home consumed.">+27.1</td>
                 <td>Sunny</td>
                 <td>83°F</td>
                 <td>68°F</td>
@@ -356,15 +418,31 @@
               </tr>
 
 
+
+
+
+
+
+
+
+
+
+
+
+
               <tr class="entry-history-row" data-entry-date="2026-07-22" tabindex="0" title="Select this record to edit">
                 <td>2026-07-22</td>
                 <td>Wed</td>
                 <td>78.0</td>
                 <td>922</td>
                 <td>126.0</td>
-                <td class="meter-diff-cell" title="M01 change from the previous available date">19.0</td>
+                <td class="meter-diff-cell calculation-positive" title="M01 change from the previous available date">19.0</td>
                 <td>305.0</td>
-                <td class="meter-diff-cell" title="M02 change from the previous available date">55.0</td>
+                <td class="meter-diff-cell calculation-positive" title="M02 change from the previous available date">55.0</td>
+                <td class="estimated-consumption-cell calculation-positive" title="Estimated home energy used on Jul 22, 2026.&#10;78.0 solar production + 19.0 grid import - 55.0 grid export = 42.0 kWh EDC.&#10;Import is added because the home used it. Export is subtracted because it was sent to the grid.">42.0</td>
+
+                <td class="estimated-consumption-diff-cell calculation-positive" title="EDC change compared with Jul 21, 2026.&#10;42.0 current EDC - 26.6 previous EDC = 15.4 kWh.&#10;You consumed an estimated 15.4 kWh MORE than the previous day. Negative means less consumption; positive means more.">15.4</td>
+                <td class="daily-energy-balance-cell calculation-positive" title="Daily Energy Balance for Jul 22, 2026.&#10;78.0 production - 42.0 EDC = +36.0 kWh.&#10;Cross-check: 55.0 export - 19.0 import = +36.0 kWh.&#10;Net surplus: solar produced more than the home consumed.">+36.0</td>
                 <td>Sunny</td>
                 <td>79°F</td>
                 <td>66°F</td>
@@ -374,15 +452,31 @@
               </tr>
 
 
+
+
+
+
+
+
+
+
+
+
+
+
               <tr class="entry-history-row" data-entry-date="2026-07-21" tabindex="0" title="Select this record to edit">
                 <td>2026-07-21</td>
                 <td>Tue</td>
                 <td>22.6</td>
                 <td>460</td>
                 <td>107.0</td>
-                <td class="meter-diff-cell" title="M01 change from the previous available date">25.0</td>
+                <td class="meter-diff-cell calculation-positive" title="M01 change from the previous available date">25.0</td>
                 <td>250.0</td>
-                <td class="meter-diff-cell" title="M02 change from the previous available date">21.0</td>
+                <td class="meter-diff-cell calculation-positive" title="M02 change from the previous available date">21.0</td>
+                <td class="estimated-consumption-cell calculation-positive" title="Estimated home energy used on Jul 21, 2026.&#10;22.6 solar production + 25.0 grid import - 21.0 grid export = 26.6 kWh EDC.&#10;Import is added because the home used it. Export is subtracted because it was sent to the grid.">26.6</td>
+
+                <td class="estimated-consumption-diff-cell calculation-negative" title="EDC change compared with Jul 20, 2026.&#10;26.6 current EDC - 75.0 previous EDC = -48.4 kWh.&#10;You consumed an estimated 48.4 kWh LESS than the previous day. Negative means less consumption; positive means more.">-48.4</td>
+                <td class="daily-energy-balance-cell calculation-negative" title="Daily Energy Balance for Jul 21, 2026.&#10;22.6 production - 26.6 EDC = -4.0 kWh.&#10;Cross-check: 21.0 export - 25.0 import = -4.0 kWh.&#10;Net deficit: the home consumed more than solar produced and relied on net grid energy.">-4.0</td>
                 <td>Overcast</td>
                 <td>76°F</td>
                 <td>65°F</td>
@@ -392,15 +486,31 @@
               </tr>
 
 
+
+
+
+
+
+
+
+
+
+
+
+
               <tr class="entry-history-row" data-entry-date="2026-07-20" tabindex="0" title="Select this record to edit">
                 <td>2026-07-20</td>
                 <td>Mon</td>
                 <td>94.0</td>
                 <td>950</td>
                 <td>82.0</td>
-                <td class="meter-diff-cell" title="M01 change from the previous available date">3.0</td>
+                <td class="meter-diff-cell calculation-positive" title="M01 change from the previous available date">3.0</td>
                 <td>229.0</td>
-                <td class="meter-diff-cell" title="M02 change from the previous available date">22.0</td>
+                <td class="meter-diff-cell calculation-positive" title="M02 change from the previous available date">22.0</td>
+                <td class="estimated-consumption-cell calculation-positive" title="Estimated home energy used on Jul 20, 2026.&#10;94.0 solar production + 3.0 grid import - 22.0 grid export = 75.0 kWh EDC.&#10;Import is added because the home used it. Export is subtracted because it was sent to the grid.">75.0</td>
+
+                <td class="estimated-consumption-diff-cell calculation-positive" title="EDC change compared with Jul 19, 2026.&#10;75.0 current EDC - 63.9 previous EDC = 11.2 kWh.&#10;You consumed an estimated 11.2 kWh MORE than the previous day. Negative means less consumption; positive means more.">11.2</td>
+                <td class="daily-energy-balance-cell calculation-positive" title="Daily Energy Balance for Jul 20, 2026.&#10;94.0 production - 75.0 EDC = +19.0 kWh.&#10;Cross-check: 22.0 export - 3.0 import = +19.0 kWh.&#10;Net surplus: solar produced more than the home consumed.">+19.0</td>
                 <td>Sunny</td>
                 <td><span class="text-muted">-</span></td>
                 <td><span class="text-muted">-</span></td>
@@ -410,15 +520,31 @@
               </tr>
 
 
+
+
+
+
+
+
+
+
+
+
+
+
               <tr class="entry-history-row" data-entry-date="2026-07-19" tabindex="0" title="Select this record to edit">
                 <td>2026-07-19</td>
                 <td>Sun</td>
                 <td>92.9</td>
                 <td>802</td>
                 <td>79.0</td>
-                <td class="meter-diff-cell" title="M01 change from the previous available date">8.0</td>
+                <td class="meter-diff-cell calculation-positive" title="M01 change from the previous available date">8.0</td>
                 <td>207.0</td>
-                <td class="meter-diff-cell" title="M02 change from the previous available date">37.0</td>
+                <td class="meter-diff-cell calculation-positive" title="M02 change from the previous available date">37.0</td>
+                <td class="estimated-consumption-cell calculation-positive" title="Estimated home energy used on Jul 19, 2026.&#10;92.9 solar production + 8.0 grid import - 37.0 grid export = 63.9 kWh EDC.&#10;Import is added because the home used it. Export is subtracted because it was sent to the grid.">63.9</td>
+
+                <td class="estimated-consumption-diff-cell calculation-positive" title="EDC change compared with Jul 18, 2026.&#10;63.9 current EDC - 1.5 previous EDC = 62.4 kWh.&#10;You consumed an estimated 62.4 kWh MORE than the previous day. Negative means less consumption; positive means more.">62.4</td>
+                <td class="daily-energy-balance-cell calculation-positive" title="Daily Energy Balance for Jul 19, 2026.&#10;92.9 production - 63.9 EDC = +29.0 kWh.&#10;Cross-check: 37.0 export - 8.0 import = +29.0 kWh.&#10;Net surplus: solar produced more than the home consumed.">+29.0</td>
                 <td>Sunny</td>
                 <td><span class="text-muted">-</span></td>
                 <td><span class="text-muted">-</span></td>
@@ -428,15 +554,31 @@
               </tr>
 
 
+
+
+
+
+
+
+
+
+
+
+
+
               <tr class="entry-history-row" data-entry-date="2026-07-18" tabindex="0" title="Select this record to edit">
                 <td>2026-07-18</td>
                 <td>Sat</td>
                 <td>25.5</td>
                 <td>740</td>
                 <td>71.0</td>
-                <td class="meter-diff-cell" title="M01 change from the previous available date">18.0</td>
+                <td class="meter-diff-cell calculation-positive" title="M01 change from the previous available date">18.0</td>
                 <td>170.0</td>
-                <td class="meter-diff-cell" title="M02 change from the previous available date">42.0</td>
+                <td class="meter-diff-cell calculation-positive" title="M02 change from the previous available date">42.0</td>
+                <td class="estimated-consumption-cell calculation-positive" title="Estimated home energy used on Jul 18, 2026.&#10;25.5 solar production + 18.0 grid import - 42.0 grid export = 1.5 kWh EDC.&#10;Import is added because the home used it. Export is subtracted because it was sent to the grid.">1.5</td>
+
+                <td class="estimated-consumption-diff-cell calculation-negative" title="EDC change compared with Jul 17, 2026.&#10;1.5 current EDC - 53.8 previous EDC = -52.3 kWh.&#10;You consumed an estimated 52.3 kWh LESS than the previous day. Negative means less consumption; positive means more.">-52.3</td>
+                <td class="daily-energy-balance-cell calculation-positive" title="Daily Energy Balance for Jul 18, 2026.&#10;25.5 production - 1.5 EDC = +24.0 kWh.&#10;Cross-check: 42.0 export - 18.0 import = +24.0 kWh.&#10;Net surplus: solar produced more than the home consumed.">+24.0</td>
                 <td>Cloudy</td>
                 <td><span class="text-muted">-</span></td>
                 <td><span class="text-muted">-</span></td>
@@ -446,15 +588,27 @@
               </tr>
 
 
+
+
+
+
+
+
+
+
               <tr class="entry-history-row" data-entry-date="2026-07-17" tabindex="0" title="Select this record to edit">
                 <td>2026-07-17</td>
                 <td>Fri</td>
                 <td>90.8</td>
                 <td>910</td>
                 <td>53.0</td>
-                <td class="meter-diff-cell" title="M01 change from the previous available date">17.0</td>
+                <td class="meter-diff-cell calculation-positive" title="M01 change from the previous available date">17.0</td>
                 <td>128.0</td>
-                <td class="meter-diff-cell" title="M02 change from the previous available date">54.0</td>
+                <td class="meter-diff-cell calculation-positive" title="M02 change from the previous available date">54.0</td>
+                <td class="estimated-consumption-cell calculation-positive" title="Estimated home energy used on Jul 17, 2026.&#10;90.8 solar production + 17.0 grid import - 54.0 grid export = 53.8 kWh EDC.&#10;Import is added because the home used it. Export is subtracted because it was sent to the grid.">53.8</td>
+
+                <td class="estimated-consumption-diff-cell " title="EDC Diff requires two calculated consumption days. Negative means less consumption; positive means more."><span class="text-muted">-</span></td>
+                <td class="daily-energy-balance-cell calculation-positive" title="Daily Energy Balance for Jul 17, 2026.&#10;90.8 production - 53.8 EDC = +37.0 kWh.&#10;Cross-check: 54.0 export - 17.0 import = +37.0 kWh.&#10;Net surplus: solar produced more than the home consumed.">+37.0</td>
                 <td>Sunny</td>
                 <td><span class="text-muted">-</span></td>
                 <td><span class="text-muted">-</span></td>
@@ -464,15 +618,22 @@
               </tr>
 
 
+
+
+
               <tr class="entry-history-row" data-entry-date="2026-07-16" tabindex="0" title="Select this record to edit">
                 <td>2026-07-16</td>
                 <td>Thu</td>
                 <td>44.4</td>
                 <td>860</td>
                 <td>36.0</td>
-                <td class="meter-diff-cell" title="M01 change from the previous available date"><span class="text-muted">-</span></td>
+                <td class="meter-diff-cell " title="M01 change from the previous available date"><span class="text-muted">-</span></td>
                 <td>74.0</td>
-                <td class="meter-diff-cell" title="M02 change from the previous available date"><span class="text-muted">-</span></td>
+                <td class="meter-diff-cell " title="M02 change from the previous available date"><span class="text-muted">-</span></td>
+                <td class="estimated-consumption-cell " title="EDC requires a previous meter reading so daily import and export can be calculated."><span class="text-muted">-</span></td>
+
+                <td class="estimated-consumption-diff-cell " title="EDC Diff requires two calculated consumption days. Negative means less consumption; positive means more."><span class="text-muted">-</span></td>
+                <td class="daily-energy-balance-cell " title="Day Balance requires daily import and export differences."><span class="text-muted">-</span></td>
                 <td>Sunny</td>
                 <td><span class="text-muted">-</span></td>
                 <td><span class="text-muted">-</span></td>
@@ -484,35 +645,35 @@
 
 
               <tr class="entry-empty-row" aria-hidden="true">
-                <td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td>
+                <td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td>
               </tr>
 
               <tr class="entry-empty-row" aria-hidden="true">
-                <td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td>
+                <td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td>
               </tr>
 
               <tr class="entry-empty-row" aria-hidden="true">
-                <td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td>
+                <td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td>
               </tr>
 
               <tr class="entry-empty-row" aria-hidden="true">
-                <td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td>
+                <td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td>
               </tr>
 
               <tr class="entry-empty-row" aria-hidden="true">
-                <td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td>
+                <td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td>
               </tr>
 
               <tr class="entry-empty-row" aria-hidden="true">
-                <td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td>
+                <td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td>
               </tr>
 
               <tr class="entry-empty-row" aria-hidden="true">
-                <td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td>
+                <td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td>
               </tr>
 
               <tr class="entry-empty-row" aria-hidden="true">
-                <td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td>
+                <td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td>
               </tr>
 
 
@@ -788,9 +949,9 @@
     </div>
   </main>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/js/bootstrap.bundle.min.js"></script>
-  <script src="assets/js/site-bootstrap.js?v=20260829-sync80"></script>
-  <script src="assets/js/firebase-config.js?v=20260829-sync80"></script>
-  <script defer src="assets/js/app-bundle.js?v=20260829-sync80"></script>
+  <script src="assets/js/site-bootstrap.js?v=20260830-sync86"></script>
+  <script src="assets/js/firebase-config.js?v=20260830-sync86"></script>
+  <script defer src="assets/js/app-bundle.js?v=20260830-sync86"></script>
 
 </body>
 </html>

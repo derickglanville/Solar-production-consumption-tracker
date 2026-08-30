@@ -34,6 +34,29 @@ function normalizeSunrunRows(payload) {
   }));
 }
 
+function sunrunTrackerToday() {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).formatToParts(new Date());
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
+}
+
+function ensureSunrunTodayRow() {
+  const today = sunrunTrackerToday();
+  if (sunrunRows.some((row) => row.entry_date === today)) return false;
+  sunrunRows.push({
+    id: `sunrun-row-${++sunrunRowSequence}`,
+    entry_date: today,
+    production_kwh: 0,
+    cumulative_kwh: 0
+  });
+  return true;
+}
+
 function sortAndRecalculateSunrunRows() {
   sunrunRows.sort((left, right) => left.entry_date.localeCompare(right.entry_date));
   let cumulative = 0;
@@ -193,8 +216,12 @@ async function reloadSunrunFile() {
     if (!response.ok) throw new Error("Could not reload the SunRun production file.");
     sunrunRows = normalizeSunrunRows(await response.json());
   }
+  const createdToday = ensureSunrunTodayRow();
   rebuildSunrunMonthFilter();
   renderSunrunRows();
+  if (createdToday) {
+    showSunrunStatus(`A pending production row was created for ${sunrunTrackerToday()}. Enter the final SunRun production when available.`, "info");
+  }
 }
 
 async function saveSunrunFile() {
@@ -235,6 +262,7 @@ function addSunrunRow() {
 function initializeSunrunProductionEditor() {
   if (document.body?.dataset?.page !== "sunrun-production") return;
   sunrunRows = normalizeSunrunRows(sunrunBootstrap);
+  const createdToday = ensureSunrunTodayRow();
   rebuildSunrunMonthFilter();
   renderSunrunRows();
 
@@ -314,6 +342,8 @@ function initializeSunrunProductionEditor() {
   const validation = getSunrunValidation();
   if (!validation.valid) {
     showSunrunStatus(`The source file contains duplicate dates (${validation.duplicates.join(", ")}). Remove the duplicate row before saving.`, "warning");
+  } else if (createdToday) {
+    showSunrunStatus(`A pending production row was created for ${sunrunTrackerToday()}. Enter the final SunRun production when available.`, "info");
   }
 }
 

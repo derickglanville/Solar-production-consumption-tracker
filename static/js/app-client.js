@@ -254,6 +254,17 @@ function formatIsoWeekday(isoDate) {
   });
 }
 
+function formatIsoDateForDisplay(isoDate) {
+  const match = String(isoDate || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return String(isoDate || "Unknown date");
+  const [, year, month, day] = match;
+  return new Date(Number(year), Number(month) - 1, Number(day)).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric"
+  });
+}
+
 function shouldHideEntryFromDisplay(entry) {
   if (!entry) return true;
   const entryDate = String(entry.entry_date || "");
@@ -4082,12 +4093,25 @@ function populateEntriesTable(entries) {
   const meterDifferences = new Map();
   chronologicalEntries.forEach((entry, index) => {
     const previousEntry = index > 0 ? chronologicalEntries[index - 1] : null;
+    const previousCalculation = index > 0 ? meterDifferences.get(previousEntry.entry_date) : null;
+    const m01 = previousEntry
+      ? Number(entry.meter_01_import_reading || 0) - Number(previousEntry.meter_01_import_reading || 0)
+      : null;
+    const m02 = previousEntry
+      ? Number(entry.meter_02_export_reading || 0) - Number(previousEntry.meter_02_export_reading || 0)
+      : null;
+    const edc = Number.isFinite(m01) && Number.isFinite(m02)
+      ? Number(entry.production_kwh || 0) + m01 - m02
+      : null;
     meterDifferences.set(entry.entry_date, {
-      m01: previousEntry
-        ? Number(entry.meter_01_import_reading || 0) - Number(previousEntry.meter_01_import_reading || 0)
-        : null,
-      m02: previousEntry
-        ? Number(entry.meter_02_export_reading || 0) - Number(previousEntry.meter_02_export_reading || 0)
+      m01,
+      m02,
+      edc,
+      dayBalance: Number.isFinite(edc) ? Number(entry.production_kwh || 0) - edc : null,
+      previousEdc: previousCalculation?.edc ?? null,
+      previousDate: previousEntry?.entry_date ?? null,
+      edcDiff: Number.isFinite(edc) && Number.isFinite(previousCalculation?.edc)
+        ? edc - previousCalculation.edc
         : null
     });
   });
@@ -4101,8 +4125,42 @@ function populateEntriesTable(entries) {
       : `${visibleEntries.length} of ${chronologicalEntries.length}`;
   }
   const formatDifference = (value) => Number.isFinite(value) ? value.toFixed(1) : '<span class="text-muted">-</span>';
+  const calculationSignClass = (value) => {
+    if (!Number.isFinite(value)) return "";
+    if (value > 0.05) return "calculation-positive";
+    if (value < -0.05) return "calculation-negative";
+    return "calculation-neutral";
+  };
   const populatedRows = visibleEntries.map((entry) => {
     const differences = meterDifferences.get(entry.entry_date) || {};
+    const entryDateLabel = formatIsoDateForDisplay(entry.entry_date);
+    const edcTooltip = Number.isFinite(differences.edc)
+      ? `Estimated home energy used on ${entryDateLabel}.\n${Number(entry.production_kwh || 0).toFixed(1)} solar production + ${differences.m01.toFixed(1)} grid import - ${differences.m02.toFixed(1)} grid export = ${differences.edc.toFixed(1)} kWh EDC.\nImport is added because the home used it. Export is subtracted because it was sent to the grid.`
+      : "EDC requires a previous meter reading so daily import and export can be calculated.";
+    const previousEdc = differences.previousEdc;
+    const previousDateLabel = differences.previousDate
+      ? formatIsoDateForDisplay(differences.previousDate)
+      : "the previous day";
+    const consumptionDirection = Number.isFinite(differences.edcDiff)
+      ? differences.edcDiff < 0
+        ? `You consumed an estimated ${Math.abs(differences.edcDiff).toFixed(1)} kWh LESS than the previous day.`
+        : differences.edcDiff > 0
+          ? `You consumed an estimated ${differences.edcDiff.toFixed(1)} kWh MORE than the previous day.`
+          : "Estimated consumption was unchanged from the previous day."
+      : "";
+    const edcDiffTooltip = Number.isFinite(differences.edcDiff)
+      ? `EDC change compared with ${previousDateLabel}.\n${differences.edc.toFixed(1)} current EDC - ${previousEdc.toFixed(1)} previous EDC = ${differences.edcDiff.toFixed(1)} kWh.\n${consumptionDirection} Negative means less consumption; positive means more.`
+      : "EDC Diff requires two calculated consumption days. Negative means less consumption; positive means more.";
+    const balanceInterpretation = Number.isFinite(differences.dayBalance)
+      ? differences.dayBalance > 0.05
+        ? "Net surplus: solar produced more than the home consumed."
+        : differences.dayBalance < -0.05
+          ? "Net deficit: the home consumed more than solar produced and relied on net grid energy."
+          : "Balanced day: production approximately matched consumption."
+      : "Day Balance requires daily import and export differences.";
+    const balanceTooltip = Number.isFinite(differences.dayBalance)
+      ? `Daily Energy Balance for ${entryDateLabel}.\n${Number(entry.production_kwh || 0).toFixed(1)} production - ${differences.edc.toFixed(1)} EDC = ${differences.dayBalance >= 0 ? "+" : ""}${differences.dayBalance.toFixed(1)} kWh.\nCross-check: ${differences.m02.toFixed(1)} export - ${differences.m01.toFixed(1)} import = ${(differences.m02 - differences.m01) >= 0 ? "+" : ""}${(differences.m02 - differences.m01).toFixed(1)} kWh.\n${balanceInterpretation}`
+      : balanceInterpretation;
     return `
     <tr class="entry-history-row ${entry.entry_date === entriesPageState.selectedDate ? "entry-row-selected" : ""}"
         data-entry-date="${entry.entry_date}" tabindex="0" title="Select this record to edit">
@@ -4111,9 +4169,12 @@ function populateEntriesTable(entries) {
       <td>${Number(entry.production_kwh || 0).toFixed(1)}</td>
       <td>${Number(entry.irradiance_peak_wm2 || 0).toFixed(0)}</td>
       <td>${Number(entry.meter_01_import_reading || 0).toFixed(1)}</td>
-      <td class="meter-diff-cell" title="M01 change from the previous available date">${formatDifference(differences.m01)}</td>
+      <td class="meter-diff-cell ${calculationSignClass(differences.m01)}" title="M01 change from the previous available date">${formatDifference(differences.m01)}</td>
       <td>${Number(entry.meter_02_export_reading || 0).toFixed(1)}</td>
-      <td class="meter-diff-cell" title="M02 change from the previous available date">${formatDifference(differences.m02)}</td>
+      <td class="meter-diff-cell ${calculationSignClass(differences.m02)}" title="M02 change from the previous available date">${formatDifference(differences.m02)}</td>
+      <td class="estimated-consumption-cell ${calculationSignClass(differences.edc)}" title="${escapeHtml(edcTooltip)}">${formatDifference(differences.edc)}</td>
+      <td class="estimated-consumption-diff-cell ${calculationSignClass(differences.edcDiff)}" title="${escapeHtml(edcDiffTooltip)}">${formatDifference(differences.edcDiff)}</td>
+      <td class="daily-energy-balance-cell ${calculationSignClass(differences.dayBalance)}" title="${escapeHtml(balanceTooltip)}">${Number.isFinite(differences.dayBalance) ? `${differences.dayBalance >= 0 ? "+" : ""}${differences.dayBalance.toFixed(1)}` : '<span class="text-muted">-</span>'}</td>
       <td>${renderWeatherCell(entry)}</td>
       <td>${formatTemperatureCellValue(entry.temperature_high_f)}</td>
       <td>${formatTemperatureCellValue(entry.temperature_low_f)}</td>
@@ -4125,7 +4186,7 @@ function populateEntriesTable(entries) {
   }).join("");
   const blankRows = Array.from(
     { length: Math.max(0, 18 - visibleEntries.length) },
-    () => `<tr class="entry-empty-row" aria-hidden="true">${"<td>&nbsp;</td>".repeat(14)}</tr>`
+    () => `<tr class="entry-empty-row" aria-hidden="true">${"<td>&nbsp;</td>".repeat(17)}</tr>`
   ).join("");
   body.innerHTML = populatedRows + blankRows;
 
@@ -4152,6 +4213,8 @@ function updateEntriesMeterDifferenceSummary(entries, meterDifferences, allEntri
   const m02Target = document.getElementById("entries-m02-diff-total");
   const m01AverageTarget = document.getElementById("entries-m01-diff-average");
   const m02AverageTarget = document.getElementById("entries-m02-diff-average");
+  const consumptionAverageTarget = document.getElementById("entries-average-daily-consumption");
+  const consumptionCountTarget = document.getElementById("entries-consumption-count");
   const hourlyTarget = document.getElementById("entries-last-hourly-update");
   const hourlyDetail = document.getElementById("entries-last-hourly-update-detail");
   const hourlyPrevious = document.getElementById("entries-last-hourly-previous");
@@ -4179,6 +4242,22 @@ function updateEntriesMeterDifferenceSummary(entries, meterDifferences, allEntri
     m02AverageTarget.textContent = totals.m02Count
       ? `Average: ${(totals.m02 / totals.m02Count).toFixed(1)} kWh/day`
       : "Average: —";
+  }
+  const consumptionValues = displayedDifferences
+    .map((differences) => differences.edc)
+    .filter((value) => Number.isFinite(value));
+  const averageDailyConsumption = consumptionValues.length
+    ? consumptionValues.reduce((sum, value) => sum + value, 0) / consumptionValues.length
+    : 0;
+  if (consumptionAverageTarget) {
+    consumptionAverageTarget.textContent = consumptionValues.length
+      ? `${averageDailyConsumption.toFixed(1)} kWh/day`
+      : "—";
+  }
+  if (consumptionCountTarget) {
+    consumptionCountTarget.textContent = consumptionValues.length
+      ? `Based on ${consumptionValues.length} calculated day${consumptionValues.length === 1 ? "" : "s"}`
+      : "No calculated days";
   }
 
   const savedRuns = allEntries.flatMap((entry) => (
