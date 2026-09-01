@@ -210,6 +210,7 @@ window.SOLAR_BOOTSTRAP = {
       "meter_01_import_reading": 36,
       "meter_02_export_reading": 74,
       "notes": "Smart meter data starts.",
+      "notes_manual": false,
       "production_kwh": 44.416,
       "temperature_f": null,
       "temperature_high_f": null,
@@ -229,6 +230,7 @@ window.SOLAR_BOOTSTRAP = {
       "meter_01_import_reading": 53,
       "meter_02_export_reading": 128,
       "notes": "Strong clear day.",
+      "notes_manual": false,
       "production_kwh": 90.788,
       "temperature_f": null,
       "temperature_high_f": null,
@@ -248,6 +250,7 @@ window.SOLAR_BOOTSTRAP = {
       "meter_01_import_reading": 71,
       "meter_02_export_reading": 170,
       "notes": "Afternoon cloud cover.",
+      "notes_manual": false,
       "production_kwh": 25.498,
       "temperature_f": null,
       "temperature_high_f": null,
@@ -267,6 +270,7 @@ window.SOLAR_BOOTSTRAP = {
       "meter_01_import_reading": 79,
       "meter_02_export_reading": 207,
       "notes": "Recovered after clouds.",
+      "notes_manual": false,
       "production_kwh": 92.862,
       "temperature_f": null,
       "temperature_high_f": null,
@@ -286,6 +290,7 @@ window.SOLAR_BOOTSTRAP = {
       "meter_01_import_reading": 82,
       "meter_02_export_reading": 229,
       "notes": "Excellent solar day.",
+      "notes_manual": false,
       "production_kwh": 94.041,
       "temperature_f": null,
       "temperature_high_f": null,
@@ -305,6 +310,7 @@ window.SOLAR_BOOTSTRAP = {
       "meter_01_import_reading": 107,
       "meter_02_export_reading": 250,
       "notes": "Production synced from SunRun CSV. Smart meter readings remain based on recorded NYSEG history.",
+      "notes_manual": false,
       "production_kwh": 22.614,
       "temperature_f": null,
       "temperature_high_f": 76,
@@ -324,6 +330,7 @@ window.SOLAR_BOOTSTRAP = {
       "meter_01_import_reading": 126,
       "meter_02_export_reading": 305,
       "notes": "Production synced from SunRun CSV. Smart meter readings remain based on recorded NYSEG history.",
+      "notes_manual": false,
       "production_kwh": 78.042,
       "temperature_f": null,
       "temperature_high_f": 79,
@@ -343,6 +350,7 @@ window.SOLAR_BOOTSTRAP = {
       "meter_01_import_reading": 137.3,
       "meter_02_export_reading": 343.4,
       "notes": "Production synced from SunRun CSV. Smart meter readings remain based on recorded NYSEG history.",
+      "notes_manual": false,
       "production_kwh": 93.15,
       "temperature_f": null,
       "temperature_high_f": 83,
@@ -362,6 +370,7 @@ window.SOLAR_BOOTSTRAP = {
       "meter_01_import_reading": 162.3,
       "meter_02_export_reading": 364.4,
       "notes": "Pending data from SunRun. Temporary placeholder aligned to the July 21 pattern until the SunRun CSV includes July 24.",
+      "notes_manual": false,
       "production_kwh": 22.614,
       "temperature_f": null,
       "temperature_high_f": 76,
@@ -381,6 +390,7 @@ window.SOLAR_BOOTSTRAP = {
       "meter_01_import_reading": 181.3,
       "meter_02_export_reading": 419.4,
       "notes": "Pending data from SunRun. Temporary placeholder aligned to the July 22 pattern until the SunRun CSV includes July 25.",
+      "notes_manual": false,
       "production_kwh": 78.042,
       "temperature_f": null,
       "temperature_high_f": 79,
@@ -683,30 +693,42 @@ window.SOLAR_BOOTSTRAP = {
       },
       "2026-08-27": {
         "available": true,
-        "end_of_day_meter_kwh": 3189.838,
+        "end_of_day_meter_kwh": 3190.828,
         "entry_date": "2026-08-27",
-        "production_kwh": 26.03
+        "production_kwh": 27.02
       },
       "2026-08-28": {
         "available": true,
-        "end_of_day_meter_kwh": 3261.438,
+        "end_of_day_meter_kwh": 3263.628,
         "entry_date": "2026-08-28",
-        "production_kwh": 71.6
+        "production_kwh": 72.8
       },
       "2026-08-29": {
         "available": true,
-        "end_of_day_meter_kwh": 3317.088,
+        "end_of_day_meter_kwh": 3345.448,
         "entry_date": "2026-08-29",
-        "production_kwh": 55.65
+        "production_kwh": 81.82
       },
       "2026-08-30": {
         "available": true,
-        "end_of_day_meter_kwh": 3362.528,
+        "end_of_day_meter_kwh": 3387.468,
         "entry_date": "2026-08-30",
-        "production_kwh": 45.44
+        "production_kwh": 42.02
+      },
+      "2026-08-31": {
+        "available": true,
+        "end_of_day_meter_kwh": 3426.478,
+        "entry_date": "2026-08-31",
+        "production_kwh": 39.01
+      },
+      "2026-09-01": {
+        "available": true,
+        "end_of_day_meter_kwh": 3436.488,
+        "entry_date": "2026-09-01",
+        "production_kwh": 10.01
       }
     },
-    "latest_available_date": "2026-08-30",
+    "latest_available_date": "2026-09-01",
     "rows": [
       {
         "available": false,
@@ -1004,27 +1026,39 @@ window.SOLAR_BOOTSTRAP = {
       },
       {
         "available": true,
-        "end_of_day_meter_kwh": 3189.838,
+        "end_of_day_meter_kwh": 3190.828,
         "entry_date": "2026-08-27",
-        "production_kwh": 26.03
+        "production_kwh": 27.02
       },
       {
         "available": true,
-        "end_of_day_meter_kwh": 3261.438,
+        "end_of_day_meter_kwh": 3263.628,
         "entry_date": "2026-08-28",
-        "production_kwh": 71.6
+        "production_kwh": 72.8
       },
       {
         "available": true,
-        "end_of_day_meter_kwh": 3317.088,
+        "end_of_day_meter_kwh": 3345.448,
         "entry_date": "2026-08-29",
-        "production_kwh": 55.65
+        "production_kwh": 81.82
       },
       {
         "available": true,
-        "end_of_day_meter_kwh": 3362.528,
+        "end_of_day_meter_kwh": 3387.468,
         "entry_date": "2026-08-30",
-        "production_kwh": 45.44
+        "production_kwh": 42.02
+      },
+      {
+        "available": true,
+        "end_of_day_meter_kwh": 3426.478,
+        "entry_date": "2026-08-31",
+        "production_kwh": 39.01
+      },
+      {
+        "available": true,
+        "end_of_day_meter_kwh": 3436.488,
+        "entry_date": "2026-09-01",
+        "production_kwh": 10.01
       }
     ]
   },

@@ -76,6 +76,7 @@
           <div class="col-12">
             <label class="form-label">Notes</label>
             <textarea name="notes" rows="2" class="form-control"></textarea>
+            <div class="form-text">Editable. Once saved, your note will not be replaced by automatic weather or production updates.</div>
           </div>
           <div class="col-12 d-flex flex-wrap gap-2 entry-form-actions">
             <button class="btn btn-sun btn-sm" id="entry-save-button">Save Entry</button>
@@ -222,16 +223,20 @@
             <strong id="entries-m02-diff-total">0.0 kWh</strong>
             <small id="entries-m02-diff-average">Average: 0.0 kWh/day</small>
           </div>
-          <div class="entries-history-meter-stat entries-history-consumption-stat" title="Average of Solar Production + M01 daily import - M02 daily export for the filtered rows">
-            <span>Average Daily Consumption</span>
-            <strong id="entries-average-daily-consumption">0.0 kWh</strong>
-            <small id="entries-consumption-count">No calculated days</small>
+          <div class="entries-history-meter-stat entries-history-consumption-stat" title="Total and average of Solar Production + M01 daily import - M02 daily export for the filtered rows">
+            <span>Total Consumption</span>
+            <strong id="entries-total-consumption">0.0 kWh</strong>
+            <small id="entries-average-daily-consumption">Average: 0.0 kWh/day</small>
+          </div>
+          <div class="entries-history-meter-stat entries-history-production-stat" id="entries-production-reconciliation" title="Implied production = Total Consumption - M01 Import + M02 Export. This reconciles against the Sunrun CSV for the same filtered dates; it is not an independent production measurement because EDC includes Sunrun production.">
+            <span>Implied Solar Production</span>
+            <strong id="entries-implied-production-total">0.0 kWh</strong>
+            <small id="entries-sunrun-production-comparison">Sunrun CSV: 0.0 kWh · Diff: 0.0 kWh</small>
           </div>
           <div class="entries-history-meter-stat entries-history-hourly-stat" title="Date and time of the most recently saved hourly meter-simulation run">
             <span>Last Hourly Update</span>
             <strong id="entries-last-hourly-update">Not run yet</strong>
             <small id="entries-last-hourly-update-detail">Waiting for an hourly simulation</small>
-            <small id="entries-last-hourly-previous">Previous M01/M02 unavailable</small>
           </div>
         </div>
         <div class="calculation-color-legend" aria-label="Calculation color key">
@@ -278,7 +283,7 @@
                 {% set previous_m02_diff = previous_entry.meter_02_export_reading - previous_previous_entry.meter_02_export_reading %}
                 {% set previous_edc = previous_entry.production_kwh + previous_m01_diff - previous_m02_diff %}
               {% endif %}
-              <tr class="entry-history-row" data-entry-date="{{ entry.entry_date.strftime('%Y-%m-%d') }}" tabindex="0" title="Select this record to edit">
+              <tr class="entry-history-row{% if previous_entry and current_m01_diff > current_m02_diff %} entry-import-diff-exceeds-export-diff{% endif %}" data-entry-date="{{ entry.entry_date.strftime('%Y-%m-%d') }}" tabindex="0" title="Select this record to edit{% if previous_entry and current_m01_diff > current_m02_diff %}. Yellow indicates M01 Diff is greater than M02 Diff.{% endif %}">
                 <td>{{ entry.entry_date.strftime("%Y-%m-%d") }}</td>
                 <td>{{ entry.entry_date.strftime("%a") }}</td>
                 <td>{{ "%.1f"|format(entry.production_kwh) }}</td>

@@ -551,6 +551,7 @@ function normalizeEntry(entry) {
     sunrise_time: entry.sunrise_time || "",
     sunset_time: entry.sunset_time || "",
     notes: entry.notes || "",
+    notes_manual: Boolean(entry.notes_manual),
     estimated: Boolean(entry.estimated),
     lookup_source: entry.lookup_source || "",
     irradiance_method: entry.irradiance_method || "",
@@ -927,7 +928,7 @@ async function syncSunrunProductionIntoEntries(db, entries) {
           ...entry,
           production_kwh: pendingProduction,
           estimated: true,
-          notes: String(entry.entry_date) === todayIsoDate
+          notes: String(entry.entry_date) === todayIsoDate && !entry.notes_manual
             ? "Pending final production data from SunRun; the displayed production is an intraday estimate."
             : entry.notes,
           updated_at: new Date().toISOString()
@@ -1100,7 +1101,8 @@ async function revalidateSuspiciousIrradiancePeaks(db, entries) {
       }
 
       const existingNotes = String(entry.notes || "");
-      const canReplaceNotes = !existingNotes || /auto-filled|fallback|placeholder/i.test(existingNotes);
+      const canReplaceNotes = !entry.notes_manual && String(entry.lookup_source || "").toLowerCase() !== "manual" &&
+        (!existingNotes || /auto-filled|fallback|placeholder/i.test(existingNotes));
       const mergedEntry = normalizeEntry({
         ...entry,
         irradiance_peak_wm2: correctedPeak,
@@ -4161,9 +4163,11 @@ function populateEntriesTable(entries) {
     const balanceTooltip = Number.isFinite(differences.dayBalance)
       ? `Daily Energy Balance for ${entryDateLabel}.\n${Number(entry.production_kwh || 0).toFixed(1)} production - ${differences.edc.toFixed(1)} EDC = ${differences.dayBalance >= 0 ? "+" : ""}${differences.dayBalance.toFixed(1)} kWh.\nCross-check: ${differences.m02.toFixed(1)} export - ${differences.m01.toFixed(1)} import = ${(differences.m02 - differences.m01) >= 0 ? "+" : ""}${(differences.m02 - differences.m01).toFixed(1)} kWh.\n${balanceInterpretation}`
       : balanceInterpretation;
+    const importDiffExceedsExportDiff = Number.isFinite(differences.m01) &&
+      Number.isFinite(differences.m02) && differences.m01 > differences.m02;
     return `
-    <tr class="entry-history-row ${entry.entry_date === entriesPageState.selectedDate ? "entry-row-selected" : ""}"
-        data-entry-date="${entry.entry_date}" tabindex="0" title="Select this record to edit">
+    <tr class="entry-history-row ${entry.entry_date === entriesPageState.selectedDate ? "entry-row-selected" : ""} ${importDiffExceedsExportDiff ? "entry-import-diff-exceeds-export-diff" : ""}"
+        data-entry-date="${entry.entry_date}" tabindex="0" title="Select this record to edit${importDiffExceedsExportDiff ? ". Yellow indicates M01 Diff is greater than M02 Diff." : ""}">
       <td>${entry.entry_date}</td>
       <td>${formatIsoWeekday(entry.entry_date)}</td>
       <td>${Number(entry.production_kwh || 0).toFixed(1)}</td>
@@ -4214,10 +4218,12 @@ function updateEntriesMeterDifferenceSummary(entries, meterDifferences, allEntri
   const m01AverageTarget = document.getElementById("entries-m01-diff-average");
   const m02AverageTarget = document.getElementById("entries-m02-diff-average");
   const consumptionAverageTarget = document.getElementById("entries-average-daily-consumption");
-  const consumptionCountTarget = document.getElementById("entries-consumption-count");
+  const consumptionTotalTarget = document.getElementById("entries-total-consumption");
+  const impliedProductionTarget = document.getElementById("entries-implied-production-total");
+  const sunrunComparisonTarget = document.getElementById("entries-sunrun-production-comparison");
+  const productionReconciliation = document.getElementById("entries-production-reconciliation");
   const hourlyTarget = document.getElementById("entries-last-hourly-update");
   const hourlyDetail = document.getElementById("entries-last-hourly-update-detail");
-  const hourlyPrevious = document.getElementById("entries-last-hourly-previous");
 
   const displayedDifferences = entries.map((entry) => meterDifferences.get(entry.entry_date) || {});
   const totals = displayedDifferences.reduce((result, differences) => {
@@ -4246,18 +4252,48 @@ function updateEntriesMeterDifferenceSummary(entries, meterDifferences, allEntri
   const consumptionValues = displayedDifferences
     .map((differences) => differences.edc)
     .filter((value) => Number.isFinite(value));
+  const totalConsumption = consumptionValues.reduce((sum, value) => sum + value, 0);
   const averageDailyConsumption = consumptionValues.length
-    ? consumptionValues.reduce((sum, value) => sum + value, 0) / consumptionValues.length
+    ? totalConsumption / consumptionValues.length
     : 0;
   if (consumptionAverageTarget) {
     consumptionAverageTarget.textContent = consumptionValues.length
-      ? `${averageDailyConsumption.toFixed(1)} kWh/day`
+      ? `Average: ${averageDailyConsumption.toFixed(1)} kWh/day · ${consumptionValues.length} day${consumptionValues.length === 1 ? "" : "s"}`
+      : "Average: —";
+  }
+  if (consumptionTotalTarget) {
+    consumptionTotalTarget.textContent = consumptionValues.length
+      ? `${totalConsumption.toFixed(1)} kWh`
       : "—";
   }
-  if (consumptionCountTarget) {
-    consumptionCountTarget.textContent = consumptionValues.length
-      ? `Based on ${consumptionValues.length} calculated day${consumptionValues.length === 1 ? "" : "s"}`
-      : "No calculated days";
+  const impliedProduction = consumptionValues.length
+    ? totalConsumption - totals.m01 + totals.m02
+    : null;
+  const comparableEntries = entries.filter((entry) => {
+    const differences = meterDifferences.get(entry.entry_date) || {};
+    return Number.isFinite(differences.edc) && getSunrunProductionRecord(entry.entry_date)?.available;
+  });
+  const sunrunProductionTotal = comparableEntries.reduce((sum, entry) => (
+    sum + Number(getSunrunProductionRecord(entry.entry_date)?.production_kwh || 0)
+  ), 0);
+  const productionDifference = Number.isFinite(impliedProduction) && comparableEntries.length === consumptionValues.length
+    ? impliedProduction - sunrunProductionTotal
+    : null;
+  if (impliedProductionTarget) {
+    impliedProductionTarget.textContent = Number.isFinite(impliedProduction)
+      ? `${formatNumber(impliedProduction, 1, 1)} kWh`
+      : "—";
+  }
+  if (sunrunComparisonTarget) {
+    const coverage = `${comparableEntries.length}/${consumptionValues.length} dates`;
+    sunrunComparisonTarget.textContent = comparableEntries.length
+      ? `Sunrun CSV: ${formatNumber(sunrunProductionTotal, 1, 1)} kWh · Diff: ${Number.isFinite(productionDifference) ? `${productionDifference >= 0 ? "+" : ""}${formatNumber(productionDifference, 1, 1)} kWh` : "incomplete"} · ${coverage}`
+      : "No matching Sunrun CSV dates";
+  }
+  if (productionReconciliation) {
+    productionReconciliation.title = Number.isFinite(impliedProduction)
+      ? `Implied production = Consumption - Import + Export.\n${formatNumber(totalConsumption, 1, 1)} - ${formatNumber(totals.m01, 1, 1)} + ${formatNumber(totals.m02, 1, 1)} = ${formatNumber(impliedProduction, 1, 1)} kWh.\nSunrun CSV total for matching filtered dates: ${formatNumber(sunrunProductionTotal, 1, 1)} kWh.\nThis is a reconciliation, not an independent measurement, because EDC includes Sunrun production.`
+      : "Production reconciliation requires calculated consumption and meter differences.";
   }
 
   const savedRuns = allEntries.flatMap((entry) => (
@@ -4284,14 +4320,12 @@ function updateEntriesMeterDifferenceSummary(entries, meterDifferences, allEntri
       : "Not run yet";
   }
   if (hourlyDetail) {
-    hourlyDetail.textContent = latestRun
-      ? `${latestRun.run_label || "Hourly meter check"} · ${latestRun.entry_date}`
-      : "Waiting for an hourly simulation";
-  }
-  if (hourlyPrevious) {
-    hourlyPrevious.textContent = Number.isFinite(previousM01) && Number.isFinite(previousM02)
-      ? `Previous: M01 ${previousM01.toFixed(1)} · M02 ${previousM02.toFixed(1)}`
+    const previousLabel = Number.isFinite(previousM01) && Number.isFinite(previousM02)
+      ? `Previous M01 ${previousM01.toFixed(1)} · M02 ${previousM02.toFixed(1)}`
       : "Previous M01/M02 unavailable";
+    hourlyDetail.textContent = latestRun
+      ? `${latestRun.run_label || "Hourly meter check"} · ${latestRun.entry_date} · ${previousLabel}`
+      : "Waiting for an hourly simulation";
   }
 }
 
@@ -4370,11 +4404,16 @@ function updateEntriesMonthlyCostSummary(entries, config = defaultConfig) {
     `Sunrun lease = $${sunrunLease.toFixed(2)}. Export credits cannot reduce the NYSEG estimate below its fixed charge.`;
 }
 
-async function refreshEntryLookupFields(db, entryDate) {
+async function refreshEntryLookupFields(db, entryDate, { notesOverride = null } = {}) {
   const state = await loadFirestoreState(db);
   const existingEntry = state.entries.find((entry) => entry.entry_date === entryDate);
   const lookupValues = await buildEstimatedLookupValues(entryDate, state.entries);
   const sunrunRecord = getSunrunProductionRecord(entryDate);
+  const existingNotes = String(existingEntry?.notes || "");
+  const hasNotesOverride = notesOverride !== null;
+  const preservedNotes = hasNotesOverride ? String(notesOverride) : existingNotes;
+  const protectExistingNotes = Boolean(existingEntry?.notes_manual) ||
+    String(existingEntry?.lookup_source || "").toLowerCase() === "manual";
   const mergedEntry = normalizeEntry({
     ...(existingEntry || {
       entry_date: entryDate,
@@ -4408,7 +4447,10 @@ async function refreshEntryLookupFields(db, entryDate) {
     sunrise_time: lookupValues.sunrise_time || existingEntry?.sunrise_time || "",
     sunset_time: lookupValues.sunset_time || existingEntry?.sunset_time || "",
     lookup_source: lookupValues.lookup_source || existingEntry?.lookup_source || "manual",
-    notes: lookupValues.notes || existingEntry?.notes || "",
+    notes: hasNotesOverride || protectExistingNotes
+      ? preservedNotes
+      : preservedNotes || lookupValues.notes || "",
+    notes_manual: hasNotesOverride || protectExistingNotes,
     estimated: existingEntry?.estimated ?? true,
     updated_at: new Date().toISOString()
   });
@@ -4559,6 +4601,7 @@ async function handleEntryForm(db) {
       sunrise_time: existingEntry?.sunrise_time || "",
       sunset_time: existingEntry?.sunset_time || "",
       notes: formData.get("notes") || "",
+      notes_manual: true,
       estimated: false,
       lookup_source: "manual",
       irradiance_method: existingEntry?.irradiance_method || "",
@@ -4607,13 +4650,14 @@ async function handleEntryForm(db) {
   if (refreshButton) {
     refreshButton.addEventListener("click", async () => {
       const entryDate = getActiveEntryDate();
+      const currentNotes = form.elements.namedItem("notes")?.value ?? null;
       await refreshEntries({
         showMessage: false,
         runAutoCreate: true,
         forceCreate: false,
         entryDate
       });
-      const refreshedEntry = await refreshEntryLookupFields(db, entryDate);
+      const refreshedEntry = await refreshEntryLookupFields(db, entryDate, { notesOverride: currentNotes });
       await refreshEntries({ showMessage: false });
       fillEntryForm(refreshedEntry);
       renderStatusAlert("entries-status", `Refreshed Open-Meteo lookup values for ${entryDate}.`, "success");

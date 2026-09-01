@@ -34,6 +34,7 @@ class DailySolarEntry:
     cloud_cover_pct: Optional[float] = None
     wind_mph: Optional[float] = None
     notes: str = ""
+    notes_manual: bool = False
     estimated: bool = False
     lookup_source: str = ""
     created_at: Optional[str] = None
@@ -200,6 +201,7 @@ class FirestoreRepository:
             cloud_cover_pct=float(payload["cloud_cover_pct"]) if payload.get("cloud_cover_pct") is not None else None,
             wind_mph=float(payload["wind_mph"]) if payload.get("wind_mph") is not None else None,
             notes=payload.get("notes", ""),
+            notes_manual=bool(payload.get("notes_manual", False)),
             estimated=bool(payload.get("estimated", False)),
             lookup_source=payload.get("lookup_source", ""),
             created_at=payload.get("created_at"),
@@ -223,6 +225,7 @@ class FirestoreRepository:
             "cloud_cover_pct": entry.cloud_cover_pct,
             "wind_mph": entry.wind_mph,
             "notes": entry.notes,
+            "notes_manual": bool(entry.notes_manual),
             "estimated": bool(entry.estimated),
             "lookup_source": entry.lookup_source,
             "created_at": created_at,

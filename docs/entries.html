@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/styles.css?v=20260830-sync86">
+  <link rel="stylesheet" href="assets/css/styles.css?v=20260901-sync93">
   <script src="https://cdn.plot.ly/plotly-3.4.0.min.js"></script>
 </head>
 <body data-page="entries" data-local-snapshot-mode="false">
@@ -126,6 +126,7 @@
           <div class="col-12">
             <label class="form-label">Notes</label>
             <textarea name="notes" rows="2" class="form-control"></textarea>
+            <div class="form-text">Editable. Once saved, your note will not be replaced by automatic weather or production updates.</div>
           </div>
           <div class="col-12 d-flex flex-wrap gap-2 entry-form-actions">
             <button class="btn btn-sun btn-sm" id="entry-save-button">Save Entry</button>
@@ -272,16 +273,20 @@
             <strong id="entries-m02-diff-total">0.0 kWh</strong>
             <small id="entries-m02-diff-average">Average: 0.0 kWh/day</small>
           </div>
-          <div class="entries-history-meter-stat entries-history-consumption-stat" title="Average of Solar Production + M01 daily import - M02 daily export for the filtered rows">
-            <span>Average Daily Consumption</span>
-            <strong id="entries-average-daily-consumption">0.0 kWh</strong>
-            <small id="entries-consumption-count">No calculated days</small>
+          <div class="entries-history-meter-stat entries-history-consumption-stat" title="Total and average of Solar Production + M01 daily import - M02 daily export for the filtered rows">
+            <span>Total Consumption</span>
+            <strong id="entries-total-consumption">0.0 kWh</strong>
+            <small id="entries-average-daily-consumption">Average: 0.0 kWh/day</small>
+          </div>
+          <div class="entries-history-meter-stat entries-history-production-stat" id="entries-production-reconciliation" title="Implied production = Total Consumption - M01 Import + M02 Export. This reconciles against the Sunrun CSV for the same filtered dates; it is not an independent production measurement because EDC includes Sunrun production.">
+            <span>Implied Solar Production</span>
+            <strong id="entries-implied-production-total">0.0 kWh</strong>
+            <small id="entries-sunrun-production-comparison">Sunrun CSV: 0.0 kWh · Diff: 0.0 kWh</small>
           </div>
           <div class="entries-history-meter-stat entries-history-hourly-stat" title="Date and time of the most recently saved hourly meter-simulation run">
             <span>Last Hourly Update</span>
             <strong id="entries-last-hourly-update">Not run yet</strong>
             <small id="entries-last-hourly-update-detail">Waiting for an hourly simulation</small>
-            <small id="entries-last-hourly-previous">Previous M01/M02 unavailable</small>
           </div>
         </div>
         <div class="calculation-color-legend" aria-label="Calculation color key">
@@ -362,7 +367,7 @@
 
 
 
-              <tr class="entry-history-row" data-entry-date="2026-07-24" tabindex="0" title="Select this record to edit">
+              <tr class="entry-history-row entry-import-diff-exceeds-export-diff" data-entry-date="2026-07-24" tabindex="0" title="Select this record to edit. Yellow indicates M01 Diff is greater than M02 Diff.">
                 <td>2026-07-24</td>
                 <td>Fri</td>
                 <td>22.6</td>
@@ -464,7 +469,7 @@
 
 
 
-              <tr class="entry-history-row" data-entry-date="2026-07-21" tabindex="0" title="Select this record to edit">
+              <tr class="entry-history-row entry-import-diff-exceeds-export-diff" data-entry-date="2026-07-21" tabindex="0" title="Select this record to edit. Yellow indicates M01 Diff is greater than M02 Diff.">
                 <td>2026-07-21</td>
                 <td>Tue</td>
                 <td>22.6</td>
@@ -949,9 +954,9 @@
     </div>
   </main>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/js/bootstrap.bundle.min.js"></script>
-  <script src="assets/js/site-bootstrap.js?v=20260830-sync86"></script>
-  <script src="assets/js/firebase-config.js?v=20260830-sync86"></script>
-  <script defer src="assets/js/app-bundle.js?v=20260830-sync86"></script>
+  <script src="assets/js/site-bootstrap.js?v=20260901-sync93"></script>
+  <script src="assets/js/firebase-config.js?v=20260901-sync93"></script>
+  <script defer src="assets/js/app-bundle.js?v=20260901-sync93"></script>
 
 </body>
 </html>
