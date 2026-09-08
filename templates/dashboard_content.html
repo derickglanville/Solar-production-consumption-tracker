@@ -96,7 +96,7 @@
       data-daily-production="{{ solar_entry.production_kwh if solar_entry else 0 }}"
       data-system-size="{{ config.system_size_kw_dc }}"
       data-hourly-profile="%5B%5D"
-      data-entry-history="{{ tracker_entries|tojson|forceescape }}"
+      data-entry-history="{{ tracker_entries|default([], true)|tojson|forceescape }}"
     >
       <button class="solar-path-summary" type="button" data-solar-path-toggle aria-expanded="false">
         <span class="solar-path-summary-title">
