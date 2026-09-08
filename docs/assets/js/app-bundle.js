@@ -23579,6 +23579,7 @@ This typically indicates that your device does not have a healthy Internet conne
       renderDashboardChartsClient(metricsEntries, config);
       setupChartPopouts(target);
       setupValidatedLocalDashboardLinks(target);
+      window.initializeSolarPathTrackers?.(target);
     } catch (error) {
       console.error("Dashboard rendering error", error);
       setupChartPopouts(target);
@@ -23702,6 +23703,7 @@ This typically indicates that your device does not have a healthy Internet conne
   var localSnapshotSyncEndHour = 20;
   var localSnapshotSyncTimer = null;
   var meterSimulationSyncTimer = null;
+  var dailyEntryAutoCreateTimer = null;
   var meterSimulationLastAttemptedRunKey = "";
   var meterSimulationCheckpoints = [];
   var entriesPageState = {
@@ -24894,82 +24896,48 @@ This typically indicates that your device does not have a healthy Internet conne
     </section>
   `;
   }
-  function buildHistoricalUsagePanelHtml(historicalUsage, config) {
-    const workbookHref = isStaticSite() ? "NYSEG%20Bill/NYSEG%20Bill.xlsx" : "/documents/nyseg-bill/view";
-    if (!historicalUsage?.available) {
-      return `
-      <section class="row g-3 mb-4">
-        <div class="col-12">
-          <div class="card tracker-card">
-            <div class="card-body">
-              <p class="eyebrow mb-2">Historic NYSEG Baseline</p>
-              <h2 class="h5 mb-2">Pre-solar usage workbook analysis</h2>
-              <div class="tracker-modal-note">No historical workbook source is currently loaded.</div>
-            </div>
-          </div>
-        </div>
-      </section>
-    `;
-    }
-    const varianceDirection = Number(historicalUsage.versus_expected_annual_kwh || 0) >= 0 ? "high" : "low";
-    return `
-    <section class="row g-3 mb-4">
-      <div class="col-lg-7">
-        <div class="card tracker-card h-100">
-          <div class="card-body">
-            <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
-              <div>
-                <p class="eyebrow mb-2">Historic NYSEG Baseline</p>
-                <h2 class="h5 mb-1">Pre-solar usage workbook analysis</h2>
-                <p class="text-muted mb-0">This section uses your uploaded NYSEG bill workbook as a baseline source for judging the effectiveness of the solar system.</p>
-              </div>
-              <div class="d-flex flex-wrap gap-2 align-items-center">
-                <span class="ai-status-pill ai-status-pill-success">Workbook Loaded</span>
-                <a class="btn btn-contract btn-sm" href="${workbookHref}">View Spreadsheet</a>
-              </div>
-            </div>
-            <div class="info-grid mb-3">
-              <div><span>History Window</span><strong>${escapeHtml(historicalUsage.start_date)} to ${escapeHtml(historicalUsage.end_date)}</strong></div>
-              <div><span>Monthly Records</span><strong>${formatNumber(historicalUsage.record_count, 0, 0)}</strong></div>
-              <div><span>Avg Monthly Usage</span><strong>${formatNumber(historicalUsage.average_monthly_kwh, 0, 0)} kWh</strong></div>
-              <div><span>Annualized Baseline</span><strong>${formatNumber(historicalUsage.annualized_kwh, 0, 0)} kWh</strong></div>
-              <div><span>Expected Annual Usage</span><strong>${formatNumber(config.annual_home_usage_kwh, 0, 0)} kWh</strong></div>
-              <div><span>Variance vs Expected</span><strong>${formatNumber(Math.abs(historicalUsage.versus_expected_annual_kwh || 0), 0, 0)} kWh ${varianceDirection}</strong></div>
-              <div><span>Highest Monthly Read</span><strong>${formatNumber(historicalUsage.maximum_kwh, 0, 0)} kWh</strong></div>
-              <div><span>Lowest Monthly Read</span><strong>${formatNumber(historicalUsage.minimum_kwh, 0, 0)} kWh</strong></div>
-            </div>
-            <div class="tracker-modal-note">
-              Meter ${escapeHtml(historicalUsage.meter_label || "source")} includes ${formatNumber(historicalUsage.actual_read_count, 0, 0)} NYSEG reads and ${formatNumber(historicalUsage.calculated_read_count, 0, 0)} calculated reads. Use this as the pre-solar baseline when comparing grid dependence and estimated solar offset.
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="col-lg-5">
-        <div class="card tracker-card h-100">
-          <div class="card-body">
-            <h2 class="h5 mb-3">Baseline Effectiveness Notes</h2>
-            <div class="tracker-modal-math">
-              <div class="tracker-modal-step">
-                <strong>1. Baseline Context</strong>
-                <p>The workbook annualizes to roughly ${formatNumber(historicalUsage.annualized_kwh, 0, 0)} kWh/year before solar activation on ${escapeHtml(config.activation_date || "")}.</p>
-              </div>
-              <div class="tracker-modal-step">
-                <strong>2. Compare to Contract Assumption</strong>
-                <p>Sunrun planning assumed ${formatNumber(config.annual_home_usage_kwh, 0, 0)} kWh/year, so this workbook is ${Number(historicalUsage.versus_expected_annual_kwh || 0) >= 0 ? `about ${formatNumber(historicalUsage.versus_expected_annual_kwh, 0, 0)} kWh higher` : `about ${formatNumber(Math.abs(historicalUsage.versus_expected_annual_kwh || 0), 0, 0)} kWh lower`}.</p>
-              </div>
-              <div class="tracker-modal-step">
-                <strong>3. Use in Solar Analysis</strong>
-                <p>This gives the dashboard and AI analyst a historical benchmark for judging whether current solar offset and import behavior look effective versus pre-solar usage.</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-  `;
-  }
   function buildMonthlyBillPanelHtml(monthlyBill) {
-    const billHref = isStaticSite() ? "NYSEG%20Bill/July%202027.pdf" : "/documents/nyseg-monthly-bill/view";
+    const usage = monthlyBill?.usage_totals || {};
+    const net = monthlyBill?.net_metering || {};
+    const billingRows = (monthlyBill?.billing_records || []).map((row) => `
+    <tr>
+      <td><strong>${escapeHtml(row.billing_start_date)} to ${escapeHtml(row.billing_end_date)}</strong><small>${formatNumber(row.days_in_period, 0, 0)} days</small></td>
+      <td>${formatNumber(row.imported_kwh, 0, 0)} kWh</td>
+      <td>${formatCurrency(row.delivery_charges)}</td><td>${formatCurrency(row.supply_charges)}</td>
+      <td>${formatCurrency(row.taxes)}</td><td>${formatCurrency(row.miscellaneous_charges)}</td>
+      <td><strong>${formatCurrency(row.total_energy_charges)}</strong></td><td>${formatCurrency(row.amount_due)}</td>
+    </tr>`).join("");
+    const netRows = (monthlyBill?.billing_records || []).map((row) => `
+    <tr>
+      <td><strong>${escapeHtml(row.billing_end_date)}</strong><small title="${escapeHtml(row.meter_note || "")}">${escapeHtml(row.net_direction)}</small></td>
+      <td>${formatNumber(row.imported_kwh, 0, 0)}</td><td>${formatNumber(row.exported_kwh, 0, 0)}</td>
+      <td class="${Number(row.net_grid_kwh) <= 0 ? "nyseg-net-positive" : "nyseg-net-negative"}">${Number(row.net_grid_kwh) >= 0 ? "+" : ""}${formatNumber(row.net_grid_kwh, 0, 0)}</td>
+    </tr>`).join("");
+    const usageRows = (monthlyBill?.usage_records || []).map((row) => `
+    <tr><td><strong>${escapeHtml(row.month_label)}</strong></td><td>${escapeHtml(row.billing_start_date)} to ${escapeHtml(row.billing_end_date)}</td><td>${formatNumber(row.usage_kwh, 0, 0)} kWh</td><td>${formatCurrency(row.cost)}</td><td>$${formatNumber(row.effective_rate_per_kwh, 3, 3)}</td><td>${formatNumber(row.average_temperature_f, 0, 0)}\xB0F</td></tr>`).join("");
+    const sourceActions = isStaticSite() ? `<span class="ai-status-pill" title="Raw NYSEG files contain private account information and remain local">Source Files: Local Only</span>` : `<a class="btn btn-contract btn-sm" href="/documents/nyseg-bill/view">Historic Spreadsheet</a><a class="btn btn-contract btn-sm" href="/documents/nyseg-monthly-bill/view">Latest Bill</a>`;
+    if (monthlyBill?.available && (billingRows || usageRows)) {
+      return `
+      <section class="mb-4"><div class="card tracker-card nyseg-baseline-card"><div class="card-body">
+        <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
+          <div><p class="eyebrow mb-2">Historic NYSEG Baseline</p><h2 class="h5 mb-1">Monthly usage, billing, and net-metering history</h2><p class="text-muted mb-0">Usage comes from the NYSEG monthly export. Charge details and meter registers come from the bill PDFs.</p></div>
+          <div class="d-flex flex-wrap gap-2 align-items-center"><span class="ai-status-pill ai-status-pill-success">${formatNumber(usage.record_count, 0, 0)} Usage Months</span><span class="ai-status-pill ai-status-pill-success">${formatNumber(monthlyBill.billing_totals?.record_count, 0, 0)} Bills Reviewed</span>${sourceActions}</div>
+        </div>
+        <div class="nyseg-baseline-summary mb-3">
+          <div class="nyseg-summary-tile"><span>Average Monthly Usage</span><strong>${formatNumber(usage.average_monthly_kwh, 0, 0)} kWh</strong><small>${escapeHtml(usage.start_date || "")} to ${escapeHtml(usage.end_date || "")}</small></div>
+          <div class="nyseg-summary-tile"><span>Average Monthly Usage Cost</span><strong>${formatCurrency(usage.average_monthly_cost)}</strong><small>$${formatNumber(usage.effective_rate_per_kwh, 3, 3)}/kWh blended</small></div>
+          <div class="nyseg-summary-tile nyseg-summary-tile-import"><span>Bill-Period Import</span><strong>${formatNumber(net.billing_period_import_kwh, 0, 0)} kWh</strong><small>Includes 419 kWh on the replaced meter</small></div>
+          <div class="nyseg-summary-tile nyseg-summary-tile-export"><span>Smart-Meter Export</span><strong>${formatNumber(net.export_kwh, 0, 0)} kWh</strong><small>Register 02 across available solar bills</small></div>
+          <div class="nyseg-summary-tile nyseg-summary-tile-net"><span>Bill-Period Net Position</span><strong>${formatNumber(Math.abs(net.billing_period_net_kwh || 0), 0, 0)} kWh ${escapeHtml((net.billing_period_direction || "").toLowerCase())}</strong><small>Import minus export; negative means surplus export</small></div>
+        </div>
+        <div class="nyseg-baseline-layout">
+          <article class="nyseg-data-panel nyseg-data-panel-wide"><div class="nyseg-panel-heading"><div><h3>Historical Billing Month to Month</h3><p>Energy usage and itemized electricity charges from each PDF.</p></div></div><div class="nyseg-table-scroll"><table class="table nyseg-data-table mb-0"><thead><tr><th>Billing Period</th><th>Used</th><th>Delivery</th><th>Supply</th><th>Taxes</th><th>Misc.</th><th>Energy Total</th><th>Amount Due</th></tr></thead><tbody>${billingRows}</tbody></table></div><p class="nyseg-table-footnote">Amount Due can include prior balances, budget billing, or payment-plan amounts. Energy Total is the better month-to-month electricity-charge comparison.</p></article>
+          <article class="nyseg-data-panel"><div class="nyseg-panel-heading"><div><h3>Net Metering</h3><p>Register 01 import versus Register 02 export.</p></div></div><div class="nyseg-table-scroll nyseg-table-scroll-compact"><table class="table nyseg-data-table mb-0"><thead><tr><th>Period</th><th>Import</th><th>Export</th><th>Net</th></tr></thead><tbody>${netRows}</tbody></table></div><div class="tracker-modal-note mt-2">The meter-transition bill includes 419 kWh from the old meter. Smart-meter-only totals are ${formatNumber(net.smart_meter_import_kwh, 0, 0)} kWh imported and ${formatNumber(net.export_kwh, 0, 0)} kWh exported.</div></article>
+          <article class="nyseg-data-panel nyseg-data-panel-full"><div class="nyseg-panel-heading"><div><h3>Usage Data Month to Month</h3><p>Scrollable NYSEG export history, newest month first.</p></div></div><div class="nyseg-table-scroll nyseg-usage-scroll"><table class="table nyseg-data-table mb-0"><thead><tr><th>Month</th><th>Billing Period</th><th>Usage</th><th>Usage Cost</th><th>Effective $/kWh</th><th>Avg. Temp.</th></tr></thead><tbody>${usageRows}</tbody></table></div></article>
+        </div>
+      </div></div></section>`;
+    }
+    const legacyBillHref = isStaticSite() ? "NYSEG%20Bill/Bills/08_06_26%20-%2009_03_26.pdf" : "/documents/nyseg-monthly-bill/view";
     if (!monthlyBill?.available) {
       return `
       <section class="row g-3 mb-4">
@@ -24998,7 +24966,7 @@ This typically indicates that your device does not have a healthy Internet conne
               </div>
               <div class="d-flex flex-wrap gap-2 align-items-center">
                 <span class="ai-status-pill ai-status-pill-success">Bill Loaded</span>
-                <a class="btn btn-contract btn-sm" href="${billHref}">View Bill</a>
+                <a class="btn btn-contract btn-sm" href="${legacyBillHref}">View Bill</a>
               </div>
             </div>
             <div class="info-grid mb-3">
@@ -25359,6 +25327,63 @@ This typically indicates that your device does not have a healthy Internet conne
       });
     }
   }
+  function buildSolarPathTrackerHtml(entry = {}, config = {}, entries = []) {
+    const encodedProfile = encodeURIComponent(JSON.stringify(
+      Array.isArray(entry.irradiance_hourly_profile) ? entry.irradiance_hourly_profile : []
+    ));
+    const weather = escapeHtml(entry.weather || "Unknown");
+    return `
+    <section
+      class="solar-path-tracker tracker-card mb-4"
+      data-solar-path-tracker
+      data-entry-date="${escapeHtml(entry.entry_date || "")}"
+      data-weather="${weather}"
+      data-cloud-cover="${entry.cloud_cover_pct ?? ""}"
+      data-irradiance-peak="${Number(entry.irradiance_peak_wm2 || 0)}"
+      data-daily-production="${Number(entry.production_kwh || 0)}"
+      data-system-size="${Number(config.system_size_kw_dc || 18.45)}"
+      data-hourly-profile="${encodedProfile}"
+      data-entry-history="${escapeHtml(encodeURIComponent(JSON.stringify(entries || [])))}"
+    >
+      <button class="solar-path-summary" type="button" data-solar-path-toggle aria-expanded="false">
+        <span class="solar-path-summary-title"><span class="eyebrow">Live Solar Tracker</span><strong>The Sun's Path Across Yorktown Heights</strong></span>
+        <span class="solar-path-summary-live">
+          <span><small>Sun position</small><strong data-solar-summary-position>Calculating...</strong></span>
+          <span><small>Estimated now</small><strong data-solar-summary-power>-- kW</strong></span>
+          <span><small>Sky</small><strong data-solar-summary-weather>${weather}</strong></span>
+        </span>
+        <span class="solar-path-expand-label"><span data-solar-toggle-label>Expand tracker</span><span class="solar-path-chevron" aria-hidden="true">\u2304</span></span>
+      </button>
+      <div class="solar-path-panel" data-solar-path-panel hidden>
+        <div class="solar-review-controls" aria-label="Solar path review controls">
+          <div class="solar-review-date-group"><label>Review Date</label><div class="solar-review-button-row"><button type="button" data-solar-previous-day title="Review the previous day">Previous</button><input type="date" data-solar-review-date><button type="button" data-solar-next-day title="Review the next day">Next</button></div></div>
+          <div class="solar-review-time-group"><div class="solar-review-time-heading"><label>Time of Day</label><strong data-solar-review-time-label>Live now</strong></div><input type="range" min="360" max="1200" step="15" data-solar-review-time><div class="solar-review-button-row"><button type="button" data-solar-previous-hour>-1 Hour</button><button type="button" data-solar-play>Play Day</button><button type="button" data-solar-next-hour>+1 Hour</button><button type="button" class="solar-live-button" data-solar-live>Live Now</button></div></div>
+        </div>
+        <div class="solar-sky" data-solar-sky>
+          <div class="solar-sky-stars" aria-hidden="true"></div><div class="solar-cloud solar-cloud-one" aria-hidden="true"></div><div class="solar-cloud solar-cloud-two" aria-hidden="true"></div><div class="solar-rain" aria-hidden="true"></div>
+          <div class="solar-editorial-head"><span data-solar-window-kicker>Today's Solar Window</span><h2 data-solar-editorial-title>The Sun's Path Across the Sky</h2><p data-solar-editorial-meta>Yorktown Heights, NY</p></div>
+          <div class="solar-insight-card"><span data-solar-interpretation-kicker>Live interpretation</span><strong data-solar-insight-title>Reading the sky...</strong><p data-solar-insight>Current conditions and solar position will appear here.</p></div>
+          <svg class="solar-arc" viewBox="0 0 1000 360" preserveAspectRatio="none" role="img" aria-label="Current day's calculated sun path"><path data-solar-arc-path></path></svg>
+          <div class="solar-hour-markers" data-solar-hour-markers aria-hidden="true"></div><div class="solar-current-sun" data-solar-marker aria-hidden="true"><span>Now</span></div><div class="solar-horizon"></div>
+          <div class="solar-compass" aria-hidden="true"><span>NE<br><small>45\xB0</small></span><span>E<br><small>90\xB0</small></span><span>S<br><small>180\xB0</small></span><span>W<br><small>270\xB0</small></span><span>NW<br><small>315\xB0</small></span></div>
+          <div class="solar-sky-caption"><strong data-solar-sky-title>Current sky</strong><span data-solar-sky-detail>Loading weather and irradiance...</span></div>
+        </div>
+        <div class="solar-path-detail-grid">
+          <div><span>Local Time</span><strong data-solar-local-time>--</strong><small>America/New_York</small></div>
+          <div><span>Sun Position</span><strong data-solar-position>--</strong><small data-solar-direction>--</small></div>
+          <div><span>Solar Window</span><strong data-solar-window>--</strong><small data-solar-noon>--</small></div>
+          <div><span>Current Irradiance</span><strong data-solar-irradiance>-- W/m\xB2</strong><small data-solar-irradiance-source>Open-Meteo hourly</small></div>
+          <div><span>Estimated Current Power</span><strong data-solar-power>-- kW</strong><small data-solar-energy-pace>-- kWh per hour at this pace</small></div>
+          <div><span>Sunrun Daily Record</span><strong data-solar-daily-production>-- kWh</strong><small data-solar-record-date>--</small></div>
+        </div>
+        <div class="solar-reference-band">
+          <div class="solar-path-table-wrap"><table class="table solar-path-table mb-0"><thead><tr><th>Time</th><th>Azimuth</th><th>Elevation</th><th>Estimated Power</th></tr></thead><tbody data-solar-hourly-rows></tbody></table></div>
+          <aside class="solar-takeaways"><span class="solar-takeaways-kicker">Key Takeaways</span><h3>What today's path means</h3><ul data-solar-takeaways><li>Calculating today's solar story...</li></ul></aside>
+        </div>
+        <p class="solar-path-disclaimer mb-0">Sun position is calculated for Yorktown Heights. Current power is an estimate based on Open-Meteo irradiance and an 86% system derate; Sunrun remains the source of final daily production.</p>
+      </div>
+    </section>`;
+  }
   function renderDashboardHtmlClient(entries, metrics, config, firebaseStatus, alerts) {
     const recentEntries = getDisplayEntries(entries).slice(-10).reverse();
     const energyImpact = buildEnergyImpactSummaryClient(metrics, config);
@@ -25391,6 +25416,9 @@ This typically indicates that your device does not have a healthy Internet conne
                 <button type="button" class="btn btn-contract btn-sm" data-dashboard-view-toggle aria-pressed="false">Field Mode</button>
                 <button type="button" class="btn btn-contract btn-sm" data-bs-toggle="modal" data-bs-target="#dashboardIntroModal">About</button>
                 <button type="button" class="btn btn-sun btn-sm" onclick="window.location.assign(window.location.pathname + '?refresh=' + Date.now())" title="Re-read the SunRun CSV and refresh live Firebase data">Force Load Data</button>
+                <a class="btn btn-contract btn-sm" href="${isStaticSite() ? "light-bulbs.html" : "/light-bulbs"}">Light Bulbs</a>
+                <a class="btn btn-contract btn-sm" href="${isStaticSite() ? "electricity-usage.html" : "/electricity-usage"}">Electricity Usage</a>
+                ${isStaticSite() ? '<span class="btn btn-contract btn-sm disabled" title="The private circuit directory is available in the local app only">Circuit Breakers (Local)</span>' : '<a class="btn btn-contract btn-sm" href="/circuit-breakers" target="_blank" rel="noopener noreferrer">Circuit Breakers</a>'}
               </div>
             </div>
             <div class="stat-callout dashboard-projection-callout">
@@ -25405,6 +25433,7 @@ This typically indicates that your device does not have a healthy Internet conne
             </div>
           </div>
         </section>
+        ${buildSolarPathTrackerHtml(entries.length ? entries[entries.length - 1] : {}, config, entries)}
         ${firebaseStatus?.message ? `<section class="mb-4"><div class="status-banner ${firebaseStatus.kind === "success" ? "status-banner-success" : ""}"><div><p class="status-title mb-1">${firebaseStatusTitle}</p><p class="mb-0">${firebaseStatus.message}</p></div>${firebaseStatusPill ? `<span class="status-pill">${firebaseStatusPill}</span>` : ""}</div></section>` : ""}
         ${alerts.length ? `<section class="mb-4"><div class="card tracker-card"><div class="card-body"><h2 class="h5 mb-3">Alerts &amp; Context</h2><div class="d-flex flex-column gap-2">${alerts.map((alert) => `<div class="badge text-bg-warning p-2 text-wrap text-start lh-base">${alert}</div>`).join("")}</div></div></div></section>` : ""}
         ${buildAiPanelHtml(dashboardAiState.openaiConfigured)}
@@ -25423,7 +25452,6 @@ This typically indicates that your device does not have a healthy Internet conne
           <div class="col-lg-6"><div class="card tracker-card h-100"><div class="card-body"><h2 class="h5 mb-3">Grid Flow and Virtual Consumption Monitor</h2><div class="chart-popout-frame" data-chart-popout-label="Grid Flow and Virtual Consumption Monitor"><button type="button" class="btn btn-contract btn-sm chart-popout-button" data-chart-popout>Pop Out</button><div id="flow-chart" class="dashboard-chart"></div></div></div></div></div>
           <div class="col-lg-6"><div class="card tracker-card h-100"><div class="card-body"><h2 class="h5 mb-3">Solar Offset Snapshot</h2><div class="info-grid"><div><span>Estimated Self Consumption</span><strong>${formatNumber(metrics.estimated_self_consumption, 1, 1)} kWh</strong></div><div><span>Total Home Consumption</span><strong>${formatNumber(metrics.total_home_consumption, 1, 1)} kWh</strong></div><div><span>Solar Offset</span><strong>${formatNumber(metrics.solar_offset_pct, 1, 1)}%</strong></div><div><span>Expected Offset</span><strong>${formatNumber(config.expected_offset_pct, 1, 1)}%</strong></div><div><span>Electricity Value Produced</span><strong>${formatCurrency(metrics.electricity_value_produced)}</strong></div><div><span>Grid Cost</span><strong>${formatCurrency(metrics.grid_cost)}</strong></div><div><span>Lease Cost</span><strong>${formatCurrency(metrics.lease_cost)}</strong></div><div><span>Lifetime Savings</span><strong>${formatCurrency(metrics.lifetime_savings)}</strong></div><div><span>Tree Removal Payback</span><strong>${metrics.tree_payback_months ? `${formatNumber(metrics.tree_payback_months, 1, 1)} months` : "N/A"}</strong></div></div></div></div></div>
         </section>
-        ${buildHistoricalUsagePanelHtml(dashboardAiState.historicalUsage, config)}
         ${buildMonthlyBillPanelHtml(dashboardAiState.monthlyBill)}
         <section class="row g-3 mb-4">
           <div class="col-lg-4"><div class="card tracker-card h-100"><div class="card-body"><div class="chart-popout-frame" data-chart-popout-label="Production and Irradiance Trend"><button type="button" class="btn btn-contract btn-sm chart-popout-button" data-chart-popout>Pop Out</button><div id="irradiance-chart" class="dashboard-chart"></div></div></div></div></div>
@@ -27275,6 +27303,27 @@ This is a reconciliation, not an independent measurement, because EDC includes S
       }
       refreshCheckpointPrediction();
     }
+    function startDailyEntryAutoCreateWatcher() {
+      if (dailyEntryAutoCreateTimer) return;
+      dailyEntryAutoCreateTimer = window.setInterval(async () => {
+        const today = getTodayIsoDate();
+        if (!isAtOrAfterAutoCreateTime() || entriesPageState.entries.some(
+          (entry) => String(entry.entry_date) === String(today)
+        )) {
+          return;
+        }
+        try {
+          await refreshEntries({
+            showMessage: true,
+            runAutoCreate: true,
+            forceCreate: false,
+            entryDate: today
+          });
+        } catch (error) {
+          console.warn("Daily Historical Entry auto-create check failed.", error);
+        }
+      }, 6e4);
+    }
     window.addEventListener("solar-meter-simulation-saved", (event) => {
       const savedEntry = normalizeEntry(event.detail?.entry || {});
       if (!savedEntry.entry_date) return;
@@ -27545,6 +27594,7 @@ This is a reconciliation, not an independent measurement, because EDC includes S
       });
     }
     window.setTimeout(refreshCheckpointPrediction, 0);
+    startDailyEntryAutoCreateWatcher();
     return { refreshEntries };
   }
   async function handleSettingsForm(db) {
@@ -27649,7 +27699,12 @@ This is a reconciliation, not an independent measurement, because EDC includes S
       } else if (irradianceRevalidation.updated) {
         renderStatusAlert("entries-status", `Corrected daily peak irradiance for ${irradianceRevalidation.count} record${irradianceRevalidation.count === 1 ? "" : "s"} from Open-Meteo.`, "success");
       }
-      await entryTools.refreshEntries({ showMessage: false, runAutoCreate: true, forceCreate: false });
+      await entryTools.refreshEntries({
+        showMessage: false,
+        runAutoCreate: true,
+        forceCreate: false,
+        entryDate: getTodayIsoDate()
+      });
       const url = new URL(window.location.href);
       if (url.searchParams.get("autocreate") === "1") {
         await entryTools.refreshEntries({ showMessage: true, runAutoCreate: true, forceCreate: true });

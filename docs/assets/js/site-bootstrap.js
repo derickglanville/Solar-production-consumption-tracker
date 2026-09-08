@@ -175,28 +175,502 @@ window.SOLAR_BOOTSTRAP = {
     "versus_expected_annual_pct": 2.3412488112263814
   },
   "monthly_bill": {
-    "amount_due": 516.9,
+    "amount_due": 1054.04,
     "available": true,
-    "average_daily_use_kwh": 4.0,
-    "balance_forward": -1.05,
-    "billing_end_date": "2026-07-01",
-    "billing_start_date": "2026-06-05",
-    "budget_billing_amount": 507.0,
-    "current_usage_kwh": 118.0,
-    "days_in_period": 27,
-    "display_name": "July 2027.pdf",
+    "average_daily_use_kwh": 17.862068965517242,
+    "balance_forward": 921.82,
+    "billing_end_date": "2026-09-03",
+    "billing_records": [
+      {
+        "amount_due": 1054.04,
+        "average_daily_use_kwh": 17.862068965517242,
+        "balance_forward": 921.82,
+        "billing_end_date": "2026-09-03",
+        "billing_start_date": "2026-08-06",
+        "budget_billing_amount": 0.0,
+        "current_usage_kwh": 518.0,
+        "days_in_period": 29,
+        "delivery_charges": 77.47,
+        "display_name": "08_06_26 - 09_03_26.pdf",
+        "effective_energy_rate": 0.2341119691119691,
+        "exported_kwh": 1260.0,
+        "imported_kwh": 518.0,
+        "meter_note": "Register 01 recorded 518 kWh imported; Register 02 recorded 1,260 kWh exported.",
+        "miscellaneous_charges": 0.95,
+        "net_direction": "Net export",
+        "net_grid_kwh": -742.0,
+        "payment_agreement_amount": 10.0,
+        "smart_meter_import_kwh": 518.0,
+        "statement_date": "2026-09-08",
+        "supply_charges": 37.4,
+        "supply_rate_per_kwh": 0.07220077,
+        "taxes": 6.4,
+        "total_adjustments": 0.0,
+        "total_energy_charges": 121.27
+      },
+      {
+        "amount_due": 921.82,
+        "average_daily_use_kwh": 23.142857142857142,
+        "balance_forward": 0.0,
+        "billing_end_date": "2026-08-05",
+        "billing_start_date": "2026-07-02",
+        "budget_billing_amount": 0.0,
+        "current_usage_kwh": 810.0,
+        "days_in_period": 35,
+        "delivery_charges": 112.94,
+        "display_name": "07_02_26 - 08_05_26.pdf",
+        "effective_energy_rate": 0.2723333333333333,
+        "exported_kwh": 1025.0,
+        "imported_kwh": 810.0,
+        "meter_note": "Meter-transition month: 419 kWh old-meter use plus 391 kWh smart-meter import; Register 02 recorded 1,025 kWh exported.",
+        "miscellaneous_charges": 0.95,
+        "net_direction": "Net export",
+        "net_grid_kwh": -215.0,
+        "payment_agreement_amount": 10.0,
+        "smart_meter_import_kwh": 391.0,
+        "statement_date": "2026-09-03",
+        "supply_charges": 96.56,
+        "supply_rate_per_kwh": 0.11920988,
+        "taxes": 11.09,
+        "total_adjustments": 690.28,
+        "total_energy_charges": 220.59
+      },
+      {
+        "amount_due": 516.9,
+        "average_daily_use_kwh": 4.37037037037037,
+        "balance_forward": -1.05,
+        "billing_end_date": "2026-07-01",
+        "billing_start_date": "2026-06-05",
+        "budget_billing_amount": 507.0,
+        "current_usage_kwh": 118.0,
+        "days_in_period": 27,
+        "delivery_charges": 32.58,
+        "display_name": "06_05_26 - 07_01_26.pdf",
+        "effective_energy_rate": 0.3877966101694915,
+        "exported_kwh": 0.0,
+        "imported_kwh": 118.0,
+        "meter_note": "Pre-smart-meter bill; no export register was available.",
+        "miscellaneous_charges": 0.95,
+        "net_direction": "Net import",
+        "net_grid_kwh": 118.0,
+        "payment_agreement_amount": 10.0,
+        "smart_meter_import_kwh": 0.0,
+        "statement_date": "2026-07-07",
+        "supply_charges": 10.69,
+        "supply_rate_per_kwh": 0.09059322,
+        "taxes": 2.49,
+        "total_adjustments": -1151.52,
+        "total_energy_charges": 45.76
+      }
+    ],
+    "billing_start_date": "2026-08-06",
+    "billing_totals": {
+      "amount_due": 2492.76,
+      "delivery_charges": 222.99,
+      "energy_charges": 387.62,
+      "miscellaneous_charges": 2.8499999999999996,
+      "record_count": 3,
+      "supply_charges": 144.65,
+      "taxes": 19.980000000000004
+    },
+    "budget_billing_amount": 0.0,
+    "current_usage_kwh": 518.0,
+    "days_in_period": 29,
+    "display_name": "08_06_26 - 09_03_26.pdf",
     "miscellaneous_charges": 0.95,
+    "net_metering": {
+      "billing_period_direction": "Net export",
+      "billing_period_import_kwh": 1446.0,
+      "billing_period_net_kwh": -839.0,
+      "export_kwh": 2285.0,
+      "smart_meter_direction": "Net export",
+      "smart_meter_import_kwh": 909.0,
+      "smart_meter_net_kwh": -1376.0,
+      "solar_bill_count": 2
+    },
     "notes": [
-      "The PDF filename says July 2027, but the bill content shows a statement date of July 07, 2026.",
-      "This bill is being used as a monthly bill reference source for dashboard context.",
-      "The bill shows only 118 kWh over a 27-day period, which is much lower than the same period one year earlier and should be interpreted carefully alongside solar production and export data."
+      "Loaded 36 monthly usage/cost records and 3 detailed bill PDFs.",
+      "Register 01 is electricity imported from NYSEG; Register 02 is solar electricity exported to NYSEG.",
+      "The July 2-August 5 bill spans the old and smart meters, so total billed import and smart-meter-only import are shown separately."
     ],
     "payment_agreement_amount": 10.0,
-    "prior_year_average_daily_use_kwh": 35.0,
-    "statement_date": "2026-07-07",
-    "total_adjustments": -1151.52,
-    "total_electricity_cost": 45.76,
-    "total_energy_charges": 45.76
+    "prior_year_average_daily_use_kwh": 0.0,
+    "statement_date": "2026-09-08",
+    "total_adjustments": 0.0,
+    "total_electricity_cost": 121.27,
+    "total_energy_charges": 121.27,
+    "usage_records": [
+      {
+        "average_temperature_f": 72.0,
+        "billing_end_date": "2026-09-03",
+        "billing_start_date": "2026-08-06",
+        "cost": 114.87,
+        "effective_rate_per_kwh": 0.22175675675675677,
+        "month_label": "Sep 2026",
+        "units": "kWh",
+        "usage_kwh": 518.0
+      },
+      {
+        "average_temperature_f": 73.0,
+        "billing_end_date": "2026-08-05",
+        "billing_start_date": "2026-07-02",
+        "cost": 209.5,
+        "effective_rate_per_kwh": 0.25864197530864197,
+        "month_label": "Aug 2026",
+        "units": "kWh",
+        "usage_kwh": 810.0
+      },
+      {
+        "average_temperature_f": 71.0,
+        "billing_end_date": "2026-07-01",
+        "billing_start_date": "2026-06-05",
+        "cost": 43.27,
+        "effective_rate_per_kwh": 0.3666949152542373,
+        "month_label": "Jul 2026",
+        "units": "kWh",
+        "usage_kwh": 118.0
+      },
+      {
+        "average_temperature_f": 61.0,
+        "billing_end_date": "2026-06-04",
+        "billing_start_date": "2026-05-06",
+        "cost": 486.94,
+        "effective_rate_per_kwh": 0.25454260324098277,
+        "month_label": "Jun 2026",
+        "units": "kWh",
+        "usage_kwh": 1913.0
+      },
+      {
+        "average_temperature_f": 52.0,
+        "billing_end_date": "2026-05-05",
+        "billing_start_date": "2026-04-07",
+        "cost": 403.45,
+        "effective_rate_per_kwh": 0.2738968092328581,
+        "month_label": "May 2026",
+        "units": "kWh",
+        "usage_kwh": 1473.0
+      },
+      {
+        "average_temperature_f": 45.0,
+        "billing_end_date": "2026-04-06",
+        "billing_start_date": "2026-03-04",
+        "cost": 501.89,
+        "effective_rate_per_kwh": 0.2678175026680896,
+        "month_label": "Apr 2026",
+        "units": "kWh",
+        "usage_kwh": 1874.0
+      },
+      {
+        "average_temperature_f": 28.0,
+        "billing_end_date": "2026-03-03",
+        "billing_start_date": "2026-02-05",
+        "cost": 811.93,
+        "effective_rate_per_kwh": 0.2569398734177215,
+        "month_label": "Mar 2026",
+        "units": "kWh",
+        "usage_kwh": 3160.0
+      },
+      {
+        "average_temperature_f": 25.0,
+        "billing_end_date": "2026-02-04",
+        "billing_start_date": "2026-01-07",
+        "cost": 397.06,
+        "effective_rate_per_kwh": 0.2798167723749119,
+        "month_label": "Feb 2026",
+        "units": "kWh",
+        "usage_kwh": 1419.0
+      },
+      {
+        "average_temperature_f": 29.0,
+        "billing_end_date": "2026-01-06",
+        "billing_start_date": "2025-12-06",
+        "cost": 493.13,
+        "effective_rate_per_kwh": 0.2522404092071611,
+        "month_label": "Jan 2026",
+        "units": "kWh",
+        "usage_kwh": 1955.0
+      },
+      {
+        "average_temperature_f": 40.0,
+        "billing_end_date": "2025-12-05",
+        "billing_start_date": "2025-11-05",
+        "cost": 480.25,
+        "effective_rate_per_kwh": 0.20916811846689895,
+        "month_label": "Dec 2025",
+        "units": "kWh",
+        "usage_kwh": 2296.0
+      },
+      {
+        "average_temperature_f": 52.0,
+        "billing_end_date": "2025-11-04",
+        "billing_start_date": "2025-10-07",
+        "cost": 139.51,
+        "effective_rate_per_kwh": 0.2667495219885277,
+        "month_label": "Nov 2025",
+        "units": "kWh",
+        "usage_kwh": 523.0
+      },
+      {
+        "average_temperature_f": 66.0,
+        "billing_end_date": "2025-10-06",
+        "billing_start_date": "2025-09-04",
+        "cost": 235.4,
+        "effective_rate_per_kwh": 0.2349301397205589,
+        "month_label": "Oct 2025",
+        "units": "kWh",
+        "usage_kwh": 1002.0
+      },
+      {
+        "average_temperature_f": 70.0,
+        "billing_end_date": "2025-09-03",
+        "billing_start_date": "2025-08-06",
+        "cost": 277.3,
+        "effective_rate_per_kwh": 0.22917355371900827,
+        "month_label": "Sep 2025",
+        "units": "kWh",
+        "usage_kwh": 1210.0
+      },
+      {
+        "average_temperature_f": 76.0,
+        "billing_end_date": "2025-08-05",
+        "billing_start_date": "2025-07-04",
+        "cost": 257.28,
+        "effective_rate_per_kwh": 0.236688132474701,
+        "month_label": "Aug 2025",
+        "units": "kWh",
+        "usage_kwh": 1087.0
+      },
+      {
+        "average_temperature_f": 72.0,
+        "billing_end_date": "2025-07-03",
+        "billing_start_date": "2025-06-05",
+        "cost": 233.29,
+        "effective_rate_per_kwh": 0.23212935323383083,
+        "month_label": "Jul 2025",
+        "units": "kWh",
+        "usage_kwh": 1005.0
+      },
+      {
+        "average_temperature_f": 59.0,
+        "billing_end_date": "2025-06-04",
+        "billing_start_date": "2025-05-06",
+        "cost": 277.7,
+        "effective_rate_per_kwh": 0.25784586815227484,
+        "month_label": "Jun 2025",
+        "units": "kWh",
+        "usage_kwh": 1077.0
+      },
+      {
+        "average_temperature_f": 54.0,
+        "billing_end_date": "2025-05-05",
+        "billing_start_date": "2025-04-04",
+        "cost": 992.56,
+        "effective_rate_per_kwh": 0.2568072445019405,
+        "month_label": "May 2025",
+        "units": "kWh",
+        "usage_kwh": 3865.0
+      },
+      {
+        "average_temperature_f": 44.0,
+        "billing_end_date": "2025-04-03",
+        "billing_start_date": "2025-03-04",
+        "cost": 329.46,
+        "effective_rate_per_kwh": 0.2387391304347826,
+        "month_label": "Apr 2025",
+        "units": "kWh",
+        "usage_kwh": 1380.0
+      },
+      {
+        "average_temperature_f": 31.0,
+        "billing_end_date": "2025-03-03",
+        "billing_start_date": "2025-02-06",
+        "cost": 478.61,
+        "effective_rate_per_kwh": 0.22682938388625593,
+        "month_label": "Mar 2025",
+        "units": "kWh",
+        "usage_kwh": 2110.0
+      },
+      {
+        "average_temperature_f": 26.0,
+        "billing_end_date": "2025-02-05",
+        "billing_start_date": "2025-01-07",
+        "cost": 132.6,
+        "effective_rate_per_kwh": 0.23636363636363636,
+        "month_label": "Feb 2025",
+        "units": "kWh",
+        "usage_kwh": 561.0
+      },
+      {
+        "average_temperature_f": 34.0,
+        "billing_end_date": "2025-01-06",
+        "billing_start_date": "2024-12-06",
+        "cost": 549.15,
+        "effective_rate_per_kwh": 0.1870401907356948,
+        "month_label": "Jan 2025",
+        "units": "kWh",
+        "usage_kwh": 2936.0
+      },
+      {
+        "average_temperature_f": 44.0,
+        "billing_end_date": "2024-12-05",
+        "billing_start_date": "2024-11-05",
+        "cost": 320.44,
+        "effective_rate_per_kwh": 0.1802249718785152,
+        "month_label": "Dec 2024",
+        "units": "kWh",
+        "usage_kwh": 1778.0
+      },
+      {
+        "average_temperature_f": 55.0,
+        "billing_end_date": "2024-11-04",
+        "billing_start_date": "2024-10-04",
+        "cost": 22.87,
+        "effective_rate_per_kwh": 0.9529166666666667,
+        "month_label": "Nov 2024",
+        "units": "kWh",
+        "usage_kwh": 24.0
+      },
+      {
+        "average_temperature_f": 64.0,
+        "billing_end_date": "2024-10-03",
+        "billing_start_date": "2024-09-04",
+        "cost": 165.06,
+        "effective_rate_per_kwh": 0.18864,
+        "month_label": "Oct 2024",
+        "units": "kWh",
+        "usage_kwh": 875.0
+      },
+      {
+        "average_temperature_f": 70.0,
+        "billing_end_date": "2024-09-03",
+        "billing_start_date": "2024-08-06",
+        "cost": 297.46,
+        "effective_rate_per_kwh": 0.1856803995006242,
+        "month_label": "Sep 2024",
+        "units": "kWh",
+        "usage_kwh": 1602.0
+      },
+      {
+        "average_temperature_f": 77.0,
+        "billing_end_date": "2024-08-05",
+        "billing_start_date": "2024-07-03",
+        "cost": 184.59,
+        "effective_rate_per_kwh": 0.1957476139978791,
+        "month_label": "Aug 2024",
+        "units": "kWh",
+        "usage_kwh": 943.0
+      },
+      {
+        "average_temperature_f": 72.0,
+        "billing_end_date": "2024-07-02",
+        "billing_start_date": "2024-06-06",
+        "cost": 93.39,
+        "effective_rate_per_kwh": 0.19828025477707006,
+        "month_label": "Jul 2024",
+        "units": "kWh",
+        "usage_kwh": 471.0
+      },
+      {
+        "average_temperature_f": 63.0,
+        "billing_end_date": "2024-06-05",
+        "billing_start_date": "2024-05-03",
+        "cost": 215.26,
+        "effective_rate_per_kwh": 0.1715219123505976,
+        "month_label": "Jun 2024",
+        "units": "kWh",
+        "usage_kwh": 1255.0
+      },
+      {
+        "average_temperature_f": 52.0,
+        "billing_end_date": "2024-05-02",
+        "billing_start_date": "2024-04-04",
+        "cost": 157.1,
+        "effective_rate_per_kwh": 0.16983783783783782,
+        "month_label": "May 2024",
+        "units": "kWh",
+        "usage_kwh": 925.0
+      },
+      {
+        "average_temperature_f": 44.0,
+        "billing_end_date": "2024-04-03",
+        "billing_start_date": "2024-03-02",
+        "cost": 288.26,
+        "effective_rate_per_kwh": 0.1673012188044109,
+        "month_label": "Apr 2024",
+        "units": "kWh",
+        "usage_kwh": 1723.0
+      },
+      {
+        "average_temperature_f": 35.0,
+        "billing_end_date": "2024-03-01",
+        "billing_start_date": "2024-02-06",
+        "cost": 422.72,
+        "effective_rate_per_kwh": 0.19949032562529495,
+        "month_label": "Mar 2024",
+        "units": "kWh",
+        "usage_kwh": 2119.0
+      },
+      {
+        "average_temperature_f": 33.0,
+        "billing_end_date": "2024-02-05",
+        "billing_start_date": "2024-01-03",
+        "cost": 469.56,
+        "effective_rate_per_kwh": 0.19080048760666396,
+        "month_label": "Feb 2024",
+        "units": "kWh",
+        "usage_kwh": 2461.0
+      },
+      {
+        "average_temperature_f": 39.0,
+        "billing_end_date": "2024-01-02",
+        "billing_start_date": "2023-12-06",
+        "cost": 360.69,
+        "effective_rate_per_kwh": 0.1889418543740178,
+        "month_label": "Jan 2024",
+        "units": "kWh",
+        "usage_kwh": 1909.0
+      },
+      {
+        "average_temperature_f": 42.0,
+        "billing_end_date": "2023-12-05",
+        "billing_start_date": "2023-11-01",
+        "cost": 313.05,
+        "effective_rate_per_kwh": 0.1780716723549488,
+        "month_label": "Dec 2023",
+        "units": "kWh",
+        "usage_kwh": 1758.0
+      },
+      {
+        "average_temperature_f": 56.0,
+        "billing_end_date": "2023-10-31",
+        "billing_start_date": "2023-10-05",
+        "cost": 39.44,
+        "effective_rate_per_kwh": 0.10270833333333333,
+        "month_label": "Oct 2023",
+        "units": "kWh",
+        "usage_kwh": 384.0
+      },
+      {
+        "average_temperature_f": 66.0,
+        "billing_end_date": "2023-10-04",
+        "billing_start_date": "2023-09-02",
+        "cost": 81.46,
+        "effective_rate_per_kwh": 0.07500920810313075,
+        "month_label": "Oct 2023",
+        "units": "kWh",
+        "usage_kwh": 1086.0
+      }
+    ],
+    "usage_totals": {
+      "average_monthly_cost": 313.23611111111103,
+      "average_monthly_kwh": 1433.4722222222222,
+      "effective_rate_per_kwh": 0.2185156477085553,
+      "end_date": "2026-09-03",
+      "record_count": 36,
+      "start_date": "2023-09-02",
+      "total_cost": 11276.499999999996,
+      "total_kwh": 51605.0
+    }
   },
   "sample_entries": [
     {
@@ -735,12 +1209,42 @@ window.SOLAR_BOOTSTRAP = {
       },
       "2026-09-03": {
         "available": true,
-        "end_of_day_meter_kwh": 3519.188,
+        "end_of_day_meter_kwh": 3522.958,
         "entry_date": "2026-09-03",
-        "production_kwh": 45.45
+        "production_kwh": 49.22
+      },
+      "2026-09-04": {
+        "available": true,
+        "end_of_day_meter_kwh": 3590.948,
+        "entry_date": "2026-09-04",
+        "production_kwh": 67.99
+      },
+      "2026-09-05": {
+        "available": true,
+        "end_of_day_meter_kwh": 3658.938,
+        "entry_date": "2026-09-05",
+        "production_kwh": 67.99
+      },
+      "2026-09-06": {
+        "available": true,
+        "end_of_day_meter_kwh": 3722.328,
+        "entry_date": "2026-09-06",
+        "production_kwh": 63.39
+      },
+      "2026-09-07": {
+        "available": true,
+        "end_of_day_meter_kwh": 3795.758,
+        "entry_date": "2026-09-07",
+        "production_kwh": 73.43
+      },
+      "2026-09-08": {
+        "available": true,
+        "end_of_day_meter_kwh": 3851.308,
+        "entry_date": "2026-09-08",
+        "production_kwh": 55.55
       }
     },
-    "latest_available_date": "2026-09-03",
+    "latest_available_date": "2026-09-08",
     "rows": [
       {
         "available": false,
@@ -1080,9 +1584,39 @@ window.SOLAR_BOOTSTRAP = {
       },
       {
         "available": true,
-        "end_of_day_meter_kwh": 3519.188,
+        "end_of_day_meter_kwh": 3522.958,
         "entry_date": "2026-09-03",
-        "production_kwh": 45.45
+        "production_kwh": 49.22
+      },
+      {
+        "available": true,
+        "end_of_day_meter_kwh": 3590.948,
+        "entry_date": "2026-09-04",
+        "production_kwh": 67.99
+      },
+      {
+        "available": true,
+        "end_of_day_meter_kwh": 3658.938,
+        "entry_date": "2026-09-05",
+        "production_kwh": 67.99
+      },
+      {
+        "available": true,
+        "end_of_day_meter_kwh": 3722.328,
+        "entry_date": "2026-09-06",
+        "production_kwh": 63.39
+      },
+      {
+        "available": true,
+        "end_of_day_meter_kwh": 3795.758,
+        "entry_date": "2026-09-07",
+        "production_kwh": 73.43
+      },
+      {
+        "available": true,
+        "end_of_day_meter_kwh": 3851.308,
+        "entry_date": "2026-09-08",
+        "production_kwh": 55.55
       }
     ]
   },

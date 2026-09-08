@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="hero-panel reference-editor-hero mb-3">
+  <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+    <div>
+      <p class="eyebrow mb-1">Editable Home Reference</p>
+      <h1 class="hero-title mb-1">Light Bulb Inventory</h1>
+      <p class="text-muted mb-0">Room-by-room lighting information imported from {{ reference_data.source_file }}.</p>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+      <button type="button" class="btn btn-contract btn-sm" data-reference-reload>Reload Saved</button>
+      <button type="button" class="btn btn-contract btn-sm" data-reference-add>Add Location</button>
+      <button type="button" class="btn btn-sun btn-sm" data-reference-save>Save Changes</button>
+      <a class="btn btn-contract btn-sm" href="{{ url_for('main.dashboard') }}">Back to Dashboard</a>
+    </div>
+  </div>
+</section>
+
+<div id="reference-editor-status"></div>
+
+<section class="row g-3 mb-3">
+  <div class="col-md-3"><div class="metric-card sun reference-metric"><span>Total Bulbs</span><strong id="lighting-total-bulbs">0</strong></div></div>
+  <div class="col-md-3"><div class="metric-card export reference-metric"><span>Known LED Bulbs</span><strong id="lighting-led-bulbs">0</strong></div></div>
+  <div class="col-md-3"><div class="metric-card money reference-metric"><span>Replace</span><strong id="lighting-replace-bulbs">0</strong></div></div>
+  <div class="col-md-3"><div class="metric-card sky reference-metric"><span>Unknown</span><strong id="lighting-unknown-bulbs">0</strong></div></div>
+</section>
+
+<section class="card tracker-card reference-editor-card">
+  <div class="card-body">
+    <div class="reference-table-scroll">
+      <table class="table align-middle reference-editor-table">
+        <thead><tr><th>Room or Location</th><th class="reference-count-column">Bulbs</th><th class="reference-led-column">LED</th><th>Comment</th><th class="reference-action-column">Action</th></tr></thead>
+        <tbody id="light-bulbs-table-body"></tbody>
+      </table>
+    </div>
+    <p class="text-muted small mt-3 mb-0">The source file totals 77 bulbs. Rows marked No or Unknown are the best candidates for inspection or replacement.</p>
+  </div>
+</section>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>window.REFERENCE_EDITOR_BOOTSTRAP = {{ reference_data|tojson }};</script>
+<script defer src="{{ url_for('static', filename='js/reference-editors.js') }}?v=20260908-sync104"></script>
+{% endblock %}

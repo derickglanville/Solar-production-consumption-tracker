@@ -12,6 +12,14 @@ from plotly.offline.offline import get_plotlyjs
 from .ai import answer_question, get_ai_status
 from .analytics import build_alerts, build_chart_bundle, build_dataframe, calculate_metrics
 from .appliances import APPLIANCE_WORKBOOK_PATH, load_appliance_summary, save_appliance_records
+from .energy_references import (
+    load_circuit_breakers,
+    load_electricity_usage,
+    load_light_bulbs,
+    save_circuit_breakers,
+    save_electricity_usage,
+    save_light_bulbs,
+)
 from .firestore import AppConfig, DailySolarEntry
 from .historical_usage import historical_usage_to_dict, load_historical_usage_summary
 from .monthly_bill import load_monthly_bill_summary, monthly_bill_to_dict
@@ -42,6 +50,11 @@ WEATHER_OPTIONS = [
 LOCAL_DASHBOARD_URL = "http://127.0.0.1:8765/"
 LOCAL_JSON_DIRECTORY = Path(__file__).resolve().parent.parent / "JSON"
 LOCAL_APPLICATION_SNAPSHOT_PATH = LOCAL_JSON_DIRECTORY / "application_data_current.json"
+CIRCUIT_BREAKER_DIRECTORY_PATH = (
+    Path(__file__).resolve().parent.parent
+    / "Documents"
+    / "Circuit_Breaker_Directory_Professional.pdf"
+)
 
 
 def entry_to_dict(entry):
@@ -383,6 +396,7 @@ def render_dashboard(entries, config, firebase_status):
         alerts=alerts,
         charts=charts,
         recent_entries=recent_entries,
+        tracker_entries=[entry_to_dict(entry) for entry in visible_entries],
         config=config,
         firebase_status=firebase_status,
         bootstrap_data=build_bootstrap_data(),
@@ -420,6 +434,7 @@ def dashboard():
         alerts=build_alerts(build_dataframe(visible_entries, config), config),
         charts=build_chart_bundle(build_dataframe(visible_entries, config), config),
         recent_entries=list(reversed(visible_entries[-10:])),
+        tracker_entries=[entry_to_dict(entry) for entry in visible_entries],
         config=config,
         firebase_status=firebase_status,
         historical_usage=historical_usage_to_dict(historical_usage),
@@ -470,6 +485,50 @@ def dictionary():
         page_name="dictionary",
         local_snapshot_mode=False,
         bootstrap_data=build_bootstrap_data(),
+    )
+
+
+@main_blueprint.route("/light-bulbs")
+def light_bulbs():
+    return render_template(
+        "light_bulbs.html",
+        page_name="light-bulbs",
+        local_snapshot_mode=False,
+        bootstrap_data=build_bootstrap_data(),
+        reference_data=load_light_bulbs(),
+    )
+
+
+@main_blueprint.route("/electricity-usage")
+def electricity_usage():
+    return render_template(
+        "electricity_usage.html",
+        page_name="electricity-usage",
+        local_snapshot_mode=False,
+        bootstrap_data=build_bootstrap_data(),
+        reference_data=load_electricity_usage(),
+    )
+
+
+@main_blueprint.route("/circuit-breakers")
+def circuit_breakers():
+    return render_template(
+        "circuit_breakers.html",
+        page_name="circuit-breakers",
+        local_snapshot_mode=False,
+        bootstrap_data=build_bootstrap_data(),
+        reference_data=load_circuit_breakers(),
+    )
+
+
+@main_blueprint.route("/documents/circuit-breakers/file")
+def circuit_breakers_file():
+    if not CIRCUIT_BREAKER_DIRECTORY_PATH.exists():
+        return Response("Circuit breaker directory PDF is not available.", status=404)
+    return send_file(
+        CIRCUIT_BREAKER_DIRECTORY_PATH,
+        as_attachment=False,
+        mimetype="application/pdf",
     )
 
 
@@ -549,6 +608,39 @@ def appliances_save_api():
     payload = request.get_json(force=True)
     records = payload.get("records", [])
     return jsonify(save_appliance_records(records))
+
+
+@main_blueprint.route("/api/reference/light-bulbs")
+def light_bulbs_api():
+    return jsonify(load_light_bulbs())
+
+
+@main_blueprint.route("/api/reference/light-bulbs/save", methods=["POST"])
+def light_bulbs_save_api():
+    payload = request.get_json(force=True)
+    return jsonify(save_light_bulbs(payload.get("records") or []))
+
+
+@main_blueprint.route("/api/reference/electricity-usage")
+def electricity_usage_api():
+    return jsonify(load_electricity_usage())
+
+
+@main_blueprint.route("/api/reference/electricity-usage/save", methods=["POST"])
+def electricity_usage_save_api():
+    payload = request.get_json(force=True)
+    return jsonify(save_electricity_usage(payload))
+
+
+@main_blueprint.route("/api/reference/circuit-breakers")
+def circuit_breakers_api():
+    return jsonify(load_circuit_breakers())
+
+
+@main_blueprint.route("/api/reference/circuit-breakers/save", methods=["POST"])
+def circuit_breakers_save_api():
+    payload = request.get_json(force=True)
+    return jsonify(save_circuit_breakers(payload))
 
 
 @main_blueprint.route("/api/sunrun-production")
@@ -720,11 +812,10 @@ def nyseg_bill_viewer():
 
 @main_blueprint.route("/documents/nyseg-monthly-bill/file")
 def nyseg_monthly_bill_document():
-    return send_from_directory(
-        "C:\\Software Developement\\ChatGPT Codex\\Solar Energy - SunRun\\NYSEG Bill",
-        "July 2027.pdf",
-        as_attachment=False,
-    )
+    bill = load_monthly_bill_summary()
+    if not bill.available or not Path(bill.source_path).exists():
+        return Response("No NYSEG bill PDF is available.", status=404)
+    return send_file(bill.source_path, as_attachment=False, mimetype="application/pdf")
 
 
 @main_blueprint.route("/documents/nyseg-monthly-bill/view")

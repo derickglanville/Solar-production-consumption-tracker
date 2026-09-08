@@ -17,17 +17,22 @@ from solar_tracker.routes import build_bootstrap_data
 
 
 DOCS = ROOT / "docs"
-ASSET_VERSION = "20260903-sync96"
+ASSET_VERSION = "20260908-sync104"
 
 ROUTE_REPLACEMENTS = {
     'href="/"': 'href="index.html"',
     'href="/entries"': 'href="entries.html"',
     'href="/sunrun-production"': 'href="sunrun-production.html"',
     'href="/appliances"': 'href="appliances.html"',
+    'href="/light-bulbs"': 'href="light-bulbs.html"',
+    'href="/electricity-usage"': 'href="electricity-usage.html"',
     'href="/contract-summary"': 'href="contract-summary.html"',
     'href="/settings"': 'href="settings.html"',
     'href="/dictionary"': 'href="dictionary.html"',
     'href="/export/csv"': 'href="solar_tracker_demo_export.csv"',
+    'href="/documents/nyseg-bill/view"': 'href="#" aria-disabled="true" title="Available in the local app only"',
+    'href="/documents/nyseg-monthly-bill/view"': 'href="#" aria-disabled="true" title="Private bill PDFs are available in the local app only"',
+    'href="/circuit-breakers"': 'href="#" aria-disabled="true" title="The private circuit directory is available in the local app only"',
 }
 
 
@@ -61,6 +66,16 @@ def render_static_page(path: str) -> str:
         html,
     )
     html = re.sub(
+        r'src="/static/js/reference-editors\.js\?v=[^"]+"',
+        f'src="assets/js/reference-editors.js?v={ASSET_VERSION}"',
+        html,
+    )
+    html = re.sub(
+        r'src="/static/js/solar-path-tracker\.js\?v=[^"]+"',
+        f'src="assets/js/solar-path-tracker.js?v={ASSET_VERSION}"',
+        html,
+    )
+    html = re.sub(
         r'src="/static/js/firebase-config\.js\?v=[^"]+"',
         f'src="assets/js/firebase-config.js?v={ASSET_VERSION}"',
         html,
@@ -85,6 +100,8 @@ def sync_assets() -> None:
         ROOT / "static" / "js" / "app-bundle.js": DOCS / "assets" / "js" / "app-bundle.js",
         ROOT / "static" / "js" / "appliances.js": DOCS / "assets" / "js" / "appliances.js",
         ROOT / "static" / "js" / "sunrun-production.js": DOCS / "assets" / "js" / "sunrun-production.js",
+        ROOT / "static" / "js" / "reference-editors.js": DOCS / "assets" / "js" / "reference-editors.js",
+        ROOT / "static" / "js" / "solar-path-tracker.js": DOCS / "assets" / "js" / "solar-path-tracker.js",
         ROOT / "static" / "images" / "solar-home-side.png": DOCS / "assets" / "images" / "solar-home-side.png",
         ROOT / "static" / "images" / "solar-farm-side.png": DOCS / "assets" / "images" / "solar-farm-side.png",
     }
@@ -158,6 +175,8 @@ def main() -> None:
         "entries.html": "/entries",
         "sunrun-production.html": "/sunrun-production",
         "appliances.html": "/appliances",
+        "light-bulbs.html": "/light-bulbs",
+        "electricity-usage.html": "/electricity-usage",
         "contract-summary.html": "/contract-summary",
         "dictionary.html": "/dictionary",
         "settings.html": "/settings",

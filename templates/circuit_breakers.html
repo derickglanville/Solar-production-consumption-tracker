@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="hero-panel reference-editor-hero mb-3">
+  <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+    <div>
+      <p class="eyebrow mb-1">Editable Home Reference</p>
+      <h1 class="hero-title mb-1">Circuit Breaker Directory</h1>
+      <p class="text-muted mb-0">Edit the working circuit map and retain the original PDF for comparison.</p>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+      <button type="button" class="btn btn-contract btn-sm" data-circuit-reload>Reload Saved</button>
+      <button type="button" class="btn btn-contract btn-sm" data-circuit-add>Add Circuit</button>
+      <button type="button" class="btn btn-sun btn-sm" data-circuit-save>Save Changes</button>
+      <a class="btn btn-contract btn-sm" href="{{ url_for('main.circuit_breakers_file') }}" target="_blank" rel="noopener">Original PDF</a>
+      <a class="btn btn-contract btn-sm" href="{{ url_for('main.dashboard') }}">Back to Dashboard</a>
+    </div>
+  </div>
+</section>
+
+<div id="circuit-editor-status"></div>
+
+<section class="card tracker-card mb-3">
+  <div class="card-body reference-summary-editor">
+    <div class="row g-2">
+      <div class="col-lg-6"><label class="form-label" for="circuit-title">Document Title</label><input id="circuit-title" class="form-control form-control-sm" type="text"></div>
+      <div class="col-lg-3"><label class="form-label" for="circuit-subtitle">Description</label><input id="circuit-subtitle" class="form-control form-control-sm" type="text"></div>
+      <div class="col-lg-3"><label class="form-label" for="circuit-updated">Updated</label><input id="circuit-updated" class="form-control form-control-sm" type="text"></div>
+    </div>
+  </div>
+</section>
+
+<section class="card tracker-card reference-editor-card mb-3">
+  <div class="card-body">
+    <div class="d-flex justify-content-between align-items-center gap-2 mb-2">
+      <h2 class="h5 mb-0">Editable Circuit Map</h2>
+      <span class="text-muted small"><strong id="circuit-row-count">0</strong> listed circuits</span>
+    </div>
+    <div class="reference-table-scroll circuit-reference-table-scroll">
+      <table class="table align-middle reference-editor-table circuit-reference-table">
+        <thead><tr><th>Circuit</th><th>Identification</th><th>Status / Notes</th><th class="reference-action-column">Action</th></tr></thead>
+        <tbody id="circuit-breakers-table-body"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section class="card tracker-card mb-3">
+  <div class="card-body reference-summary-editor">
+    <div class="row g-3">
+      <div class="col-lg-6"><label class="form-label" for="circuit-key-note">Key Equipment Note</label><textarea id="circuit-key-note" class="form-control" rows="3"></textarea></div>
+      <div class="col-lg-6"><label class="form-label" for="circuit-safety-note">Safety Note</label><textarea id="circuit-safety-note" class="form-control circuit-safety-input" rows="3"></textarea></div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>window.CIRCUIT_BREAKER_BOOTSTRAP = {{ reference_data|tojson }};</script>
+<script defer src="{{ url_for('static', filename='js/circuit-breakers.js') }}?v=20260908-sync104"></script>
+{% endblock %}

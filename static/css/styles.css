@@ -299,6 +299,493 @@ body[data-page="dashboard"].dashboard-compact-mode .container {
   white-space: nowrap;
 }
 
+.solar-path-tracker {
+  overflow: hidden;
+  background: rgba(250, 252, 251, 0.96);
+}
+
+.solar-path-summary {
+  width: 100%;
+  min-height: 82px;
+  display: grid;
+  grid-template-columns: minmax(260px, 1.25fr) minmax(420px, 1fr) auto;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.9rem 1.15rem;
+  border: 0;
+  background: linear-gradient(100deg, rgba(255, 255, 255, 0.96), rgba(235, 243, 243, 0.92));
+  color: var(--text);
+  text-align: left;
+}
+
+.solar-path-summary:hover {
+  background: linear-gradient(100deg, #fff, rgba(228, 239, 240, 0.96));
+}
+
+.solar-path-summary-title .eyebrow,
+.solar-path-summary-title strong,
+.solar-path-summary-live small,
+.solar-path-summary-live strong {
+  display: block;
+}
+
+.solar-path-summary-title strong {
+  margin-top: 0.2rem;
+  font-size: 1.12rem;
+}
+
+.solar-path-summary-live {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.solar-path-summary-live span {
+  padding: 0.45rem 0.6rem;
+  border-left: 2px solid rgba(109, 149, 171, 0.3);
+}
+
+.solar-path-summary-live small {
+  color: var(--muted);
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.solar-path-summary-live strong {
+  margin-top: 0.15rem;
+  font-size: 0.86rem;
+  white-space: nowrap;
+}
+
+.solar-path-expand-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.48rem 0.75rem;
+  border: 1px solid rgba(80, 111, 128, 0.2);
+  border-radius: 999px;
+  color: #446779;
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.solar-path-chevron {
+  font-size: 1.15rem;
+  line-height: 0.7;
+  transition: transform 180ms ease;
+}
+
+.solar-path-tracker.is-expanded .solar-path-chevron {
+  transform: rotate(180deg);
+}
+
+.solar-path-panel {
+  padding: 0 1rem 1rem;
+  border-top: 1px solid rgba(89, 111, 126, 0.13);
+  color: #eef7fb;
+  background: linear-gradient(150deg, #071b29 0%, #0d2b3c 56%, #092331 100%);
+}
+
+.solar-review-controls {
+  display: grid;
+  grid-template-columns: minmax(300px, 0.75fr) minmax(440px, 1.25fr);
+  gap: 0.8rem;
+  padding: 0.85rem 0 0;
+}
+
+.solar-review-date-group,
+.solar-review-time-group {
+  padding: 0.68rem 0.75rem;
+  border: 1px solid rgba(164, 207, 225, 0.2);
+  border-radius: 13px;
+  background: linear-gradient(145deg, rgba(18, 57, 76, 0.96), rgba(11, 42, 58, 0.92));
+}
+
+.solar-review-controls label,
+.solar-review-time-heading strong {
+  color: #d7edf5;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.solar-review-time-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.35rem;
+}
+
+.solar-review-time-heading strong {
+  color: #ffe17a;
+}
+
+.solar-review-button-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.35rem;
+}
+
+.solar-review-controls button,
+.solar-review-controls input[type="date"] {
+  min-height: 32px;
+  padding: 0.32rem 0.62rem;
+  border: 1px solid rgba(174, 215, 232, 0.3);
+  border-radius: 999px;
+  color: #e7f5fa;
+  background: rgba(5, 34, 50, 0.72);
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.solar-review-controls button:hover,
+.solar-review-controls button:focus-visible {
+  border-color: #ffe17a;
+  color: #ffe17a;
+}
+
+.solar-review-controls input[type="date"] {
+  flex: 1;
+  min-width: 145px;
+  color-scheme: dark;
+}
+
+.solar-review-controls input[type="range"] {
+  width: 100%;
+  accent-color: #ffd94d;
+}
+
+.solar-review-controls .solar-live-button {
+  margin-left: auto;
+  border-color: rgba(255, 225, 122, 0.6);
+  color: #172f3d;
+  background: #ffe17a;
+}
+
+.solar-sky {
+  position: relative;
+  height: 450px;
+  margin: 1rem 0;
+  overflow: hidden;
+  border-radius: 20px;
+  color: #fff;
+  border: 1px solid rgba(172, 223, 247, 0.34);
+  background:
+    radial-gradient(circle at 50% 44%, rgba(255, 231, 135, 0.2), transparent 18%),
+    linear-gradient(180deg, #0754a4 0%, #2d8bd1 44%, #8fc9e6 72%, #f0c67a 100%);
+  box-shadow: inset 0 0 80px rgba(3, 31, 62, 0.22), 0 22px 48px rgba(2, 15, 25, 0.25);
+  transition: background 600ms ease;
+}
+
+.solar-sky[data-condition="cloudy"] { background: linear-gradient(180deg, #54798f 0%, #95afbd 58%, #d5d9cf 100%); }
+.solar-sky[data-condition="overcast"] { background: linear-gradient(180deg, #485b68 0%, #84939b 62%, #c9ceca 100%); }
+.solar-sky[data-condition="rain"] { background: linear-gradient(180deg, #293e50 0%, #5f7888 62%, #9faeb0 100%); }
+.solar-sky[data-condition="snow"] { background: linear-gradient(180deg, #8099aa 0%, #c7d6de 60%, #eef3f0 100%); }
+.solar-sky[data-condition="smoke"] { background: linear-gradient(180deg, #7c817e 0%, #c6ad89 64%, #e4c99b 100%); }
+.solar-sky[data-condition="night"] { background: radial-gradient(circle at 76% 18%, rgba(170, 199, 230, 0.18), transparent 15%), linear-gradient(180deg, #071526 0%, #17324e 68%, #4f5e69 100%); }
+
+.solar-sky::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0;
+  height: 32%;
+  background:
+    radial-gradient(ellipse at 15% 100%, #153b34 0 24%, transparent 25%),
+    radial-gradient(ellipse at 78% 108%, #1a4d3b 0 31%, transparent 32%),
+    linear-gradient(173deg, transparent 0 31%, rgba(39, 84, 68, 0.7) 32% 50%, rgba(9, 40, 37, 0.96) 51% 100%);
+  pointer-events: none;
+}
+
+.solar-arc {
+  position: absolute;
+  inset: 17% 4% 16%;
+  width: 92%;
+  height: 67%;
+  overflow: visible;
+  z-index: 3;
+}
+
+.solar-arc path {
+  fill: none;
+  stroke: rgba(255, 221, 90, 0.92);
+  stroke-width: 3;
+  stroke-dasharray: none;
+  filter: drop-shadow(0 0 7px rgba(255, 213, 56, 0.75));
+  vector-effect: non-scaling-stroke;
+}
+
+.solar-current-sun {
+  position: absolute;
+  z-index: 5;
+  width: 38px;
+  height: 38px;
+  margin: -19px;
+  border-radius: 50%;
+  background: #ffe064;
+  box-shadow: 0 0 12px #ffe064, 0 0 34px rgba(255, 204, 44, 0.9), 0 0 58px rgba(255, 204, 44, 0.55);
+  transition: left 700ms ease, top 700ms ease, opacity 300ms ease;
+  animation: solar-pulse 2.6s ease-in-out infinite;
+}
+
+.solar-current-sun span {
+  position: absolute;
+  left: 50%;
+  top: -27px;
+  transform: translateX(-50%);
+  padding: 0.18rem 0.42rem;
+  border-radius: 999px;
+  color: #172f3d;
+  background: rgba(255, 247, 202, 0.94);
+  box-shadow: 0 3px 12px rgba(8, 28, 41, 0.24);
+  font-size: 0.62rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+@keyframes solar-pulse {
+  0%, 100% { box-shadow: 0 0 12px #ffe064, 0 0 34px rgba(255, 204, 44, 0.9), 0 0 58px rgba(255, 204, 44, 0.55); }
+  50% { box-shadow: 0 0 18px #fff4aa, 0 0 46px rgba(255, 211, 50, 0.94), 0 0 76px rgba(255, 191, 38, 0.62); }
+}
+
+.solar-current-sun.below-horizon { opacity: 0; }
+
+.solar-horizon {
+  position: absolute;
+  z-index: 4;
+  left: 4%;
+  right: 4%;
+  bottom: 16%;
+  border-top: 1px solid rgba(255, 255, 255, 0.65);
+}
+
+.solar-compass {
+  position: absolute;
+  z-index: 6;
+  left: 4%;
+  right: 4%;
+  bottom: 3%;
+  display: flex;
+  justify-content: space-between;
+  text-align: center;
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.solar-compass small { opacity: 0.76; }
+
+.solar-editorial-head {
+  position: absolute;
+  z-index: 7;
+  left: 1rem;
+  top: 1rem;
+  max-width: 48%;
+  text-shadow: 0 2px 14px rgba(2, 25, 46, 0.46);
+}
+
+.solar-editorial-head span {
+  color: #ffe88d;
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.solar-editorial-head h2 {
+  margin: 0.2rem 0 0.18rem;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(1.25rem, 2.1vw, 2rem);
+  line-height: 1.02;
+}
+
+.solar-editorial-head p { margin: 0; font-size: 0.72rem; opacity: 0.9; }
+
+.solar-insight-card {
+  position: absolute;
+  z-index: 8;
+  right: 1rem;
+  top: 1rem;
+  width: min(31%, 340px);
+  padding: 0.72rem 0.82rem;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 12px;
+  background: linear-gradient(145deg, rgba(3, 28, 54, 0.78), rgba(8, 48, 77, 0.58));
+  box-shadow: 0 12px 28px rgba(2, 18, 31, 0.2);
+  backdrop-filter: blur(10px);
+}
+
+.solar-insight-card span { color: #9fd5eb; font-size: 0.6rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; }
+.solar-insight-card strong { display: block; margin-top: 0.22rem; font-size: 0.86rem; }
+.solar-insight-card p { margin: 0.28rem 0 0; font-size: 0.71rem; line-height: 1.4; opacity: 0.9; }
+
+.solar-sky-caption {
+  position: absolute;
+  z-index: 7;
+  left: 1rem;
+  bottom: 18%;
+  max-width: 360px;
+  padding: 0.5rem 0.68rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  background: rgba(7, 33, 50, 0.64);
+  backdrop-filter: blur(7px);
+}
+
+.solar-sky-caption strong,
+.solar-sky-caption span { display: block; }
+.solar-sky-caption span { margin-top: 0.18rem; font-size: 0.78rem; opacity: 0.9; }
+
+.solar-cloud {
+  position: absolute;
+  z-index: 2;
+  width: 150px;
+  height: 42px;
+  border-radius: 50px;
+  background: rgba(255, 255, 255, 0.74);
+  box-shadow: 36px -18px 0 1px rgba(255, 255, 255, 0.72), 75px 0 0 -2px rgba(255, 255, 255, 0.68);
+  opacity: 0;
+}
+
+.solar-cloud-one { top: 27%; left: 16%; }
+.solar-cloud-two { top: 17%; right: 25%; transform: scale(0.72); }
+.solar-sky[data-condition="cloudy"] .solar-cloud { opacity: 0.72; }
+.solar-sky[data-condition="overcast"] .solar-cloud,
+.solar-sky[data-condition="rain"] .solar-cloud,
+.solar-sky[data-condition="snow"] .solar-cloud { opacity: 0.92; filter: grayscale(0.6); }
+
+.solar-rain {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  opacity: 0;
+  background-image: repeating-linear-gradient(105deg, transparent 0 18px, rgba(210, 235, 248, 0.46) 19px 21px, transparent 22px 38px);
+  transform: translateY(-20px);
+}
+.solar-sky[data-condition="rain"] .solar-rain { opacity: 0.55; }
+
+.solar-sky-stars {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  opacity: 0;
+  background-image: radial-gradient(circle, rgba(255,255,255,.9) 0 1px, transparent 1.5px);
+  background-size: 48px 48px;
+}
+.solar-sky[data-condition="night"] .solar-sky-stars { opacity: 0.7; }
+
+.solar-hour-marker {
+  position: absolute;
+  z-index: 4;
+  left: var(--marker-x);
+  top: var(--marker-y);
+  width: 82px;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  color: #fff;
+  text-shadow: 0 1px 5px rgba(0, 23, 45, 0.9);
+}
+
+.solar-hour-marker i {
+  display: block;
+  width: 13px;
+  height: 13px;
+  margin: 0 auto;
+  border: 2px solid rgba(255, 250, 208, 0.88);
+  border-radius: 50%;
+  background: #ffd94d;
+  box-shadow: 0 0 7px #ffe77b, 0 0 15px rgba(255, 210, 56, 0.75);
+}
+
+.solar-hour-marker b,
+.solar-hour-marker small { display: block; white-space: nowrap; }
+.solar-hour-marker b { margin-top: -35px; font-size: 0.63rem; }
+.solar-hour-marker small { font-size: 0.54rem; opacity: 0.94; }
+.solar-hour-marker.is-edge b { margin-top: -29px; }
+
+.solar-path-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 0.65rem;
+  margin-bottom: 0.85rem;
+}
+
+.solar-path-detail-grid > div {
+  min-height: 92px;
+  padding: 0.68rem 0.72rem;
+  border: 1px solid rgba(164, 207, 225, 0.18);
+  border-radius: 13px;
+  background: linear-gradient(145deg, rgba(18, 57, 76, 0.96), rgba(11, 42, 58, 0.92));
+}
+
+.solar-path-detail-grid span,
+.solar-path-detail-grid strong,
+.solar-path-detail-grid small { display: block; }
+.solar-path-detail-grid span { color: #8fb8c9; font-size: 0.68rem; letter-spacing: 0.04em; text-transform: uppercase; }
+.solar-path-detail-grid strong { margin-top: 0.28rem; font-size: 0.91rem; }
+.solar-path-detail-grid small { margin-top: 0.18rem; color: #afcbd6; font-size: 0.68rem; line-height: 1.25; }
+
+.solar-reference-band {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(300px, 0.75fr);
+  gap: 0.85rem;
+  align-items: stretch;
+}
+
+.solar-path-table-wrap {
+  max-height: 230px;
+  overflow: auto;
+  border: 1px solid rgba(154, 200, 221, 0.2);
+  border-radius: 12px;
+}
+.solar-path-table { font-size: 0.78rem; }
+.solar-path-table thead { position: sticky; top: 0; z-index: 1; }
+.solar-path-table th { background: #183849; color: #cbe5ef; }
+.solar-path-table td { color: #e7f1f5; background: rgba(7, 31, 44, 0.72); border-color: rgba(152, 193, 210, 0.14); }
+.solar-path-table th, .solar-path-table td { padding: 0.38rem 0.55rem; white-space: nowrap; }
+.solar-takeaways {
+  padding: 0.85rem 1rem;
+  border: 1px solid rgba(255, 228, 150, 0.5);
+  border-radius: 12px;
+  color: #2f352f;
+  background: linear-gradient(145deg, #fff5ca, #f4e4ac);
+  box-shadow: 0 10px 28px rgba(0, 12, 19, 0.2);
+}
+.solar-takeaways-kicker { color: #9b6d16; font-size: 0.59rem; font-weight: 900; letter-spacing: 0.12em; text-transform: uppercase; }
+.solar-takeaways h3 { margin: 0.18rem 0 0.45rem; font-family: Georgia, "Times New Roman", serif; font-size: 1.12rem; }
+.solar-takeaways ul { margin: 0; padding-left: 1.05rem; font-size: 0.71rem; line-height: 1.4; }
+.solar-takeaways li + li { margin-top: 0.24rem; }
+.solar-path-disclaimer { padding-top: 0.65rem; color: #9dbdca; font-size: 0.72rem; }
+
+@media (max-width: 1100px) {
+  .solar-path-summary { grid-template-columns: 1fr auto; }
+  .solar-path-summary-live { grid-column: 1 / -1; grid-row: 2; }
+  .solar-path-detail-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .solar-reference-band { grid-template-columns: 1fr; }
+  .solar-review-controls { grid-template-columns: 1fr; }
+  .solar-hour-marker:nth-child(even) b,
+  .solar-hour-marker:nth-child(even) small { display: none; }
+}
+
+@media (max-width: 767.98px) {
+  .solar-path-summary { grid-template-columns: 1fr; }
+  .solar-path-summary-live { grid-column: auto; grid-template-columns: 1fr; }
+  .solar-path-expand-label { justify-self: start; }
+  .solar-sky { height: 390px; }
+  .solar-path-detail-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .solar-editorial-head { max-width: calc(100% - 2rem); }
+  .solar-insight-card { top: auto; right: 0.7rem; bottom: 18%; width: min(55%, 280px); }
+  .solar-sky-caption { display: none; }
+  .solar-hour-marker b,
+  .solar-hour-marker small { display: none; }
+  .solar-review-button-row { flex-wrap: wrap; }
+  .solar-review-controls .solar-live-button { margin-left: 0; }
+}
+
 @media (max-width: 767.98px) {
   .dashboard-hero-layout {
     grid-template-columns: 1fr;
@@ -540,6 +1027,147 @@ body.chart-popout-active {
 
 .info-grid strong {
   font-size: 1.05rem;
+}
+
+.nyseg-baseline-card {
+  overflow: hidden;
+}
+
+.nyseg-baseline-summary {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(155px, 1fr));
+  gap: 0.65rem;
+}
+
+.nyseg-summary-tile {
+  display: grid;
+  align-content: start;
+  gap: 0.12rem;
+  min-width: 0;
+  padding: 0.72rem 0.8rem;
+  border: 1px solid rgba(83, 125, 149, 0.2);
+  border-radius: 13px;
+  background: linear-gradient(145deg, rgba(247, 250, 251, 0.98), rgba(237, 244, 246, 0.88));
+}
+
+.nyseg-summary-tile span {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
+}
+
+.nyseg-summary-tile strong {
+  color: #274f64;
+  font-size: 1.05rem;
+}
+
+.nyseg-summary-tile small {
+  color: var(--muted);
+  font-size: 0.7rem;
+  line-height: 1.25;
+}
+
+.nyseg-summary-tile-import { border-top: 3px solid #d47a56; }
+.nyseg-summary-tile-export { border-top: 3px solid #3d9870; }
+.nyseg-summary-tile-net { border-top: 3px solid #d9a441; }
+
+.nyseg-baseline-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(320px, 0.8fr);
+  gap: 0.8rem;
+}
+
+.nyseg-data-panel {
+  min-width: 0;
+  padding: 0.85rem;
+  border: 1px solid rgba(83, 125, 149, 0.18);
+  border-radius: 15px;
+  background: rgba(251, 252, 252, 0.9);
+}
+
+.nyseg-data-panel-full {
+  grid-column: 1 / -1;
+}
+
+.nyseg-panel-heading h3 {
+  margin: 0;
+  font-size: 0.98rem;
+}
+
+.nyseg-panel-heading p,
+.nyseg-table-footnote {
+  margin: 0.15rem 0 0.55rem;
+  color: var(--muted);
+  font-size: 0.74rem;
+}
+
+.nyseg-table-scroll {
+  overflow: auto;
+  border: 1px solid rgba(83, 125, 149, 0.13);
+  border-radius: 10px;
+}
+
+.nyseg-usage-scroll {
+  max-height: 330px;
+}
+
+.nyseg-data-table {
+  min-width: 690px;
+  font-size: 0.76rem;
+  white-space: nowrap;
+}
+
+.nyseg-table-scroll-compact .nyseg-data-table {
+  min-width: 420px;
+}
+
+.nyseg-data-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 0.45rem 0.5rem;
+  border-bottom-color: rgba(83, 125, 149, 0.22);
+  background: #eef4f5;
+  color: #587083;
+  font-size: 0.68rem;
+  letter-spacing: 0.035em;
+  text-transform: uppercase;
+}
+
+.nyseg-data-table td {
+  padding: 0.42rem 0.5rem;
+  vertical-align: middle;
+}
+
+.nyseg-data-table td small {
+  display: block;
+  max-width: 190px;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 0.67rem;
+  text-overflow: ellipsis;
+}
+
+.nyseg-net-positive {
+  color: #1f7a51 !important;
+  font-weight: 700;
+}
+
+.nyseg-net-negative {
+  color: #b45542 !important;
+  font-weight: 700;
+}
+
+@media (max-width: 1100px) {
+  .nyseg-baseline-summary { grid-template-columns: repeat(3, minmax(150px, 1fr)); }
+  .nyseg-baseline-layout { grid-template-columns: 1fr; }
+  .nyseg-data-panel-full { grid-column: auto; }
+}
+
+@media (max-width: 620px) {
+  .nyseg-baseline-summary { grid-template-columns: 1fr 1fr; }
 }
 
 .energy-impact-panel {
@@ -2306,5 +2934,152 @@ body[data-page="dashboard"].dashboard-compact-mode .btn-contract {
 
   .dashboard-side-panel {
     display: none;
+  }
+}
+
+.reference-editor-hero {
+  padding: 1.15rem 1.35rem;
+}
+
+.reference-editor-hero .hero-title {
+  font-size: clamp(1.55rem, 3vw, 2.25rem);
+}
+
+.reference-metric {
+  min-height: 92px;
+  padding: 0.9rem 1rem;
+}
+
+.reference-metric span {
+  color: var(--muted, #627789);
+  font-size: 0.78rem;
+}
+
+.reference-metric strong {
+  display: block;
+  font-size: 1.55rem;
+  line-height: 1.1;
+  margin-top: 0.25rem;
+}
+
+.reference-editor-card .card-body {
+  padding: 0.85rem 1rem;
+}
+
+.reference-table-scroll {
+  max-height: 61vh;
+  overflow: auto;
+  border: 1px solid #dce5e8;
+  border-radius: 12px;
+}
+
+.reference-editor-table {
+  min-width: 820px;
+  margin: 0;
+  table-layout: fixed;
+}
+
+.reference-editor-table thead {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.reference-editor-table th {
+  background: #edf3f4;
+  color: #526c7e;
+  font-size: 0.76rem;
+  letter-spacing: 0.025em;
+  padding: 0.48rem 0.55rem;
+  white-space: nowrap;
+}
+
+.reference-editor-table td {
+  border-color: rgba(105, 132, 143, 0.2);
+  padding: 0.25rem 0.35rem;
+}
+
+.reference-editor-table .form-control,
+.reference-editor-table .form-select {
+  min-height: 30px;
+  border-color: rgba(105, 132, 143, 0.28);
+  background: rgba(255, 255, 255, 0.82);
+  font-size: 0.8rem;
+  padding-block: 0.25rem;
+}
+
+.reference-editor-table th:first-child { width: 25%; }
+.reference-editor-table th:nth-child(2) { width: 11%; }
+.reference-editor-table th:nth-child(3) { width: 14%; }
+.reference-editor-table th:nth-child(4) { width: 40%; }
+.reference-editor-table .reference-action-column { width: 10%; }
+
+.reference-led-yes td { background: rgba(122, 177, 143, 0.1); }
+.reference-led-no td { background: rgba(225, 166, 63, 0.2); }
+.reference-led-unknown td { background: rgba(119, 159, 180, 0.13); }
+
+.reference-summary-editor {
+  padding: 1rem 1.15rem;
+}
+
+.usage-reference-table-scroll {
+  max-height: 53vh;
+}
+
+.usage-reference-table th:first-child { width: 31%; }
+.usage-reference-table th:nth-child(2) { width: 31%; }
+.usage-reference-table th:nth-child(3) { width: 28%; }
+
+.circuit-reference-table-scroll {
+  max-height: 57vh;
+}
+
+.circuit-reference-table {
+  min-width: 900px;
+}
+
+.circuit-reference-table th:first-child { width: 13%; }
+.circuit-reference-table th:nth-child(2) { width: 31%; }
+.circuit-reference-table th:nth-child(3) { width: 46%; }
+
+.circuit-reference-table .circuit-number-input {
+  font-weight: 700;
+  text-align: center;
+}
+
+.circuit-row-probable td { background: rgba(225, 166, 63, 0.18); }
+.circuit-row-unknown td { background: rgba(214, 92, 74, 0.16); }
+.circuit-row-240v td { background: rgba(119, 159, 180, 0.14); }
+
+.circuit-safety-input {
+  border-color: rgba(214, 92, 74, 0.38);
+  background: rgba(255, 248, 246, 0.8);
+}
+
+.reference-section-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+
+.reference-section-editor {
+  padding: 0.8rem;
+  border: 1px solid #dce5e8;
+  border-radius: 12px;
+  background: linear-gradient(145deg, #fbfcfa, #f1f6f5);
+}
+
+.reference-section-editor textarea {
+  line-height: 1.4;
+  resize: vertical;
+}
+
+@media (max-width: 767px) {
+  .reference-section-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .reference-table-scroll {
+    max-height: 58vh;
   }
 }

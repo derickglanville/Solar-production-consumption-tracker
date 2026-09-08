@@ -5,3 +5,7 @@
   {% include "dashboard_content.html" %}
 </div>
 {% endblock %}
+
+{% block extra_scripts %}
+<script defer src="{{ url_for('static', filename='js/solar-path-tracker.js') }}?v=20260908-sync104"></script>
+{% endblock %}

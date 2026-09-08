@@ -1,0 +1,115 @@
+<section class="mb-4">
+  <div class="card tracker-card nyseg-baseline-card">
+    <div class="card-body">
+      <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
+        <div>
+          <p class="eyebrow mb-2">Historic NYSEG Baseline</p>
+          <h2 class="h5 mb-1">Monthly usage, billing, and net-metering history</h2>
+          <p class="text-muted mb-0">Usage comes from the NYSEG monthly export. Charge details and meter registers come from the bill PDFs.</p>
+        </div>
+        <div class="d-flex flex-wrap gap-2 align-items-center">
+          {% if monthly_bill.available %}
+          <span class="ai-status-pill ai-status-pill-success">{{ monthly_bill.usage_totals.record_count }} Usage Months</span>
+          <span class="ai-status-pill ai-status-pill-success">{{ monthly_bill.billing_totals.record_count }} Bills Reviewed</span>
+          <a class="btn btn-contract btn-sm" href="{{ url_for('main.nyseg_bill_viewer') }}">Historic Spreadsheet</a>
+          <a class="btn btn-contract btn-sm" href="{{ url_for('main.nyseg_monthly_bill_viewer') }}">Latest Bill</a>
+          {% endif %}
+        </div>
+      </div>
+
+      {% if monthly_bill.available %}
+      <div class="nyseg-baseline-summary mb-3">
+        <div class="nyseg-summary-tile">
+          <span>Average Monthly Usage</span>
+          <strong>{{ "{:,.0f}".format(monthly_bill.usage_totals.average_monthly_kwh) }} kWh</strong>
+          <small>{{ monthly_bill.usage_totals.start_date }} to {{ monthly_bill.usage_totals.end_date }}</small>
+        </div>
+        <div class="nyseg-summary-tile">
+          <span>Average Monthly Usage Cost</span>
+          <strong>${{ "{:,.2f}".format(monthly_bill.usage_totals.average_monthly_cost) }}</strong>
+          <small>${{ "{:.3f}".format(monthly_bill.usage_totals.effective_rate_per_kwh) }}/kWh blended</small>
+        </div>
+        <div class="nyseg-summary-tile nyseg-summary-tile-import">
+          <span>Bill-Period Import</span>
+          <strong>{{ "{:,.0f}".format(monthly_bill.net_metering.billing_period_import_kwh) }} kWh</strong>
+          <small>Includes 419 kWh on the replaced meter</small>
+        </div>
+        <div class="nyseg-summary-tile nyseg-summary-tile-export">
+          <span>Smart-Meter Export</span>
+          <strong>{{ "{:,.0f}".format(monthly_bill.net_metering.export_kwh) }} kWh</strong>
+          <small>Register 02 across available solar bills</small>
+        </div>
+        <div class="nyseg-summary-tile nyseg-summary-tile-net">
+          <span>Bill-Period Net Position</span>
+          <strong>{{ "{:,.0f}".format(monthly_bill.net_metering.billing_period_net_kwh|abs) }} kWh {{ monthly_bill.net_metering.billing_period_direction|lower }}</strong>
+          <small>Import minus export; negative means surplus export</small>
+        </div>
+      </div>
+
+      <div class="nyseg-baseline-layout">
+        <article class="nyseg-data-panel nyseg-data-panel-wide">
+          <div class="nyseg-panel-heading">
+            <div><h3>Historical Billing Month to Month</h3><p>Energy usage and itemized electricity charges from each PDF.</p></div>
+          </div>
+          <div class="nyseg-table-scroll">
+            <table class="table nyseg-data-table mb-0">
+              <thead><tr><th>Billing Period</th><th>Used</th><th>Delivery</th><th>Supply</th><th>Taxes</th><th>Misc.</th><th>Energy Total</th><th>Amount Due</th></tr></thead>
+              <tbody>
+                {% for row in monthly_bill.billing_records %}
+                <tr>
+                  <td><strong>{{ row.billing_start_date }} to {{ row.billing_end_date }}</strong><small>{{ row.days_in_period }} days</small></td>
+                  <td>{{ "{:,.0f}".format(row.imported_kwh) }} kWh</td>
+                  <td>${{ "{:,.2f}".format(row.delivery_charges) }}</td>
+                  <td>${{ "{:,.2f}".format(row.supply_charges) }}</td>
+                  <td>${{ "{:,.2f}".format(row.taxes) }}</td>
+                  <td>${{ "{:,.2f}".format(row.miscellaneous_charges) }}</td>
+                  <td><strong>${{ "{:,.2f}".format(row.total_energy_charges) }}</strong></td>
+                  <td>${{ "{:,.2f}".format(row.amount_due) }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          <p class="nyseg-table-footnote">Amount Due can include prior balances, budget billing, or payment-plan amounts. Energy Total is the better month-to-month electricity-charge comparison.</p>
+        </article>
+
+        <article class="nyseg-data-panel">
+          <div class="nyseg-panel-heading"><div><h3>Net Metering</h3><p>Register 01 import versus Register 02 export.</p></div></div>
+          <div class="nyseg-table-scroll nyseg-table-scroll-compact">
+            <table class="table nyseg-data-table mb-0">
+              <thead><tr><th>Period</th><th>Import</th><th>Export</th><th>Net</th></tr></thead>
+              <tbody>
+                {% for row in monthly_bill.billing_records %}
+                <tr>
+                  <td><strong>{{ row.billing_end_date }}</strong><small title="{{ row.meter_note }}">{{ row.net_direction }}</small></td>
+                  <td>{{ "{:,.0f}".format(row.imported_kwh) }}</td>
+                  <td>{{ "{:,.0f}".format(row.exported_kwh) }}</td>
+                  <td class="{% if row.net_grid_kwh <= 0 %}nyseg-net-positive{% else %}nyseg-net-negative{% endif %}">{{ "{:+,.0f}".format(row.net_grid_kwh) }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          <div class="tracker-modal-note mt-2">The meter-transition bill includes 419 kWh from the old meter. Smart-meter-only totals are {{ "{:,.0f}".format(monthly_bill.net_metering.smart_meter_import_kwh) }} kWh imported and {{ "{:,.0f}".format(monthly_bill.net_metering.export_kwh) }} kWh exported.</div>
+        </article>
+
+        <article class="nyseg-data-panel nyseg-data-panel-full">
+          <div class="nyseg-panel-heading"><div><h3>Usage Data Month to Month</h3><p>Scrollable NYSEG export history, newest month first.</p></div></div>
+          <div class="nyseg-table-scroll nyseg-usage-scroll">
+            <table class="table nyseg-data-table mb-0">
+              <thead><tr><th>Month</th><th>Billing Period</th><th>Usage</th><th>Usage Cost</th><th>Effective $/kWh</th><th>Avg. Temp.</th></tr></thead>
+              <tbody>
+                {% for row in monthly_bill.usage_records %}
+                <tr><td><strong>{{ row.month_label }}</strong></td><td>{{ row.billing_start_date }} to {{ row.billing_end_date }}</td><td>{{ "{:,.0f}".format(row.usage_kwh) }} kWh</td><td>${{ "{:,.2f}".format(row.cost) }}</td><td>${{ "{:.3f}".format(row.effective_rate_per_kwh) }}</td><td>{{ "{:,.0f}".format(row.average_temperature_f) }}°F</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </article>
+      </div>
+      {% else %}
+      <div class="tracker-modal-note">No NYSEG bill or monthly usage sources are currently loaded.</div>
+      {% endif %}
+    </div>
+  </div>
+</section>

@@ -59,6 +59,9 @@
               onclick="window.location.assign(window.location.pathname + '?refresh=' + Date.now())"
               title="Re-read the SunRun CSV and refresh live Firebase data"
             >Force Load Data</button>
+            <a class="btn btn-contract btn-sm" href="{{ url_for('main.light_bulbs') }}">Light Bulbs</a>
+            <a class="btn btn-contract btn-sm" href="{{ url_for('main.electricity_usage') }}">Electricity Usage</a>
+            <a class="btn btn-contract btn-sm" href="{{ url_for('main.circuit_breakers') }}" target="_blank" rel="noopener noreferrer">Circuit Breakers</a>
           </div>
         </div>
         <div class="stat-callout dashboard-projection-callout">
@@ -79,6 +82,101 @@
             ({{ "%.1f"|format(metrics.projection_vs_guarantee_pct|abs) }}%)
           </div>
         </div>
+      </div>
+    </section>
+
+    {% set solar_entry = recent_entries[0] if recent_entries else none %}
+    <section
+      class="solar-path-tracker tracker-card mb-4"
+      data-solar-path-tracker
+      data-entry-date="{{ solar_entry.entry_date if solar_entry else '' }}"
+      data-weather="{{ solar_entry.weather if solar_entry else 'Unknown' }}"
+      data-cloud-cover="{{ solar_entry.cloud_cover_pct if solar_entry and solar_entry.cloud_cover_pct is not none else '' }}"
+      data-irradiance-peak="{{ solar_entry.irradiance_peak_wm2 if solar_entry else 0 }}"
+      data-daily-production="{{ solar_entry.production_kwh if solar_entry else 0 }}"
+      data-system-size="{{ config.system_size_kw_dc }}"
+      data-hourly-profile="%5B%5D"
+      data-entry-history="{{ tracker_entries|tojson|forceescape }}"
+    >
+      <button class="solar-path-summary" type="button" data-solar-path-toggle aria-expanded="false">
+        <span class="solar-path-summary-title">
+          <span class="eyebrow">Live Solar Tracker</span>
+          <strong>The Sun's Path Across Yorktown Heights</strong>
+        </span>
+        <span class="solar-path-summary-live">
+          <span><small>Sun position</small><strong data-solar-summary-position>Calculating...</strong></span>
+          <span><small>Estimated now</small><strong data-solar-summary-power>-- kW</strong></span>
+          <span><small>Sky</small><strong data-solar-summary-weather>{{ solar_entry.weather if solar_entry else 'Loading' }}</strong></span>
+        </span>
+        <span class="solar-path-expand-label"><span data-solar-toggle-label>Expand tracker</span><span class="solar-path-chevron" aria-hidden="true">⌄</span></span>
+      </button>
+      <div class="solar-path-panel" data-solar-path-panel hidden>
+        <div class="solar-review-controls" aria-label="Solar path review controls">
+          <div class="solar-review-date-group">
+            <label for="solar-review-date-server">Review Date</label>
+            <div class="solar-review-button-row">
+              <button type="button" data-solar-previous-day title="Review the previous day">Previous</button>
+              <input id="solar-review-date-server" type="date" data-solar-review-date>
+              <button type="button" data-solar-next-day title="Review the next day">Next</button>
+            </div>
+          </div>
+          <div class="solar-review-time-group">
+            <div class="solar-review-time-heading"><label for="solar-review-time-server">Time of Day</label><strong data-solar-review-time-label>Live now</strong></div>
+            <input id="solar-review-time-server" type="range" min="360" max="1200" step="15" data-solar-review-time>
+            <div class="solar-review-button-row">
+              <button type="button" data-solar-previous-hour>-1 Hour</button>
+              <button type="button" data-solar-play>Play Day</button>
+              <button type="button" data-solar-next-hour>+1 Hour</button>
+              <button type="button" class="solar-live-button" data-solar-live>Live Now</button>
+            </div>
+          </div>
+        </div>
+        <div class="solar-sky" data-solar-sky>
+          <div class="solar-sky-stars" aria-hidden="true"></div>
+          <div class="solar-cloud solar-cloud-one" aria-hidden="true"></div>
+          <div class="solar-cloud solar-cloud-two" aria-hidden="true"></div>
+          <div class="solar-rain" aria-hidden="true"></div>
+          <div class="solar-editorial-head">
+            <span data-solar-window-kicker>Today's Solar Window</span>
+            <h2 data-solar-editorial-title>The Sun's Path Across the Sky</h2>
+            <p data-solar-editorial-meta>Yorktown Heights, NY</p>
+          </div>
+          <div class="solar-insight-card">
+            <span data-solar-interpretation-kicker>Live interpretation</span>
+            <strong data-solar-insight-title>Reading the sky...</strong>
+            <p data-solar-insight>Current conditions and solar position will appear here.</p>
+          </div>
+          <svg class="solar-arc" viewBox="0 0 1000 360" preserveAspectRatio="none" role="img" aria-label="Current day's calculated sun path">
+            <path data-solar-arc-path></path>
+          </svg>
+          <div class="solar-hour-markers" data-solar-hour-markers aria-hidden="true"></div>
+          <div class="solar-current-sun" data-solar-marker aria-hidden="true"><span>Now</span></div>
+          <div class="solar-horizon"></div>
+          <div class="solar-compass" aria-hidden="true"><span>NE<br><small>45°</small></span><span>E<br><small>90°</small></span><span>S<br><small>180°</small></span><span>W<br><small>270°</small></span><span>NW<br><small>315°</small></span></div>
+          <div class="solar-sky-caption"><strong data-solar-sky-title>Current sky</strong><span data-solar-sky-detail>Loading weather and irradiance...</span></div>
+        </div>
+        <div class="solar-path-detail-grid">
+          <div><span>Local Time</span><strong data-solar-local-time>--</strong><small>America/New_York</small></div>
+          <div><span>Sun Position</span><strong data-solar-position>--</strong><small data-solar-direction>--</small></div>
+          <div><span>Solar Window</span><strong data-solar-window>--</strong><small data-solar-noon>--</small></div>
+          <div><span>Current Irradiance</span><strong data-solar-irradiance>-- W/m²</strong><small data-solar-irradiance-source>Open-Meteo hourly</small></div>
+          <div><span>Estimated Current Power</span><strong data-solar-power>-- kW</strong><small data-solar-energy-pace>-- kWh per hour at this pace</small></div>
+          <div><span>Sunrun Daily Record</span><strong data-solar-daily-production>-- kWh</strong><small data-solar-record-date>--</small></div>
+        </div>
+        <div class="solar-reference-band">
+          <div class="solar-path-table-wrap">
+            <table class="table solar-path-table mb-0">
+              <thead><tr><th>Time</th><th>Azimuth</th><th>Elevation</th><th>Estimated Power</th></tr></thead>
+              <tbody data-solar-hourly-rows></tbody>
+            </table>
+          </div>
+          <aside class="solar-takeaways">
+            <span class="solar-takeaways-kicker">Key Takeaways</span>
+            <h3>What today's path means</h3>
+            <ul data-solar-takeaways><li>Calculating today's solar story...</li></ul>
+          </aside>
+        </div>
+        <p class="solar-path-disclaimer mb-0">Sun position is calculated for Yorktown Heights. Current power is an estimate based on Open-Meteo irradiance and an 86% system derate; Sunrun remains the source of final daily production.</p>
       </div>
     </section>
 
@@ -648,6 +746,8 @@
       </div>
     </section>
 
+    {% include "nyseg_baseline.html" %}
+    {% if false %}
     <section class="row g-3 mb-4">
       <div class="col-lg-7">
         <div class="card tracker-card h-100">
@@ -784,6 +884,7 @@
       </div>
     </section>
 
+    {% endif %}
     <section class="row g-3 mb-4">
       <div class="col-lg-4">
         <div class="card tracker-card h-100">

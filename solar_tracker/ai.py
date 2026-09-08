@@ -280,13 +280,17 @@ def _bill_answer(monthly_bill: dict[str, Any]) -> tuple[str, list[str]]:
             ["Add a monthly bill PDF to compare billed behavior against solar production and grid imports."],
         )
 
+    usage = monthly_bill.get("usage_totals") or {}
+    net = monthly_bill.get("net_metering") or {}
     answer = (
-        f"The bill amount due is ${float(monthly_bill.get('amount_due', 0.0)):,.2f}, but the actual energy-charge subtotal is only ${float(monthly_bill.get('total_energy_charges', 0.0)):,.2f}."
+        f"The NYSEG history currently covers {int(usage.get('record_count', 0))} monthly usage periods. "
+        f"Average recorded use is {float(usage.get('average_monthly_kwh', 0.0)):,.0f} kWh/month at an average usage cost of "
+        f"${float(usage.get('average_monthly_cost', 0.0)):,.2f}."
     )
     bullets = [
-        f"Budget billing amount: ${float(monthly_bill.get('budget_billing_amount', 0.0)):,.2f}.",
-        f"Payment agreement amount: ${float(monthly_bill.get('payment_agreement_amount', 0.0)):,.2f}.",
-        f"Current billed usage: {float(monthly_bill.get('current_usage_kwh', 0.0)):,.0f} kWh over {int(monthly_bill.get('days_in_period', 0))} days.",
+        f"Latest detailed bill: {float(monthly_bill.get('current_usage_kwh', 0.0)):,.0f} kWh and ${float(monthly_bill.get('total_energy_charges', 0.0)):,.2f} in energy charges.",
+        f"Available bill periods show {float(net.get('billing_period_import_kwh', 0.0)):,.0f} kWh imported and {float(net.get('export_kwh', 0.0)):,.0f} kWh exported.",
+        f"The smart-meter registers show {abs(float(net.get('smart_meter_net_kwh', 0.0))):,.0f} kWh of {str(net.get('smart_meter_direction', '')).replace('Net ', '').lower()} across the available solar bills.",
     ]
     return answer, bullets
 

@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="hero-panel reference-editor-hero mb-3">
+  <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+    <div>
+      <p class="eyebrow mb-1">Editable Home Reference</p>
+      <h1 class="hero-title mb-1">Electricity Usage Guide</h1>
+      <p class="text-muted mb-0">Household load assumptions and guidance imported from {{ reference_data.source_file }}.</p>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+      <button type="button" class="btn btn-contract btn-sm" data-reference-reload>Reload Saved</button>
+      <button type="button" class="btn btn-contract btn-sm" data-reference-add>Add Load</button>
+      <button type="button" class="btn btn-sun btn-sm" data-reference-save>Save Changes</button>
+      <a class="btn btn-contract btn-sm" href="{{ url_for('main.dashboard') }}">Back to Dashboard</a>
+    </div>
+  </div>
+</section>
+
+<div id="reference-editor-status"></div>
+
+<section class="card tracker-card mb-3">
+  <div class="card-body reference-summary-editor">
+    <div class="row g-3">
+      <div class="col-lg-6"><label class="form-label" for="usage-daily-range">Typical Daily Range</label><input id="usage-daily-range" class="form-control form-control-sm" type="text"></div>
+      <div class="col-lg-6"><label class="form-label" for="usage-center-estimate">Reasonable Center Estimate</label><input id="usage-center-estimate" class="form-control form-control-sm" type="text"></div>
+      <div class="col-12"><label class="form-label" for="usage-intro">Overview</label><textarea id="usage-intro" class="form-control" rows="2"></textarea></div>
+    </div>
+  </div>
+</section>
+
+<section class="card tracker-card reference-editor-card mb-3">
+  <div class="card-body">
+    <div class="d-flex justify-content-between align-items-center gap-2 mb-2"><h2 class="h5 mb-0">Daily Load Budget</h2><span class="text-muted small">Editable planning ranges, not measured usage</span></div>
+    <div class="reference-table-scroll usage-reference-table-scroll">
+      <table class="table align-middle reference-editor-table usage-reference-table">
+        <thead><tr><th>Load</th><th>Assumed Daily Use</th><th>Estimated kWh/Day</th><th class="reference-action-column">Action</th></tr></thead>
+        <tbody id="electricity-usage-table-body"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section class="card tracker-card reference-editor-card">
+  <div class="card-body">
+    <div class="d-flex justify-content-between align-items-center gap-2 mb-3"><h2 class="h5 mb-0">Usage Notes and Recommendations</h2><button type="button" class="btn btn-contract btn-sm" id="usage-add-section">Add Note</button></div>
+    <div id="electricity-usage-sections" class="reference-section-grid"></div>
+  </div>
+</section>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>window.REFERENCE_EDITOR_BOOTSTRAP = {{ reference_data|tojson }};</script>
+<script defer src="{{ url_for('static', filename='js/reference-editors.js') }}?v=20260908-sync104"></script>
+{% endblock %}

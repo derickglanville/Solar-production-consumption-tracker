@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Solar Tracker</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/styles.css?v=20260908-sync104">
+  <script src="https://cdn.plot.ly/plotly-3.4.0.min.js"></script>
+</head>
+<body data-page="light-bulbs" data-local-snapshot-mode="false">
+  <nav class="navbar navbar-expand-lg tracker-nav">
+    <div class="container">
+      <a class="navbar-brand fw-semibold" href="index.html">Solar Production & Consumption Tracker</a>
+      <div class="navbar-nav ms-auto">
+
+        <a class="nav-link" href="index.html">Dashboard</a>
+        <a class="nav-link" href="entries.html">Daily Entry</a>
+        <a class="nav-link" href="sunrun-production.html">SunRun Data</a>
+        <a class="nav-link" href="appliances.html">Appliances</a>
+        <a class="nav-link" href="contract-summary.html">Contract Summary</a>
+        <a class="nav-link" href="settings.html">Settings</a>
+        <a class="nav-link nav-link-button" href="dictionary.html">Dictionary</a>
+        <a class="nav-link" href="solar_tracker_demo_export.csv">CSV Export</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="py-4">
+    <div class="container">
+
+
+
+
+<section class="hero-panel reference-editor-hero mb-3">
+  <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+    <div>
+      <p class="eyebrow mb-1">Editable Home Reference</p>
+      <h1 class="hero-title mb-1">Light Bulb Inventory</h1>
+      <p class="text-muted mb-0">Room-by-room lighting information imported from Light bulbs.numbers.</p>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+      <button type="button" class="btn btn-contract btn-sm" data-reference-reload>Reload Saved</button>
+      <button type="button" class="btn btn-contract btn-sm" data-reference-add>Add Location</button>
+      <button type="button" class="btn btn-sun btn-sm" data-reference-save>Save Changes</button>
+      <a class="btn btn-contract btn-sm" href="index.html">Back to Dashboard</a>
+    </div>
+  </div>
+</section>
+
+<div id="reference-editor-status"></div>
+
+<section class="row g-3 mb-3">
+  <div class="col-md-3"><div class="metric-card sun reference-metric"><span>Total Bulbs</span><strong id="lighting-total-bulbs">0</strong></div></div>
+  <div class="col-md-3"><div class="metric-card export reference-metric"><span>Known LED Bulbs</span><strong id="lighting-led-bulbs">0</strong></div></div>
+  <div class="col-md-3"><div class="metric-card money reference-metric"><span>Replace</span><strong id="lighting-replace-bulbs">0</strong></div></div>
+  <div class="col-md-3"><div class="metric-card sky reference-metric"><span>Unknown</span><strong id="lighting-unknown-bulbs">0</strong></div></div>
+</section>
+
+<section class="card tracker-card reference-editor-card">
+  <div class="card-body">
+    <div class="reference-table-scroll">
+      <table class="table align-middle reference-editor-table">
+        <thead><tr><th>Room or Location</th><th class="reference-count-column">Bulbs</th><th class="reference-led-column">LED</th><th>Comment</th><th class="reference-action-column">Action</th></tr></thead>
+        <tbody id="light-bulbs-table-body"></tbody>
+      </table>
+    </div>
+    <p class="text-muted small mt-3 mb-0">The source file totals 77 bulbs. Rows marked No or Unknown are the best candidates for inspection or replacement.</p>
+  </div>
+</section>
+
+    </div>
+  </main>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="assets/js/site-bootstrap.js?v=20260908-sync104"></script>
+  <script src="assets/js/firebase-config.js?v=20260908-sync104"></script>
+  <script defer src="assets/js/app-bundle.js?v=20260908-sync104"></script>
+
+<script>window.REFERENCE_EDITOR_BOOTSTRAP = {"records": [{"comment": "", "count": 4, "led": "Yes", "room": "Office"}, {"comment": "", "count": 8, "led": "Yes", "room": "MBR"}, {"comment": "", "count": 3, "led": "Yes", "room": "MBR Bathroom"}, {"comment": "", "count": 4, "led": "Yes", "room": "Upstairs Hallway Bathroom"}, {"comment": "Replace with energy efficient lamp", "count": 4, "led": "No", "room": "Upstairs Hallway Lamps"}, {"comment": "Incomplete location in source file", "count": 0, "led": "Unknown", "room": "Bottom of"}, {"comment": "", "count": 1, "led": "Yes", "room": "Theo\u0027s room"}, {"comment": "", "count": 3, "led": "Yes", "room": "Shanelle\u0027s room"}, {"comment": "", "count": 2, "led": "Yes", "room": "Living room"}, {"comment": "Replace with energy efficient lamp", "count": 4, "led": "No", "room": "Dining room"}, {"comment": "", "count": 2, "led": "Yes", "room": "House entrance"}, {"comment": "", "count": 3, "led": "Yes", "room": "Main floor bathroom"}, {"comment": "", "count": 5, "led": "Yes", "room": "Kitchen"}, {"comment": "", "count": 3, "led": "Yes", "room": "Family room"}, {"comment": "Replace with energy efficient lamp", "count": 2, "led": "No", "room": "Stairs to basement"}, {"comment": "", "count": 12, "led": "Yes", "room": "Basement"}, {"comment": "", "count": 1, "led": "Yes", "room": "Bottom of basement stairs"}, {"comment": "", "count": 2, "led": "Yes", "room": "Laundry room"}, {"comment": "", "count": 1, "led": "Yes", "room": "Wine cellar"}, {"comment": "", "count": 6, "led": "Yes", "room": "Garage"}, {"comment": "", "count": 2, "led": "Yes", "room": "Driveway Flood light"}, {"comment": "Maybe LED", "count": 2, "led": "Unknown", "room": "Patio flood light"}, {"comment": "Maybe LED", "count": 1, "led": "Unknown", "room": "Outside family room"}, {"comment": "", "count": 2, "led": "Yes", "room": "Entryway"}], "source_file": "Light bulbs.numbers", "title": "Household Light Bulb Inventory"};</script>
+<script defer src="assets/js/reference-editors.js?v=20260908-sync104"></script>
+
+</body>
+</html>

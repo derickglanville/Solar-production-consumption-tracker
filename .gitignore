@@ -12,3 +12,11 @@ node_modules/
 .pnpm-store/
 JSON/application_data_current.json
 JSON/application_data_current.json.tmp
+
+# Private homeowner source documents and editable local reference data
+Documents/Circuit_Breaker_Directory_Professional.pdf
+Reference Data/circuit_breakers.json
+NYSEG Bill/NYSEG_Login.txt
+NYSEG Bill/SunRun_Login.txt
+NYSEG Bill/Bills/
+NYSEG Bill/Data/
