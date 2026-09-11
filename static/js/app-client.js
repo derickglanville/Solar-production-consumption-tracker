@@ -7,8 +7,98 @@ import {
   initializeFirestore,
   orderBy,
   query,
-  setDoc
+  runTransaction,
+  setDoc as firebaseSetDoc
 } from "firebase/firestore";
+
+async function setDoc(reference, values, options) {
+  if (reference.parent.id !== entryCollectionName) return firebaseSetDoc(reference, values, options);
+  if (!activeFirestoreDb) throw new Error("Historical Entries is not connected to Firebase yet. Refresh the page and try again.");
+  return runTransaction(activeFirestoreDb, async (transaction) => {
+    const current = await transaction.get(reference);
+    const existing = current.exists() ? current.data() : {};
+    const revisions = Array.isArray(existing.entry_revisions) ? existing.entry_revisions : [];
+    const nextRevisions = current.exists()
+      ? [{ saved_at: new Date().toISOString(), reason: "Before update", snapshot: revisionSnapshot(existing) }, ...revisions].slice(0, 50)
+      : revisions;
+    transaction.set(reference, { ...values, entry_revisions: nextRevisions }, options || {});
+  });
+}
+
+function revisionSnapshot(entry) {
+  const { entry_revisions, ...snapshot } = entry || {};
+  return snapshot;
+}
+
+function revisionFingerprint(value) {
+  if (Array.isArray(value)) return value.map(revisionFingerprint);
+  if (value && typeof value === "object") return Object.fromEntries(Object.keys(value).sort().map((key) => [key, revisionFingerprint(value[key])]));
+  return value;
+}
+
+async function restoreEntryRevision(reference, snapshot, current, entryDate) {
+  if (!snapshot || snapshot.entry_date !== entryDate) throw new Error("This saved version does not belong to the selected date.");
+  if (!activeFirestoreDb) throw new Error("Historical Entries is not connected to Firebase yet. Refresh the page and try again.");
+  await runTransaction(activeFirestoreDb, async (transaction) => {
+    const latest = await transaction.get(reference);
+    if (!latest.exists() || JSON.stringify(revisionFingerprint(latest.data())) !== JSON.stringify(revisionFingerprint(current))) throw new Error("This entry changed while you reviewed it. Close History and reopen it to review the latest values.");
+    const existingRevisions = Array.isArray(latest.data().entry_revisions) ? latest.data().entry_revisions : [];
+    const nextRevisions = [{ saved_at: new Date().toISOString(), reason: "Before restore", snapshot: revisionSnapshot(latest.data()) }, ...existingRevisions].slice(0, 50);
+    transaction.set(reference, { ...snapshot, entry_date: entryDate, updated_at: new Date().toISOString(), entry_revisions: nextRevisions });
+  });
+}
+
+async function showEntryHistory(entryDate) {
+  const dialog = document.createElement("dialog");
+  dialog.className = "entry-revision-dialog";
+  dialog.innerHTML = `<header><h2>History · ${escapeHtml(entryDate)}</h2><button type="button" data-close>Close</button></header><p>Choose a saved version to compare its M01, M02, and solar production readings. Restoring also preserves the current version.</p><div data-content>Loading saved versions…</div>`;
+  document.body.appendChild(dialog);
+  dialog.querySelector("[data-close]").onclick = () => dialog.close();
+  dialog.addEventListener("close", () => dialog.remove());
+  dialog.showModal();
+  const content = dialog.querySelector("[data-content]");
+  if (!activeFirestoreDb) {
+    content.textContent = "History is not ready yet. Refresh the page and try again.";
+    return;
+  }
+  const reference = doc(activeFirestoreDb, entryCollectionName, entryDate);
+  try {
+    const currentDoc = await getDoc(reference);
+    const current = currentDoc.data() || {};
+    const versions = Array.isArray(current.entry_revisions) ? current.entry_revisions : [];
+    if (!versions.length) { content.textContent = "No saved revisions yet. Current values will be preserved when this entry is next updated by the app."; return; }
+    content.innerHTML = `<label>Saved version <select data-versions>${versions.map((version, index) => `<option value="${index}">${escapeHtml(new Date(version.saved_at).toLocaleString())} — ${escapeHtml(version.reason || "Before update")}</option>`).join("")}</select></label><div data-preview></div><button type="button" data-restore>Restore Selected Version</button><p role="status" data-status></p>`;
+    const select = content.querySelector("[data-versions]");
+    const displayReading = (value) => Number.isFinite(Number(value)) ? `${Number(value).toFixed(1)} kWh` : "—";
+    const preview = () => {
+      const snapshot = versions[Number(select.value)].snapshot;
+      const readings = [
+        ["M01 · Grid import", "meter_01_import_reading"],
+        ["M02 · Grid export", "meter_02_export_reading"],
+        ["Power · Solar production", "production_kwh"]
+      ];
+      content.querySelector("[data-preview]").innerHTML = `<div class="entry-revision-table"><table><thead><tr><th>Reading</th><th>Current</th><th>Selected version</th></tr></thead><tbody>${readings.map(([label, key]) => `<tr><th>${label}</th><td>${escapeHtml(displayReading(current[key]))}</td><td>${escapeHtml(displayReading(snapshot[key]))}</td></tr>`).join("")}</tbody></table></div>`;
+    };
+    select.onchange = preview;
+    preview();
+    content.querySelector("[data-restore]").onclick = async (event) => {
+      const restoreButton = event.currentTarget;
+      const status = content.querySelector("[data-status]");
+      restoreButton.disabled = true;
+      select.disabled = true;
+      try {
+        const snapshot = versions[Number(select.value)].snapshot;
+        await restoreEntryRevision(reference, snapshot, current, entryDate);
+        status.textContent = "Version restored. The previous values are saved in History.";
+        window.dispatchEvent(new CustomEvent("solar-entry-restored"));
+      } catch (error) {
+        status.textContent = `Could not complete restore: ${error.message}`;
+        restoreButton.disabled = false;
+        select.disabled = false;
+      }
+    };
+  } catch (error) { content.textContent = `Could not load history: ${error.message}`; }
+}
 
 const dashboardRenderUrl = "/api/render/dashboard";
 
@@ -176,6 +266,7 @@ let entriesPageState = {
   weatherFilter: "All",
   config: mergeConfig()
 };
+let activeFirestoreDb = null;
 const meterSimulationSchedule = [
   { label: "9:00 AM", hour: 9, minute: 0, importWeight: 0.00, exportWeight: 0.00 },
   { label: "11:00 AM", hour: 11, minute: 0, importWeight: 0.30, exportWeight: 0.20 },
@@ -768,6 +859,7 @@ function getFirebaseAppContext() {
   const db = initializeFirestore(app, {
     experimentalAutoDetectLongPolling: true
   });
+  activeFirestoreDb = db;
   return { app, db };
 }
 
@@ -2178,7 +2270,7 @@ function buildSolarPathTrackerHtml(entry = {}, config = {}, entries = []) {
       </button>
       <div class="solar-path-panel" data-solar-path-panel hidden>
         <div class="solar-review-controls" aria-label="Solar path review controls">
-          <div class="solar-review-date-group"><label>Review Date</label><div class="solar-review-button-row"><button type="button" data-solar-previous-day title="Review the previous day">Previous</button><input type="date" data-solar-review-date><button type="button" data-solar-next-day title="Review the next day">Next</button></div></div>
+          <div class="solar-review-date-group"><label>Review Date</label><div class="solar-review-button-row"><button type="button" data-solar-previous-day title="Review the previous day">Previous</button><input type="date" data-solar-review-date><button type="button" data-solar-next-day title="Review the next day">Next</button></div><label class="solar-location-label">Arc Location<select data-solar-location><option value="yorktown" selected>Yorktown Heights, NY</option><option value="dallas">Dallas, TX</option><option value="negril">Negril, Jamaica</option></select></label></div>
           <div class="solar-review-time-group"><div class="solar-review-time-heading"><label>Time of Day</label><strong data-solar-review-time-label>Live now</strong></div><input type="range" min="360" max="1200" step="15" data-solar-review-time><div class="solar-review-button-row"><button type="button" data-solar-previous-hour>-1 Hour</button><button type="button" data-solar-play>Play Day</button><button type="button" data-solar-next-hour>+1 Hour</button><button type="button" class="solar-live-button" data-solar-live>Live Now</button></div></div>
         </div>
         <div class="solar-sky" data-solar-sky>
@@ -4292,7 +4384,7 @@ function populateEntriesTable(entries) {
       <td>${formatTemperatureCellValue(entry.temperature_low_f)}</td>
       <td>${renderNotesCell(entry.notes)}</td>
       <td>${entry.estimated ? '<span class="entry-estimated-pill">Estimated</span>' : '<span class="entry-confirmed-pill">Actual</span>'}</td>
-      <td><button type="button" class="btn btn-contract btn-sm entry-edit-button" data-entry-date="${entry.entry_date}">Edit</button></td>
+      <td><button type="button" class="btn btn-contract btn-sm entry-edit-button" data-entry-date="${entry.entry_date}">Edit</button> <button type="button" class="btn btn-contract btn-sm entry-revisions-button" data-entry-date="${entry.entry_date}">History</button></td>
     </tr>
   `;
   }).join("");
@@ -4314,6 +4406,10 @@ function populateEntriesTable(entries) {
         selectRow();
       }
     });
+  });
+  body.querySelectorAll(".entry-revisions-button").forEach((button) => {
+    button.addEventListener("click", () => showEntryHistory(button.dataset.entryDate));
+    button.addEventListener("keydown", (event) => event.stopPropagation());
   });
   body.querySelectorAll(".entry-edit-button").forEach((button) => {
     button.addEventListener("click", () => selectHistoricalEntry(button.dataset.entryDate));
@@ -4663,6 +4759,10 @@ async function handleEntryForm(db) {
     }
     refreshCheckpointPrediction();
   }
+
+  window.addEventListener("solar-entry-restored", () => {
+    refreshEntries({ showMessage: false });
+  });
 
   function startDailyEntryAutoCreateWatcher() {
     if (dailyEntryAutoCreateTimer) return;

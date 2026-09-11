@@ -13003,6 +13003,23 @@
       fields: n.value.mapValue.fields
     };
   }
+  function __PRIVATE_fromBatchGetDocumentsResponse(e, t) {
+    return "found" in t ? function __PRIVATE_fromFound(e2, t2) {
+      __PRIVATE_hardAssert(!!t2.found, 43571), t2.found.name, t2.found.updateTime;
+      const n = fromName(e2, t2.found.name), r = __PRIVATE_fromVersion(t2.found.updateTime), i = t2.found.createTime ? __PRIVATE_fromVersion(t2.found.createTime) : SnapshotVersion.min(), s = new ObjectValue({
+        mapValue: {
+          fields: t2.found.fields
+        }
+      });
+      return MutableDocument.newFoundDocument(n, r, i, s);
+    }(e, t) : "missing" in t ? function __PRIVATE_fromMissing(e2, t2) {
+      __PRIVATE_hardAssert(!!t2.missing, 3894), __PRIVATE_hardAssert(!!t2.readTime, 22933);
+      const n = fromName(e2, t2.missing), r = __PRIVATE_fromVersion(t2.readTime);
+      return MutableDocument.newNoDocument(n, r);
+    }(e, t) : fail(7234, {
+      result: t
+    });
+  }
   function __PRIVATE_fromWatchChange(e, t) {
     let n;
     if ("targetChange" in t) {
@@ -14779,6 +14796,14 @@ Total Duration: ${a - u}ms`);
       return null !== this.fieldMask ? new __PRIVATE_PatchMutation(e, this.data, this.fieldMask, t, this.fieldTransforms) : new __PRIVATE_SetMutation(e, this.data, t, this.fieldTransforms);
     }
   };
+  var ParsedUpdateData = class {
+    constructor(e, t, n) {
+      this.data = e, this.fieldMask = t, this.fieldTransforms = n;
+    }
+    toMutation(e, t) {
+      return new __PRIVATE_PatchMutation(e, this.data, this.fieldMask, t, this.fieldTransforms);
+    }
+  };
   function __PRIVATE_isWrite(e) {
     switch (e) {
       case 0:
@@ -14904,6 +14929,53 @@ Total Duration: ${a - u}ms`);
       a = new FieldMask(e2), u = _.fieldTransforms.filter((e3) => a.covers(e3.field));
     } else a = null, u = _.fieldTransforms;
     return new ParsedSetData(new ObjectValue(o), a, u);
+  }
+  var __PRIVATE_DeleteFieldValueImpl = class ___PRIVATE_DeleteFieldValueImpl extends FieldValue {
+    _toFieldTransform(e) {
+      if (2 !== e.dataSource) throw 1 === e.dataSource ? e.createError(`${this._methodName}() can only appear at the top level of your update data`) : e.createError(`${this._methodName}() cannot be used with set() unless you pass {merge:true}`);
+      return e.fieldMask.push(e.path), null;
+    }
+    isEqual(e) {
+      return e instanceof ___PRIVATE_DeleteFieldValueImpl;
+    }
+  };
+  function __PRIVATE_parseUpdateData(e, t, n, r) {
+    const i = e.createContext(1, t, n);
+    __PRIVATE_validatePlainObject("Data must be an object, but it was:", i, r);
+    const s = [], _ = ObjectValue.empty();
+    forEach(r, (e2, r2) => {
+      const o2 = __PRIVATE_fieldPathFromDotSeparatedString(t, e2, n);
+      r2 = getModularInstance(r2);
+      const a = i.childContextForFieldPath(o2);
+      if (r2 instanceof __PRIVATE_DeleteFieldValueImpl)
+        s.push(o2);
+      else {
+        const e3 = __PRIVATE_parseData(r2, a);
+        null != e3 && (s.push(o2), _.set(o2, e3));
+      }
+    });
+    const o = new FieldMask(s);
+    return new ParsedUpdateData(_, o, i.fieldTransforms);
+  }
+  function __PRIVATE_parseUpdateVarargs(e, t, n, r, i, s) {
+    const _ = e.createContext(1, t, n), o = [__PRIVATE_fieldPathFromArgument(t, r, n)], a = [i];
+    if (s.length % 2 != 0) throw new FirestoreError(D.INVALID_ARGUMENT, `Function ${t}() needs to be called with an even number of arguments that alternate between field names and values.`);
+    for (let e2 = 0; e2 < s.length; e2 += 2) o.push(__PRIVATE_fieldPathFromArgument(t, s[e2])), a.push(s[e2 + 1]);
+    const u = [], c = ObjectValue.empty();
+    for (let e2 = o.length - 1; e2 >= 0; --e2) if (!__PRIVATE_fieldMaskContains(u, o[e2])) {
+      const t2 = o[e2];
+      let n2 = a[e2];
+      n2 = getModularInstance(n2);
+      const r2 = _.childContextForFieldPath(t2);
+      if (n2 instanceof __PRIVATE_DeleteFieldValueImpl)
+        u.push(t2);
+      else {
+        const e3 = __PRIVATE_parseData(n2, r2);
+        null != e3 && (u.push(t2), c.set(t2, e3));
+      }
+    }
+    const E = new FieldMask(u);
+    return new ParsedUpdateData(c, E, _.fieldTransforms);
   }
   function __PRIVATE_parseQueryValue(e, t, n, r = false) {
     return __PRIVATE_parseData(n, e.createContext(r ? 4 : 3, t));
@@ -22598,6 +22670,158 @@ This typically indicates that your device does not have a healthy Internet conne
       }, 0);
     }
   };
+  var Transaction = class {
+    constructor(e) {
+      this.datastore = e, // The version of each document that was read during this transaction.
+      this.readVersions = /* @__PURE__ */ new Map(), this.mutations = [], this.committed = false, /**
+       * A deferred usage error that occurred previously in this transaction that
+       * will cause the transaction to fail once it actually commits.
+       */
+      this.lastTransactionError = null, /**
+       * Set of documents that have been written in the transaction.
+       *
+       * When there's more than one write to the same key in a transaction, any
+       * writes after the first are handled differently.
+       */
+      this.writtenDocs = /* @__PURE__ */ new Set();
+    }
+    async lookup(e) {
+      if (this.ensureCommitNotCalled(), this.mutations.length > 0) throw this.lastTransactionError = new FirestoreError(D.INVALID_ARGUMENT, "Firestore transactions require all reads to be executed before all writes."), this.lastTransactionError;
+      const t = await async function __PRIVATE_invokeBatchGetDocumentsRpc(e2, t2) {
+        const n = __PRIVATE_debugCast(e2), r = {
+          documents: t2.map((e3) => __PRIVATE_toName(n.serializer, e3))
+        }, i = await n.$t("BatchGetDocuments", n.serializer.databaseId, ResourcePath.emptyPath(), r, t2.length), s = /* @__PURE__ */ new Map();
+        i.forEach((e3) => {
+          const t3 = __PRIVATE_fromBatchGetDocumentsResponse(n.serializer, e3);
+          s.set(t3.key.toString(), t3);
+        });
+        const _ = [];
+        return t2.forEach((e3) => {
+          const t3 = s.get(e3.toString());
+          __PRIVATE_hardAssert(!!t3, 55234, {
+            key: e3
+          }), _.push(t3);
+        }), _;
+      }(this.datastore, e);
+      return t.forEach((e2) => this.recordVersion(e2)), t;
+    }
+    set(e, t) {
+      this.write(t.toMutation(e, this.precondition(e))), this.writtenDocs.add(e.toString());
+    }
+    update(e, t) {
+      try {
+        this.write(t.toMutation(e, this.preconditionForUpdate(e)));
+      } catch (e2) {
+        this.lastTransactionError = e2;
+      }
+      this.writtenDocs.add(e.toString());
+    }
+    delete(e) {
+      this.write(new __PRIVATE_DeleteMutation(e, this.precondition(e))), this.writtenDocs.add(e.toString());
+    }
+    async commit() {
+      if (this.ensureCommitNotCalled(), this.lastTransactionError) throw this.lastTransactionError;
+      const e = this.readVersions;
+      this.mutations.forEach((t) => {
+        e.delete(t.key.toString());
+      }), // For each document that was read but not written to, we want to perform
+      // a `verify` operation.
+      e.forEach((e2, t) => {
+        const n = DocumentKey.fromPath(t);
+        this.mutations.push(new __PRIVATE_VerifyMutation(n, this.precondition(n)));
+      }), await async function __PRIVATE_invokeCommitRpc(e2, t) {
+        const n = __PRIVATE_debugCast(e2), r = {
+          writes: t.map((e3) => toMutation(n.serializer, e3))
+        };
+        await n.Bt("Commit", n.serializer.databaseId, ResourcePath.emptyPath(), r);
+      }(this.datastore, this.mutations), this.committed = true;
+    }
+    recordVersion(e) {
+      let t;
+      if (e.isFoundDocument()) t = e.version;
+      else {
+        if (!e.isNoDocument()) throw fail(50498, {
+          Oc: e.constructor.name
+        });
+        t = SnapshotVersion.min();
+      }
+      const n = this.readVersions.get(e.key.toString());
+      if (n) {
+        if (!t.isEqual(n))
+          throw new FirestoreError(D.ABORTED, "Document version changed between two reads.");
+      } else this.readVersions.set(e.key.toString(), t);
+    }
+    /**
+     * Returns the version of this document when it was read in this transaction,
+     * as a precondition, or no precondition if it was not read.
+     */
+    precondition(e) {
+      const t = this.readVersions.get(e.toString());
+      return !this.writtenDocs.has(e.toString()) && t ? t.isEqual(SnapshotVersion.min()) ? Precondition.exists(false) : Precondition.updateTime(t) : Precondition.none();
+    }
+    /**
+     * Returns the precondition for a document if the operation is an update.
+     */
+    preconditionForUpdate(e) {
+      const t = this.readVersions.get(e.toString());
+      if (!this.writtenDocs.has(e.toString()) && t) {
+        if (t.isEqual(SnapshotVersion.min()))
+          throw new FirestoreError(D.INVALID_ARGUMENT, "Can't update a document that doesn't exist.");
+        return Precondition.updateTime(t);
+      }
+      return Precondition.exists(true);
+    }
+    write(e) {
+      this.ensureCommitNotCalled(), this.mutations.push(e);
+    }
+    ensureCommitNotCalled() {
+    }
+  };
+  var __PRIVATE_TransactionRunner = class {
+    constructor(e, t, n, r, i) {
+      this.asyncQueue = e, this.datastore = t, this.options = n, this.updateFunction = r, this.deferred = i, this.Mc = n.maxAttempts, this.xn = new __PRIVATE_ExponentialBackoff(
+        this.asyncQueue,
+        "transaction_retry"
+        /* TimerId.TransactionRetry */
+      );
+    }
+    /** Runs the transaction and sets the result on deferred. */
+    Nc() {
+      this.Mc -= 1, this.Lc();
+    }
+    Lc() {
+      this.xn.mn(async () => {
+        const e = new Transaction(this.datastore), t = this.Bc(e);
+        t && t.then((t2) => {
+          this.asyncQueue.enqueueAndForget(() => e.commit().then(() => {
+            this.deferred.resolve(t2);
+          }).catch((e2) => {
+            this.Uc(e2);
+          }));
+        }).catch((e2) => {
+          this.Uc(e2);
+        });
+      });
+    }
+    Bc(e) {
+      try {
+        const t = this.updateFunction(e);
+        return !__PRIVATE_isNullOrUndefined(t) && t.catch && t.then ? t : (this.deferred.reject(Error("Transaction callback must return a Promise")), null);
+      } catch (e2) {
+        return this.deferred.reject(e2), null;
+      }
+    }
+    Uc(e) {
+      this.Mc > 0 && this.kc(e) ? (this.Mc -= 1, this.asyncQueue.enqueueAndForget(() => (this.Lc(), Promise.resolve()))) : this.deferred.reject(e);
+    }
+    kc(e) {
+      if ("FirebaseError" === e?.name) {
+        const t = e.code;
+        return "aborted" === t || "failed-precondition" === t || "already-exists" === t || !__PRIVATE_isPermanentError(t);
+      }
+      return false;
+    }
+  };
   var Vn = "FirestoreClient";
   var FirestoreClient = class {
     constructor(e, t, n, r, i) {
@@ -22682,6 +22906,9 @@ This typically indicates that your device does not have a healthy Internet conne
   function __PRIVATE_getSyncEngine(e) {
     return __PRIVATE_ensureOnlineComponents(e).then((e2) => e2.syncEngine);
   }
+  function __PRIVATE_getDatastore(e) {
+    return __PRIVATE_ensureOnlineComponents(e).then((e2) => e2.datastore);
+  }
   async function __PRIVATE_getEventManager(e) {
     const t = await __PRIVATE_ensureOnlineComponents(e), n = t.eventManager;
     return n.onListen = __PRIVATE_syncEngineListen.bind(null, t.syncEngine), n.onUnlisten = __PRIVATE_syncEngineUnlisten.bind(null, t.syncEngine), n.onFirstRemoteStoreListen = __PRIVATE_triggerRemoteStoreListen.bind(null, t.syncEngine), n.onLastRemoteStoreUnlisten = __PRIVATE_triggerRemoteStoreUnlisten.bind(null, t.syncEngine), n;
@@ -22730,6 +22957,13 @@ This typically indicates that your device does not have a healthy Internet conne
   function __PRIVATE_firestoreClientWrite(e, t) {
     const n = new __PRIVATE_Deferred();
     return e.asyncQueue.enqueueAndForget(async () => __PRIVATE_syncEngineWrite(await __PRIVATE_getSyncEngine(e), t, n)), n.promise;
+  }
+  function __PRIVATE_firestoreClientTransaction(e, t, n) {
+    const r = new __PRIVATE_Deferred();
+    return e.asyncQueue.enqueueAndForget(async () => {
+      const i = await __PRIVATE_getDatastore(e);
+      new __PRIVATE_TransactionRunner(e.asyncQueue, i, n, t, r).Nc();
+    }), r.promise;
   }
   var dn = "AsyncQueue";
   var __PRIVATE_AsyncQueueImpl = class {
@@ -23291,6 +23525,23 @@ This typically indicates that your device does not have a healthy Internet conne
     let r;
     return r = t ? n && (n.merge || n.mergeFields) ? t.toFirestore(e, n) : t.toFirestore(e) : e, r;
   }
+  var __PRIVATE_LiteUserDataWriter = class extends AbstractUserDataWriter {
+    constructor(t) {
+      super(), this.firestore = t;
+    }
+    convertBytes(t) {
+      return new Bytes(t);
+    }
+    convertReference(t) {
+      const e = this.convertDocumentKey(t, this.firestore._databaseId);
+      return new DocumentReference(
+        this.firestore,
+        /* converter= */
+        null,
+        e
+      );
+    }
+  };
   var SnapshotMetadata = class {
     /** @hideconstructor */
     constructor(t, e) {
@@ -23519,6 +23770,91 @@ This typically indicates that your device does not have a healthy Internet conne
     bundleName: property("string"),
     bundle: property("string")
   };
+  var Zt2 = {
+    maxAttempts: 5
+  };
+  function __PRIVATE_validateReference(t, e) {
+    if ((t = getModularInstance(t)).firestore !== e) throw new FirestoreError(D.INVALID_ARGUMENT, "Provided document reference is from a different Firestore instance.");
+    return t;
+  }
+  var Transaction$1 = class {
+    /** @hideconstructor */
+    constructor(t, e) {
+      this._firestore = t, this._transaction = e, this._dataReader = __PRIVATE_newUserDataReader(t);
+    }
+    /**
+     * Reads the document referenced by the provided {@link DocumentReference}.
+     *
+     * @param documentRef - A reference to the document to be read.
+     * @returns A `DocumentSnapshot` with the read data.
+     */
+    get(t) {
+      const e = __PRIVATE_validateReference(t, this._firestore), n = new __PRIVATE_LiteUserDataWriter(this._firestore);
+      return this._transaction.lookup([e._key]).then((t2) => {
+        if (!t2 || 1 !== t2.length) return fail(24041);
+        const r = t2[0];
+        if (r.isFoundDocument()) return new DocumentSnapshot$1(this._firestore, n, r.key, r, e.converter);
+        if (r.isNoDocument()) return new DocumentSnapshot$1(this._firestore, n, e._key, null, e.converter);
+        throw fail(18433, {
+          doc: r
+        });
+      });
+    }
+    set(t, e, n) {
+      const r = __PRIVATE_validateReference(t, this._firestore), s = __PRIVATE_applyFirestoreDataConverter(r.converter, e, n), a = __PRIVATE_parseSetData(this._dataReader, "Transaction.set", r._key, s, null !== r.converter, n);
+      return this._transaction.set(r._key, a), this;
+    }
+    update(t, e, n, ...r) {
+      const s = __PRIVATE_validateReference(t, this._firestore);
+      let a;
+      return a = "string" == typeof (e = getModularInstance(e)) || e instanceof FieldPath ? __PRIVATE_parseUpdateVarargs(this._dataReader, "Transaction.update", s._key, e, n, r) : __PRIVATE_parseUpdateData(this._dataReader, "Transaction.update", s._key, e), this._transaction.update(s._key, a), this;
+    }
+    /**
+     * Deletes the document referred to by the provided {@link DocumentReference}.
+     *
+     * @param documentRef - A reference to the document to be deleted.
+     * @returns This `Transaction` instance. Used for chaining method calls.
+     */
+    delete(t) {
+      const e = __PRIVATE_validateReference(t, this._firestore);
+      return this._transaction.delete(e._key), this;
+    }
+  };
+  var Transaction2 = class extends Transaction$1 {
+    // This class implements the same logic as the Transaction API in the Lite SDK
+    // but is subclassed in order to return its own DocumentSnapshot types.
+    /** @hideconstructor */
+    constructor(t, e) {
+      super(t, e), this._firestore = t;
+    }
+    /**
+     * Reads the document referenced by the provided {@link DocumentReference}.
+     *
+     * @param documentRef - A reference to the document to be read.
+     * @returns A `DocumentSnapshot` with the read data.
+     */
+    get(t) {
+      const e = __PRIVATE_validateReference(t, this._firestore), n = new __PRIVATE_ExpUserDataWriter(this._firestore);
+      return super.get(t).then((t2) => new DocumentSnapshot(this._firestore, n, e._key, t2._document, new SnapshotMetadata(
+        /* hasPendingWrites= */
+        false,
+        /* fromCache= */
+        false
+      ), e.converter));
+    }
+  };
+  function runTransaction(t, e, n) {
+    t = __PRIVATE_cast(t, Firestore);
+    const r = {
+      ...Zt2,
+      ...n
+    };
+    !function __PRIVATE_validateTransactionOptions(t2) {
+      if (t2.maxAttempts < 1) throw new FirestoreError(D.INVALID_ARGUMENT, "Max attempts must be at least 1");
+    }(r);
+    const s = ensureFirestoreConfigured(t);
+    return __PRIVATE_firestoreClientTransaction(s, (n2) => e(new Transaction2(t, n2)), r);
+  }
   function getDoc(t) {
     t = __PRIVATE_cast(t, DocumentReference);
     const e = __PRIVATE_cast(t.firestore, Firestore), n = ensureFirestoreConfigured(e);
@@ -23554,6 +23890,93 @@ This typically indicates that your device does not have a healthy Internet conne
   }();
 
   // static/js/app-client.js
+  async function setDoc2(reference, values, options) {
+    if (reference.parent.id !== entryCollectionName) return setDoc(reference, values, options);
+    if (!activeFirestoreDb) throw new Error("Historical Entries is not connected to Firebase yet. Refresh the page and try again.");
+    return runTransaction(activeFirestoreDb, async (transaction) => {
+      const current = await transaction.get(reference);
+      const existing = current.exists() ? current.data() : {};
+      const revisions = Array.isArray(existing.entry_revisions) ? existing.entry_revisions : [];
+      const nextRevisions = current.exists() ? [{ saved_at: (/* @__PURE__ */ new Date()).toISOString(), reason: "Before update", snapshot: revisionSnapshot(existing) }, ...revisions].slice(0, 50) : revisions;
+      transaction.set(reference, { ...values, entry_revisions: nextRevisions }, options || {});
+    });
+  }
+  function revisionSnapshot(entry) {
+    const { entry_revisions, ...snapshot } = entry || {};
+    return snapshot;
+  }
+  function revisionFingerprint(value) {
+    if (Array.isArray(value)) return value.map(revisionFingerprint);
+    if (value && typeof value === "object") return Object.fromEntries(Object.keys(value).sort().map((key) => [key, revisionFingerprint(value[key])]));
+    return value;
+  }
+  async function restoreEntryRevision(reference, snapshot, current, entryDate) {
+    if (!snapshot || snapshot.entry_date !== entryDate) throw new Error("This saved version does not belong to the selected date.");
+    if (!activeFirestoreDb) throw new Error("Historical Entries is not connected to Firebase yet. Refresh the page and try again.");
+    await runTransaction(activeFirestoreDb, async (transaction) => {
+      const latest = await transaction.get(reference);
+      if (!latest.exists() || JSON.stringify(revisionFingerprint(latest.data())) !== JSON.stringify(revisionFingerprint(current))) throw new Error("This entry changed while you reviewed it. Close History and reopen it to review the latest values.");
+      const existingRevisions = Array.isArray(latest.data().entry_revisions) ? latest.data().entry_revisions : [];
+      const nextRevisions = [{ saved_at: (/* @__PURE__ */ new Date()).toISOString(), reason: "Before restore", snapshot: revisionSnapshot(latest.data()) }, ...existingRevisions].slice(0, 50);
+      transaction.set(reference, { ...snapshot, entry_date: entryDate, updated_at: (/* @__PURE__ */ new Date()).toISOString(), entry_revisions: nextRevisions });
+    });
+  }
+  async function showEntryHistory(entryDate) {
+    const dialog = document.createElement("dialog");
+    dialog.className = "entry-revision-dialog";
+    dialog.innerHTML = `<header><h2>History \xB7 ${escapeHtml(entryDate)}</h2><button type="button" data-close>Close</button></header><p>Choose a saved version to compare its M01, M02, and solar production readings. Restoring also preserves the current version.</p><div data-content>Loading saved versions\u2026</div>`;
+    document.body.appendChild(dialog);
+    dialog.querySelector("[data-close]").onclick = () => dialog.close();
+    dialog.addEventListener("close", () => dialog.remove());
+    dialog.showModal();
+    const content = dialog.querySelector("[data-content]");
+    if (!activeFirestoreDb) {
+      content.textContent = "History is not ready yet. Refresh the page and try again.";
+      return;
+    }
+    const reference = doc(activeFirestoreDb, entryCollectionName, entryDate);
+    try {
+      const currentDoc = await getDoc(reference);
+      const current = currentDoc.data() || {};
+      const versions = Array.isArray(current.entry_revisions) ? current.entry_revisions : [];
+      if (!versions.length) {
+        content.textContent = "No saved revisions yet. Current values will be preserved when this entry is next updated by the app.";
+        return;
+      }
+      content.innerHTML = `<label>Saved version <select data-versions>${versions.map((version3, index) => `<option value="${index}">${escapeHtml(new Date(version3.saved_at).toLocaleString())} \u2014 ${escapeHtml(version3.reason || "Before update")}</option>`).join("")}</select></label><div data-preview></div><button type="button" data-restore>Restore Selected Version</button><p role="status" data-status></p>`;
+      const select = content.querySelector("[data-versions]");
+      const displayReading = (value) => Number.isFinite(Number(value)) ? `${Number(value).toFixed(1)} kWh` : "\u2014";
+      const preview = () => {
+        const snapshot = versions[Number(select.value)].snapshot;
+        const readings = [
+          ["M01 \xB7 Grid import", "meter_01_import_reading"],
+          ["M02 \xB7 Grid export", "meter_02_export_reading"],
+          ["Power \xB7 Solar production", "production_kwh"]
+        ];
+        content.querySelector("[data-preview]").innerHTML = `<div class="entry-revision-table"><table><thead><tr><th>Reading</th><th>Current</th><th>Selected version</th></tr></thead><tbody>${readings.map(([label, key]) => `<tr><th>${label}</th><td>${escapeHtml(displayReading(current[key]))}</td><td>${escapeHtml(displayReading(snapshot[key]))}</td></tr>`).join("")}</tbody></table></div>`;
+      };
+      select.onchange = preview;
+      preview();
+      content.querySelector("[data-restore]").onclick = async (event) => {
+        const restoreButton = event.currentTarget;
+        const status = content.querySelector("[data-status]");
+        restoreButton.disabled = true;
+        select.disabled = true;
+        try {
+          const snapshot = versions[Number(select.value)].snapshot;
+          await restoreEntryRevision(reference, snapshot, current, entryDate);
+          status.textContent = "Version restored. The previous values are saved in History.";
+          window.dispatchEvent(new CustomEvent("solar-entry-restored"));
+        } catch (error) {
+          status.textContent = `Could not complete restore: ${error.message}`;
+          restoreButton.disabled = false;
+          select.disabled = false;
+        }
+      };
+    } catch (error) {
+      content.textContent = `Could not load history: ${error.message}`;
+    }
+  }
   async function renderDashboardUnified(entries, config, firebaseStatus) {
     const target = document.getElementById("dashboard-root");
     if (!target) {
@@ -23713,6 +24136,7 @@ This typically indicates that your device does not have a healthy Internet conne
     weatherFilter: "All",
     config: mergeConfig()
   };
+  var activeFirestoreDb = null;
   var meterSimulationSchedule = [
     { label: "9:00 AM", hour: 9, minute: 0, importWeight: 0, exportWeight: 0 },
     { label: "11:00 AM", hour: 11, minute: 0, importWeight: 0.3, exportWeight: 0.2 },
@@ -24199,6 +24623,7 @@ This typically indicates that your device does not have a healthy Internet conne
     const db = initializeFirestore(app, {
       experimentalAutoDetectLongPolling: true
     });
+    activeFirestoreDb = db;
     return { app, db };
   }
   function withTimeout(promise, timeoutMs, message) {
@@ -24392,7 +24817,7 @@ This typically indicates that your device does not have a healthy Internet conne
       return { entries: applySunrunProductionToEntries(entries), updated: false, count: 0 };
     }
     for (const entry of updates) {
-      await setDoc(doc(db, entryCollectionName, entry.entry_date), entry, { merge: true });
+      await setDoc2(doc(db, entryCollectionName, entry.entry_date), entry, { merge: true });
     }
     const refreshedState = await loadFirestoreState(db);
     return { entries: refreshedState.entries, updated: true, count: updates.length };
@@ -24424,7 +24849,7 @@ This typically indicates that your device does not have a healthy Internet conne
           lookup_source: lookupValues.lookup_source || entry.lookup_source || "manual",
           updated_at: (/* @__PURE__ */ new Date()).toISOString()
         });
-        await setDoc(doc(db, entryCollectionName, entry.entry_date), mergedEntry, { merge: true });
+        await setDoc2(doc(db, entryCollectionName, entry.entry_date), mergedEntry, { merge: true });
         updatedEntries.set(entry.entry_date, mergedEntry);
         changedCount += 1;
       } catch (error) {
@@ -24482,7 +24907,7 @@ This typically indicates that your device does not have a healthy Internet conne
           notes: canReplaceNotes ? lookupValues.notes : existingNotes,
           updated_at: (/* @__PURE__ */ new Date()).toISOString()
         });
-        await setDoc(doc(db, entryCollectionName, entry.entry_date), mergedEntry, { merge: true });
+        await setDoc2(doc(db, entryCollectionName, entry.entry_date), mergedEntry, { merge: true });
         updatedEntries.set(entry.entry_date, mergedEntry);
         changedCount += 1;
       } catch (error) {
@@ -24504,7 +24929,7 @@ This typically indicates that your device does not have a healthy Internet conne
       return { entries, backfilled: false };
     }
     for (const entry of missingStarterEntries) {
-      await setDoc(doc(db, entryCollectionName, entry.entry_date), {
+      await setDoc2(doc(db, entryCollectionName, entry.entry_date), {
         ...entry,
         notes: entry.notes || "Starter history restored from the built-in sample data.",
         created_at: entry.created_at || (/* @__PURE__ */ new Date()).toISOString(),
@@ -25356,7 +25781,7 @@ This typically indicates that your device does not have a healthy Internet conne
       </button>
       <div class="solar-path-panel" data-solar-path-panel hidden>
         <div class="solar-review-controls" aria-label="Solar path review controls">
-          <div class="solar-review-date-group"><label>Review Date</label><div class="solar-review-button-row"><button type="button" data-solar-previous-day title="Review the previous day">Previous</button><input type="date" data-solar-review-date><button type="button" data-solar-next-day title="Review the next day">Next</button></div></div>
+          <div class="solar-review-date-group"><label>Review Date</label><div class="solar-review-button-row"><button type="button" data-solar-previous-day title="Review the previous day">Previous</button><input type="date" data-solar-review-date><button type="button" data-solar-next-day title="Review the next day">Next</button></div><label class="solar-location-label">Arc Location<select data-solar-location><option value="yorktown" selected>Yorktown Heights, NY</option><option value="dallas">Dallas, TX</option><option value="negril">Negril, Jamaica</option></select></label></div>
           <div class="solar-review-time-group"><div class="solar-review-time-heading"><label>Time of Day</label><strong data-solar-review-time-label>Live now</strong></div><input type="range" min="360" max="1200" step="15" data-solar-review-time><div class="solar-review-button-row"><button type="button" data-solar-previous-hour>-1 Hour</button><button type="button" data-solar-play>Play Day</button><button type="button" data-solar-next-hour>+1 Hour</button><button type="button" class="solar-live-button" data-solar-live>Live Now</button></div></div>
         </div>
         <div class="solar-sky" data-solar-sky>
@@ -26487,7 +26912,7 @@ This typically indicates that your device does not have a healthy Internet conne
       meter_simulation_runs: recordedRuns,
       updated_at: timestamp
     });
-    await setDoc(doc(db, entryCollectionName, entryDate), simulatedEntry, { merge: true });
+    await setDoc2(doc(db, entryCollectionName, entryDate), simulatedEntry, { merge: true });
     return simulatedEntry;
   }
   function formatMeterSimulationRunLabel(minuteOfDay) {
@@ -26703,7 +27128,7 @@ This typically indicates that your device does not have a healthy Internet conne
           ...refreshedEntry,
           updated_at: (/* @__PURE__ */ new Date()).toISOString()
         });
-        await setDoc(doc(db, entryCollectionName, entryDate), mergedEntry, { merge: true });
+        await setDoc2(doc(db, entryCollectionName, entryDate), mergedEntry, { merge: true });
         if (shouldRunOneTimeManualAutoCreate(entryDate)) {
           markOneTimeManualAutoCreateComplete();
         }
@@ -26715,7 +27140,7 @@ This typically indicates that your device does not have a healthy Internet conne
           ...await buildAutoEntry(entries, entryDate, sourceLabel),
           updated_at: (/* @__PURE__ */ new Date()).toISOString()
         };
-        await setDoc(doc(db, entryCollectionName, entryDate), hydratedEntry, { merge: true });
+        await setDoc2(doc(db, entryCollectionName, entryDate), hydratedEntry, { merge: true });
         if (shouldRunOneTimeManualAutoCreate(entryDate)) {
           markOneTimeManualAutoCreateComplete();
         }
@@ -26730,7 +27155,7 @@ This typically indicates that your device does not have a healthy Internet conne
       return { entry: null, created: false };
     }
     const placeholderEntry = await buildAutoEntry(entries, entryDate, sourceLabel);
-    await setDoc(doc(db, entryCollectionName, entryDate), placeholderEntry, { merge: true });
+    await setDoc2(doc(db, entryCollectionName, entryDate), placeholderEntry, { merge: true });
     if (shouldRunOneTimeManualAutoCreate(entryDate)) {
       markOneTimeManualAutoCreateComplete();
     }
@@ -26743,7 +27168,7 @@ This typically indicates that your device does not have a healthy Internet conne
       return { entries, backfilled: false };
     }
     for (const entry of missingEntries) {
-      await setDoc(doc(db, entryCollectionName, entry.entry_date), {
+      await setDoc2(doc(db, entryCollectionName, entry.entry_date), {
         ...entry,
         created_at: entry.created_at || (/* @__PURE__ */ new Date()).toISOString(),
         updated_at: (/* @__PURE__ */ new Date()).toISOString()
@@ -27013,7 +27438,7 @@ ${balanceInterpretation}` : balanceInterpretation;
       <td>${formatTemperatureCellValue(entry.temperature_low_f)}</td>
       <td>${renderNotesCell(entry.notes)}</td>
       <td>${entry.estimated ? '<span class="entry-estimated-pill">Estimated</span>' : '<span class="entry-confirmed-pill">Actual</span>'}</td>
-      <td><button type="button" class="btn btn-contract btn-sm entry-edit-button" data-entry-date="${entry.entry_date}">Edit</button></td>
+      <td><button type="button" class="btn btn-contract btn-sm entry-edit-button" data-entry-date="${entry.entry_date}">Edit</button> <button type="button" class="btn btn-contract btn-sm entry-revisions-button" data-entry-date="${entry.entry_date}">History</button></td>
     </tr>
   `;
     }).join("");
@@ -27034,6 +27459,10 @@ ${balanceInterpretation}` : balanceInterpretation;
           selectRow();
         }
       });
+    });
+    body.querySelectorAll(".entry-revisions-button").forEach((button) => {
+      button.addEventListener("click", () => showEntryHistory(button.dataset.entryDate));
+      button.addEventListener("keydown", (event) => event.stopPropagation());
     });
     body.querySelectorAll(".entry-edit-button").forEach((button) => {
       button.addEventListener("click", () => selectHistoricalEntry(button.dataset.entryDate));
@@ -27214,7 +27643,7 @@ This is a reconciliation, not an independent measurement, because EDC includes S
       estimated: existingEntry?.estimated ?? true,
       updated_at: (/* @__PURE__ */ new Date()).toISOString()
     });
-    await setDoc(doc(db, entryCollectionName, entryDate), mergedEntry, { merge: true });
+    await setDoc2(doc(db, entryCollectionName, entryDate), mergedEntry, { merge: true });
     return mergedEntry;
   }
   function populateSettingsForm(config) {
@@ -27303,6 +27732,9 @@ This is a reconciliation, not an independent measurement, because EDC includes S
       }
       refreshCheckpointPrediction();
     }
+    window.addEventListener("solar-entry-restored", () => {
+      refreshEntries({ showMessage: false });
+    });
     function startDailyEntryAutoCreateWatcher() {
       if (dailyEntryAutoCreateTimer) return;
       dailyEntryAutoCreateTimer = window.setInterval(async () => {
@@ -27394,7 +27826,7 @@ This is a reconciliation, not an independent measurement, because EDC includes S
       if (sunrunRecord?.available) {
         entry.production_kwh = Number(sunrunRecord.production_kwh || entry.production_kwh || 0);
       }
-      await setDoc(doc(db, entryCollectionName, entry.entry_date), entry, { merge: true });
+      await setDoc2(doc(db, entryCollectionName, entry.entry_date), entry, { merge: true });
       entriesPageState.selectedDate = entry.entry_date;
       await refreshEntries({ showMessage: false });
       fillEntryForm(entry);
@@ -27536,7 +27968,7 @@ This is a reconciliation, not an independent measurement, because EDC includes S
         const retained = meterSimulationCheckpoints.filter((existing) => !(existing.entry_date === checkpoint.entry_date && existing.checkpoint_time === checkpoint.checkpoint_time));
         meterSimulationCheckpoints = normalizeMeterSimulationCheckpoints([...retained, checkpoint]);
         renderCalibrationHistory();
-        await setDoc(
+        await setDoc2(
           doc(db, configCollectionName, configDocumentId),
           { meter_simulation_checkpoints: meterSimulationCheckpoints },
           { merge: true }
@@ -27556,7 +27988,7 @@ This is a reconciliation, not an independent measurement, because EDC includes S
           meter_simulation_updated_at: checkpointRecordedAt,
           updated_at: checkpointRecordedAt
         });
-        await setDoc(doc(db, entryCollectionName, entryDate), savedEntry, { merge: true });
+        await setDoc2(doc(db, entryCollectionName, entryDate), savedEntry, { merge: true });
         const savedIndex = entriesPageState.entries.findIndex(
           (entry) => String(entry.entry_date) === String(entryDate)
         );
@@ -27614,7 +28046,7 @@ This is a reconciliation, not an independent measurement, because EDC includes S
         sunrun_escalator_pct: Number(formData.get("sunrun_escalator_pct") || 0),
         tree_removal_cost: Number(formData.get("tree_removal_cost") || 0)
       };
-      await setDoc(doc(db, configCollectionName, configDocumentId), config, { merge: true });
+      await setDoc2(doc(db, configCollectionName, configDocumentId), config, { merge: true });
       renderStatusAlert("settings-status", "Settings saved to Firebase Firestore.", "success");
     });
   }
@@ -27839,8 +28271,6 @@ This is a reconciliation, not an independent measurement, because EDC includes S
 @firebase/firestore/dist/common-456515ba.esm.js:
 @firebase/firestore/dist/common-456515ba.esm.js:
 @firebase/firestore/dist/common-456515ba.esm.js:
-@firebase/firestore/dist/common-456515ba.esm.js:
-@firebase/firestore/dist/common-456515ba.esm.js:
 @firebase/firestore/dist/index.esm.js:
   (**
    * @license
@@ -27867,7 +28297,6 @@ This is a reconciliation, not an independent measurement, because EDC includes S
 @firebase/firestore/dist/common-456515ba.esm.js:
 @firebase/firestore/dist/common-456515ba.esm.js:
 @firebase/firestore/dist/common-456515ba.esm.js:
-@firebase/firestore/dist/index.esm.js:
 @firebase/firestore/dist/index.esm.js:
 @firebase/firestore/dist/index.esm.js:
 @firebase/firestore/dist/index.esm.js:
@@ -27928,7 +28357,6 @@ This is a reconciliation, not an independent measurement, because EDC includes S
 @firebase/app/dist/esm/index.esm.js:
 @firebase/firestore/dist/common-456515ba.esm.js:
 @firebase/firestore/dist/common-456515ba.esm.js:
-@firebase/firestore/dist/common-456515ba.esm.js:
   (**
    * @license
    * Copyright 2019 Google LLC
@@ -27956,9 +28384,6 @@ firebase/app/dist/esm/index.esm.js:
 @firebase/firestore/dist/common-456515ba.esm.js:
 @firebase/firestore/dist/common-456515ba.esm.js:
 @firebase/firestore/dist/common-456515ba.esm.js:
-@firebase/firestore/dist/index.esm.js:
-@firebase/firestore/dist/index.esm.js:
-@firebase/firestore/dist/index.esm.js:
 @firebase/firestore/dist/index.esm.js:
 @firebase/firestore/dist/index.esm.js:
   (**
@@ -29008,6 +29433,40 @@ re2js/build/index.esm.js:
 @firebase/firestore/dist/common-456515ba.esm.js:
   (**
    * @license
+   * Copyright 2017 Google LLC
+   *
+   * Licensed under the Apache License, Version 2.0 (the "License");
+   * you may not use this file except in compliance with the License.
+   * You may obtain a copy of the License at
+   *
+   *   http://www.apache.org/licenses/LICENSE-2.0
+   *
+   * Unless required by applicable law or agreed to in writing, software
+   * distributed under the License is distributed on an "AS IS" BASIS,
+   * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   * See the License for the specific language governing permissions and
+   * limitations under the License.
+   *)
+  (**
+   * @license
+   * Copyright 2019 Google LLC
+   *
+   * Licensed under the Apache License, Version 2.0 (the "License");
+   * you may not use this file except in compliance with the License.
+   * You may obtain a copy of the License at
+   *
+   *   http://www.apache.org/licenses/LICENSE-2.0
+   *
+   * Unless required by applicable law or agreed to in writing, software
+   * distributed under the License is distributed on an "AS IS" BASIS,
+   * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   * See the License for the specific language governing permissions and
+   * limitations under the License.
+   *)
+
+@firebase/firestore/dist/common-456515ba.esm.js:
+  (**
+   * @license
    * Copyright 2020 Google LLC
    *
    * Licensed under the Apache License, Version 2.0 (the "License");
@@ -29059,6 +29518,40 @@ re2js/build/index.esm.js:
   (**
    * @license
    * Copyright 2025 Google LLC
+   *
+   * Licensed under the Apache License, Version 2.0 (the "License");
+   * you may not use this file except in compliance with the License.
+   * You may obtain a copy of the License at
+   *
+   *   http://www.apache.org/licenses/LICENSE-2.0
+   *
+   * Unless required by applicable law or agreed to in writing, software
+   * distributed under the License is distributed on an "AS IS" BASIS,
+   * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   * See the License for the specific language governing permissions and
+   * limitations under the License.
+   *)
+  (**
+   * @license
+   * Copyright 2020 Google LLC
+   *
+   * Licensed under the Apache License, Version 2.0 (the "License");
+   * you may not use this file except in compliance with the License.
+   * You may obtain a copy of the License at
+   *
+   *   http://www.apache.org/licenses/LICENSE-2.0
+   *
+   * Unless required by applicable law or agreed to in writing, software
+   * distributed under the License is distributed on an "AS IS" BASIS,
+   * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   * See the License for the specific language governing permissions and
+   * limitations under the License.
+   *)
+
+@firebase/firestore/dist/index.esm.js:
+  (**
+   * @license
+   * Copyright 2022 Google LLC
    *
    * Licensed under the Apache License, Version 2.0 (the "License");
    * you may not use this file except in compliance with the License.

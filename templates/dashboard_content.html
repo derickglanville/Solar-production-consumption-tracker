@@ -119,6 +119,12 @@
               <input id="solar-review-date-server" type="date" data-solar-review-date>
               <button type="button" data-solar-next-day title="Review the next day">Next</button>
             </div>
+            <label class="solar-location-label" for="solar-location-server">Arc Location</label>
+            <select id="solar-location-server" data-solar-location>
+              <option value="yorktown" selected>Yorktown Heights, NY</option>
+              <option value="dallas">Dallas, TX</option>
+              <option value="negril">Negril, Jamaica</option>
+            </select>
           </div>
           <div class="solar-review-time-group">
             <div class="solar-review-time-heading"><label for="solar-review-time-server">Time of Day</label><strong data-solar-review-time-label>Live now</strong></div>
@@ -153,7 +159,7 @@
           <div class="solar-current-sun" data-solar-marker aria-hidden="true"><span>Now</span></div>
           <div class="solar-horizon"></div>
           <div class="solar-compass" aria-hidden="true"><span>NE<br><small>45°</small></span><span>E<br><small>90°</small></span><span>S<br><small>180°</small></span><span>W<br><small>270°</small></span><span>NW<br><small>315°</small></span></div>
-          <div class="solar-sky-caption"><strong data-solar-sky-title>Current sky</strong><span data-solar-sky-detail>Loading weather and irradiance...</span></div>
+          <div class="solar-sky-caption"><strong data-solar-sky-title>Selected daylight arc</strong><span data-solar-sky-detail>Calculating the selected day's sunrise-to-sunset path...</span></div>
         </div>
         <div class="solar-path-detail-grid">
           <div><span>Local Time</span><strong data-solar-local-time>--</strong><small>America/New_York</small></div>
@@ -176,7 +182,7 @@
             <ul data-solar-takeaways><li>Calculating today's solar story...</li></ul>
           </aside>
         </div>
-        <p class="solar-path-disclaimer mb-0">Sun position is calculated for Yorktown Heights. Current power is an estimate based on Open-Meteo irradiance and an 86% system derate; Sunrun remains the source of final daily production.</p>
+        <p class="solar-path-disclaimer mb-0" data-solar-path-disclaimer>Sun position is calculated for Yorktown Heights. Current power is an estimate based on Open-Meteo irradiance and an 86% system derate; Sunrun remains the source of final daily production.</p>
       </div>
     </section>
 
