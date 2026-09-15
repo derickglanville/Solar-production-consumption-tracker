@@ -27417,7 +27417,8 @@ ${consumptionDirection} Negative means less consumption; positive means more.` :
       const balanceTooltip = Number.isFinite(differences.dayBalance) ? `Daily Energy Balance for ${entryDateLabel}.
 ${Number(entry.production_kwh || 0).toFixed(1)} production - ${differences.edc.toFixed(1)} EDC = ${differences.dayBalance >= 0 ? "+" : ""}${differences.dayBalance.toFixed(1)} kWh.
 Cross-check: ${differences.m02.toFixed(1)} export - ${differences.m01.toFixed(1)} import = ${differences.m02 - differences.m01 >= 0 ? "+" : ""}${(differences.m02 - differences.m01).toFixed(1)} kWh.
-${balanceInterpretation}` : balanceInterpretation;
+${balanceInterpretation}
+This is an analysis value only; the tracker does not add it to the official NYSEG credit-bank balance.` : balanceInterpretation;
       const importDiffExceedsExportDiff = Number.isFinite(differences.m01) && Number.isFinite(differences.m02) && differences.m01 > differences.m02;
       return `
     <tr class="entry-history-row ${entry.entry_date === entriesPageState.selectedDate ? "entry-row-selected" : ""} ${importDiffExceedsExportDiff ? "entry-import-diff-exceeds-export-diff" : ""}"
@@ -27468,7 +27469,21 @@ ${balanceInterpretation}` : balanceInterpretation;
       button.addEventListener("click", () => selectHistoricalEntry(button.dataset.entryDate));
     });
   }
+  function initializeEntriesMonthComparisonToggle() {
+    const toggle = document.querySelector("[data-entries-month-comparison-toggle]");
+    const content = document.querySelector("[data-entries-month-comparison-content]");
+    if (!toggle || !content || toggle.dataset.bound === "true") return;
+    toggle.dataset.bound = "true";
+    toggle.addEventListener("click", () => {
+      const opening = content.hidden;
+      content.hidden = !opening;
+      toggle.setAttribute("aria-expanded", String(opening));
+      const label = toggle.querySelector("[data-entries-month-comparison-label]");
+      if (label) label.textContent = opening ? "Hide totals" : "Show totals";
+    });
+  }
   function updateEntriesMeterDifferenceSummary(entries, meterDifferences, allEntries = entries) {
+    initializeEntriesMonthComparisonToggle();
     const m01Target = document.getElementById("entries-m01-diff-total");
     const m02Target = document.getElementById("entries-m02-diff-total");
     const m01AverageTarget = document.getElementById("entries-m01-diff-average");
@@ -27528,6 +27543,157 @@ ${balanceInterpretation}` : balanceInterpretation;
 ${formatNumber(totalConsumption, 1, 1)} - ${formatNumber(totals.m01, 1, 1)} + ${formatNumber(totals.m02, 1, 1)} = ${formatNumber(impliedProduction, 1, 1)} kWh.
 Sunrun CSV total for matching filtered dates: ${formatNumber(sunrunProductionTotal, 1, 1)} kWh.
 This is a reconciliation, not an independent measurement, because EDC includes Sunrun production.` : "Production reconciliation requires calculated consumption and meter differences.";
+    }
+    const monthKeys = Array.from({ length: 3 }, (_, offset) => {
+      const month = /* @__PURE__ */ new Date(`${getTodayIsoDate().slice(0, 7)}-01T12:00:00`);
+      month.setMonth(month.getMonth() - offset);
+      return `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, "0")}`;
+    });
+    const monthLabels = monthKeys.map((monthKey) => (/* @__PURE__ */ new Date(`${monthKey}-01T12:00:00`)).toLocaleDateString("en-US", {
+      month: "short",
+      year: "numeric"
+    }));
+    ["current", "previous", "earlier"].forEach((position, index) => {
+      const heading = document.getElementById(`entries-month-comparison-${position}`);
+      if (heading) heading.textContent = monthLabels[index];
+    });
+    const completedEntries = allEntries.filter((entry) => String(entry.entry_date || "") < getTodayIsoDate());
+    const monthlyTotals = monthKeys.reduce((result, monthKey) => {
+      result[monthKey] = {
+        power: 0,
+        m01: 0,
+        m02: 0,
+        edc: 0,
+        dayBalance: 0,
+        powerCount: 0,
+        m01Count: 0,
+        m02Count: 0,
+        edcCount: 0,
+        dayBalanceCount: 0
+      };
+      return result;
+    }, {});
+    completedEntries.forEach((entry) => {
+      const monthKey = String(entry.entry_date || "").slice(0, 7);
+      const summary = monthlyTotals[monthKey];
+      if (!summary) return;
+      const power = Number(entry.production_kwh);
+      const differences = meterDifferences.get(entry.entry_date) || {};
+      if (Number.isFinite(power)) {
+        summary.power += power;
+        summary.powerCount += 1;
+      }
+      if (Number.isFinite(differences.m01)) {
+        summary.m01 += differences.m01;
+        summary.m01Count += 1;
+      }
+      if (Number.isFinite(differences.m02)) {
+        summary.m02 += differences.m02;
+        summary.m02Count += 1;
+      }
+      if (Number.isFinite(differences.edc)) {
+        summary.edc += differences.edc;
+        summary.edcCount += 1;
+      }
+    });
+    monthKeys.forEach((monthKey) => {
+      const summary = monthlyTotals[monthKey];
+      if (summary.powerCount && summary.edcCount) {
+        summary.dayBalance = summary.power - summary.edc;
+        summary.dayBalanceCount = Math.min(summary.powerCount, summary.edcCount);
+      }
+    });
+    const monthlyMetrics = {
+      power: { label: "Power", color: "#8a641c", domId: "power", description: "Solar energy produced during completed days. Total: sum of daily production readings in kWh." },
+      m01: { label: "M01 import", color: "#c15a16", domId: "m01", description: "Electricity imported from the grid during completed days. Total: sum of each daily increase in Meter 01." },
+      m02: { label: "M02 export", color: "#176f51", domId: "m02", description: "Surplus solar exported to the grid during completed days. Total: sum of each daily increase in Meter 02." },
+      edc: { label: "EDC", color: "#2e6f9e", domId: "edc", description: "Estimated daily consumption. Each day: Power + M01 import minus M02 export; total: sum of completed days." },
+      dayBalance: { label: "Day balance", color: "#4c6170", domId: "day-balance", description: "Net energy flow for completed days. Positive means more export than import; negative means more import than export. Each day: Power minus EDC, or M02 export minus M01 import. This tracker does not add it to the official NYSEG credit-bank balance." }
+    };
+    Object.entries(monthlyMetrics).forEach(([metric, details]) => {
+      ["current", "previous", "earlier"].forEach((position, index) => {
+        const target = document.getElementById(`entries-month-${details.domId}-${position}`);
+        const summary = monthlyTotals[monthKeys[index]];
+        const count = summary?.[`${metric}Count`] || 0;
+        if (target) target.textContent = count ? `${summary[metric].toFixed(1)} kWh` : "\u2014";
+      });
+    });
+    const electricRate = Number(entriesPageState.config?.current_electric_rate || defaultConfig.current_electric_rate || 0);
+    const creditBankByMonth = /* @__PURE__ */ new Map();
+    let estimatedCreditBankKwh = 0;
+    completedEntries.forEach((entry) => {
+      const differences = meterDifferences.get(entry.entry_date) || {};
+      if (!Number.isFinite(differences.dayBalance)) return;
+      estimatedCreditBankKwh = Math.max(0, estimatedCreditBankKwh + differences.dayBalance);
+      creditBankByMonth.set(String(entry.entry_date || "").slice(0, 7), estimatedCreditBankKwh);
+    });
+    ["current", "previous", "earlier"].forEach((position, index) => {
+      const target = document.getElementById(`entries-month-credit-bank-${position}`);
+      const bankKwh = creditBankByMonth.get(monthKeys[index]);
+      if (!target) return;
+      if (!Number.isFinite(bankKwh)) {
+        target.textContent = "\u2014";
+        target.removeAttribute("title");
+        return;
+      }
+      const estimatedValue = bankKwh * electricRate;
+      target.textContent = `${bankKwh.toFixed(1)} kWh \xB7 ${formatCurrency(estimatedValue)}`;
+      target.title = `Estimated credit bank at the end of ${monthLabels[index]} from tracked meter history. ${bankKwh.toFixed(1)} kWh \xD7 $${electricRate.toFixed(3)}/kWh = ${formatCurrency(estimatedValue)}. This is not the official NYSEG balance.`;
+    });
+    const sparklineChart = document.getElementById("entries-month-sparkline-chart");
+    if (sparklineChart) {
+      sparklineChart.innerHTML = Object.entries(monthlyMetrics).map(([metric, details]) => {
+        const values = monthKeys.slice().reverse().map((monthKey) => {
+          const summary = monthlyTotals[monthKey];
+          return summary?.[`${metric}Count`] ? summary[metric] : null;
+        });
+        const finiteValues = values.filter(Number.isFinite);
+        if (!finiteValues.length) return `<div class="entries-month-sparkline"><span title="${details.description}">${details.label}</span><small>No data</small></div>`;
+        const min = Math.min(...finiteValues);
+        const max = Math.max(...finiteValues);
+        const range = max - min || 1;
+        const points = values.map((value, index) => {
+          const x2 = 8 + index * 67;
+          const y = Number.isFinite(value) ? 23 - (value - min) / range * 18 : 23;
+          return `${x2.toFixed(1)},${y.toFixed(1)}`;
+        }).join(" ");
+        return `<div class="entries-month-sparkline"><span title="${details.description}">${details.label}</span><svg viewBox="0 0 150 30" role="img" aria-label="${details.label} three-month progression"><path d="M8 23H142" class="entries-month-sparkline-baseline"></path><polyline points="${points}" fill="none" stroke="${details.color}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></polyline></svg></div>`;
+      }).join("");
+    }
+    const trendChart = document.getElementById("entries-month-trend-chart");
+    if (trendChart) {
+      const chartMetrics = ["power", "m01", "m02", "edc"];
+      const series = chartMetrics.map((metric) => ({
+        metric,
+        ...monthlyMetrics[metric],
+        values: monthKeys.slice().reverse().map((monthKey) => {
+          const summary = monthlyTotals[monthKey];
+          return summary?.[`${metric}Count`] ? summary[metric] : null;
+        })
+      }));
+      const finiteValues = series.flatMap((item) => item.values).filter(Number.isFinite);
+      if (!finiteValues.length) {
+        trendChart.innerHTML = "<small>No completed data is available for this comparison.</small>";
+      } else {
+        const max = Math.max(...finiteValues, 1);
+        const xCoordinates = [36, 172, 308];
+        const labels = monthLabels.slice().reverse().map((label) => label.replace(/\s\d{4}$/, ""));
+        const seriesMarkup = series.map((item) => {
+          const points = item.values.map((value, index) => {
+            const x2 = xCoordinates[index];
+            const y = Number.isFinite(value) ? 112 - value / max * 88 : 112;
+            return `${x2.toFixed(1)},${y.toFixed(1)}`;
+          }).join(" ");
+          return `<polyline points="${points}" fill="none" stroke="${item.color}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></polyline>`;
+        }).join("");
+        const dotsMarkup = series.map((item) => item.values.map((value, index) => {
+          if (!Number.isFinite(value)) return "";
+          const y = 112 - value / max * 88;
+          return `<circle cx="${xCoordinates[index]}" cy="${y.toFixed(1)}" r="3.5" fill="${item.color}"></circle>`;
+        }).join("")).join("");
+        const legendMarkup = series.map((item) => `<span><i style="background:${item.color}"></i>${item.label}</span>`).join("");
+        trendChart.innerHTML = `<div class="entries-month-trend-legend">${legendMarkup}</div><svg class="entries-month-line-chart" viewBox="0 0 344 140" role="img" aria-label="Three-month comparison of Power, M01 import, M02 export, and EDC in kilowatt-hours"><path d="M36 24H308M36 68H308M36 112H308" class="entries-month-line-grid"></path>${seriesMarkup}${dotsMarkup}${labels.map((label, index) => `<text x="${xCoordinates[index]}" y="134" text-anchor="middle">${label}</text>`).join("")}</svg>`;
+      }
     }
     const savedRuns = allEntries.flatMap((entry) => Array.isArray(entry.meter_simulation_runs) ? entry.meter_simulation_runs.filter((run) => ["hourly", "checkpoint"].includes(String(run.run_type || "")) && run.recorded_at).map((run) => ({ ...run, entry_date: entry.entry_date })) : []).sort((left, right) => new Date(right.recorded_at).getTime() - new Date(left.recorded_at).getTime());
     const latestRun = savedRuns[0] || null;

@@ -3162,3 +3162,345 @@ body[data-page="dashboard"].dashboard-compact-mode .btn-contract {
 .entry-revision-table table { width: 100%; border-collapse: collapse; }
 .entry-revision-table th, .entry-revision-table td { padding: 10px; border-bottom: 1px solid #c8d7df; text-align: left; overflow-wrap: anywhere; min-width: 130px; }
 .entry-revision-table thead { position: sticky; top: 0; background: #e1edf2; }
+
+.entries-month-comparison {
+  margin: 0.7rem 0;
+  padding: 0.65rem 0.75rem 0.15rem;
+  border: 1px solid rgba(83, 125, 149, 0.18);
+  border-radius: 10px;
+  background: rgba(248, 251, 250, 0.86);
+}
+
+.entries-month-comparison-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 0.8rem;
+  margin-bottom: 0.45rem;
+}
+
+.entries-month-comparison-heading .eyebrow { font-size: 0.62rem; }
+.entries-month-comparison-heading h3 { margin: 0.06rem 0 0; font-size: 0.9rem; }
+.entries-month-comparison-heading small { color: var(--muted); font-size: 0.7rem; text-align: right; }
+.entries-month-comparison-table { margin-bottom: 0.5rem; font-size: 0.78rem; }
+.entries-month-comparison-table th,
+.entries-month-comparison-table td { padding: 0.26rem 0.45rem; vertical-align: middle; }
+.entries-month-comparison-table thead th { color: var(--muted); font-size: 0.67rem; text-transform: uppercase; letter-spacing: 0.035em; }
+.entries-month-comparison-table tbody th { color: #274f64; }
+.entries-month-comparison-table td { color: #176f51; font-weight: 700; text-align: right; white-space: nowrap; }
+
+@media (max-width: 575px) {
+  .entries-month-comparison-heading { align-items: start; flex-direction: column; gap: 0.25rem; }
+  .entries-month-comparison-heading small { text-align: left; }
+}
+.entries-month-comparison {
+  padding: .45rem .6rem;
+}
+
+.entries-month-comparison-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: .2rem .15rem;
+  color: var(--ink, #263747);
+  text-align: left;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+.entries-month-comparison-toggle .eyebrow {
+  display: block;
+  margin-bottom: .1rem;
+}
+
+.entries-month-comparison-toggle strong {
+  display: block;
+  font-size: .88rem;
+}
+
+.entries-month-comparison-toggle-label {
+  color: #35667f;
+  font-size: .76rem;
+  font-weight: 800;
+}
+
+.entries-month-comparison-content {
+  padding-top: .45rem;
+}
+
+.entries-month-comparison-heading {
+  justify-content: flex-end;
+  margin-bottom: .35rem;
+}
+
+.entries-month-comparison-layout {
+  display: flex;
+  align-items: stretch;
+  gap: .8rem;
+}
+
+.entries-month-comparison .table-responsive {
+  flex: 0 0 auto;
+}
+
+.entries-month-comparison-table {
+  width: auto;
+  min-width: 510px;
+  margin-bottom: 0;
+  table-layout: auto;
+}
+
+.entries-month-comparison-table th,
+.entries-month-comparison-table td {
+  padding: .26rem .42rem;
+}
+
+.entries-month-comparison-table th:first-child {
+  min-width: 100px;
+  text-align: left;
+}
+
+.entries-month-comparison-table th:not(:first-child),
+.entries-month-comparison-table td {
+  min-width: 94px;
+  text-align: right;
+}
+
+.entries-month-trend {
+  flex: 1 1 250px;
+  min-width: 230px;
+  margin: 0;
+  padding: .15rem 0 .1rem .8rem;
+  border-left: 1px solid #d8e3e5;
+}
+
+.entries-month-trend figcaption {
+  margin-bottom: .2rem;
+  color: #405d6d;
+  font-size: .72rem;
+  font-weight: 800;
+}
+
+.entries-month-trend figcaption small {
+  margin-left: .25rem;
+  color: #71838e;
+  font-size: .66rem;
+  font-weight: 600;
+}
+
+.entries-month-trend-chart {
+  display: grid;
+  gap: .08rem;
+}
+
+.entries-month-sparkline {
+  display: grid;
+  grid-template-columns: 75px minmax(120px, 1fr);
+  align-items: center;
+  gap: .35rem;
+  min-height: 20px;
+  color: #557080;
+  font-size: .68rem;
+  font-weight: 800;
+}
+
+.entries-month-sparkline svg {
+  display: block;
+  width: 100%;
+  max-width: 190px;
+  height: 25px;
+}
+
+.entries-month-sparkline small {
+  color: #71838e;
+  font-size: .67rem;
+  font-weight: 600;
+}
+
+.entries-month-sparkline-baseline {
+  stroke: #dbe5e6;
+  stroke-width: 1;
+}
+
+@media (max-width: 900px) {
+  .entries-month-comparison-layout {
+    flex-direction: column;
+  }
+
+  .entries-month-trend {
+    width: 100%;
+    padding: .55rem 0 0;
+    border-top: 1px solid #d8e3e5;
+    border-left: 0;
+  }
+}
+.entries-month-trend {
+  flex: 1 1 360px;
+  min-width: 320px;
+}
+
+.entries-month-trend-chart {
+  width: 100%;
+}
+
+.entries-month-trend-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .2rem .65rem;
+  margin-bottom: .1rem;
+  color: #536f7e;
+  font-size: .67rem;
+  font-weight: 800;
+}
+
+.entries-month-trend-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: .22rem;
+}
+
+.entries-month-trend-legend i {
+  display: inline-block;
+  width: 8px;
+  height: 3px;
+  border-radius: 999px;
+}
+
+.entries-month-line-chart {
+  display: block;
+  width: 100%;
+  max-width: none;
+  height: 132px;
+  overflow: visible;
+}
+
+.entries-month-line-chart text {
+  fill: #647b88;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.entries-month-line-grid {
+  fill: none;
+  stroke: #e0e8e9;
+  stroke-width: 1;
+}
+
+@media (max-width: 900px) {
+  .entries-month-trend {
+    min-width: 0;
+  }
+}
+.entries-month-sparklines {
+  flex: 0 0 205px;
+  min-width: 205px;
+  margin: 0;
+  padding: .15rem .8rem .1rem 0;
+  border-right: 1px solid #d8e3e5;
+}
+
+.entries-month-sparklines figcaption {
+  margin-bottom: .2rem;
+  color: #405d6d;
+  font-size: .72rem;
+  font-weight: 800;
+}
+
+.entries-month-sparklines figcaption small {
+  margin-left: .25rem;
+  color: #71838e;
+  font-size: .66rem;
+  font-weight: 600;
+}
+
+.entries-month-sparkline-chart {
+  display: grid;
+  gap: .08rem;
+}
+
+.entries-month-trend {
+  min-width: 280px;
+}
+
+@media (max-width: 1120px) {
+  .entries-month-comparison-layout {
+    flex-wrap: wrap;
+  }
+
+  .entries-month-trend {
+    flex-basis: 100%;
+    padding: .55rem 0 0;
+    border-top: 1px solid #d8e3e5;
+    border-left: 0;
+  }
+}
+
+@media (max-width: 700px) {
+  .entries-month-sparklines {
+    flex: 1 1 100%;
+    min-width: 0;
+    padding: .55rem 0 0;
+    border-top: 1px solid #d8e3e5;
+    border-right: 0;
+  }
+}
+.entries-month-comparison-table {
+  min-width: 400px;
+}
+
+.entries-month-comparison-table th:not(:first-child),
+.entries-month-comparison-table td {
+  min-width: 75px;
+}
+
+.entries-month-sparklines {
+  flex-basis: 185px;
+  min-width: 185px;
+}
+
+.entries-month-trend {
+  min-width: 250px;
+}
+
+@media (max-width: 1120px) {
+  .entries-month-comparison-layout {
+    flex-wrap: nowrap;
+  }
+
+  .entries-month-trend {
+    flex-basis: 250px;
+    padding: .15rem 0 .1rem .8rem;
+    border-top: 0;
+    border-left: 1px solid #d8e3e5;
+  }
+}
+
+@media (max-width: 900px) {
+  .entries-month-comparison-layout {
+    flex-wrap: wrap;
+  }
+
+  .entries-month-trend {
+    flex-basis: 100%;
+    padding: .55rem 0 0;
+    border-top: 1px solid #d8e3e5;
+    border-left: 0;
+  }
+}
+.entries-month-metric-label {
+  cursor: help;
+  text-decoration-line: underline;
+  text-decoration-style: dotted;
+  text-decoration-color: #9eb4bd;
+  text-underline-offset: 3px;
+}
+
+.entries-month-sparkline > span[title] {
+  cursor: help;
+  text-decoration-line: underline;
+  text-decoration-style: dotted;
+  text-decoration-color: #b7c8ce;
+  text-underline-offset: 3px;
+}
