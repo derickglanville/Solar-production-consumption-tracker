@@ -261,7 +261,7 @@
             <tr><th scope="row"><span class="entries-month-metric-label" title="Surplus solar exported to the grid during completed days. Total: sum of each daily increase in Meter 02.">M02 export</span></th><td id="entries-month-m02-current">—</td><td id="entries-month-m02-previous">—</td><td id="entries-month-m02-earlier">—</td></tr>
             <tr><th scope="row"><span class="entries-month-metric-label" title="Estimated daily consumption. Each day: Power + M01 import − M02 export; total: sum of completed days.">EDC</span></th><td id="entries-month-edc-current">—</td><td id="entries-month-edc-previous">—</td><td id="entries-month-edc-earlier">—</td></tr>
             <tr><th scope="row"><span class="entries-month-metric-label" title="Net energy flow for completed days. Positive means more export than import; negative means more import than export. Each day: Power − EDC, or M02 export − M01 import. This tracker does not add it to the official NYSEG credit-bank balance.">Day balance</span></th><td id="entries-month-day-balance-current">—</td><td id="entries-month-day-balance-previous">—</td><td id="entries-month-day-balance-earlier">—</td></tr>
-            <tr><th scope="row"><span class="entries-month-metric-label" title="Estimated NYSEG credit bank from the tracked meter history. It starts at zero on the first tracked meter difference, adds each net export, applies net imports against the balance, and never goes below zero. Dollar value uses the current electric rate; it is not an official NYSEG balance.">NYSEG credit bank</span></th><td id="entries-month-credit-bank-current">—</td><td id="entries-month-credit-bank-previous">—</td><td id="entries-month-credit-bank-earlier">—</td></tr>
+
           </tbody>
         </table>
       </div>
@@ -274,7 +274,21 @@
         <div id="entries-month-trend-chart" class="entries-month-trend-chart"></div>
       </figure>
     </div>
-  </div>
+    <aside class="entries-credit-bank" aria-labelledby="entries-credit-bank-heading">
+      <div class="entries-credit-bank-heading">
+        <div>
+          <span class="eyebrow">Monthly net credits from tracked meter history</span>
+          <strong id="entries-credit-bank-heading">NYSEG credit bank</strong>
+        </div>
+        <small>Monthly cards show credits added or used; Running balance accumulates them. Dollar values use the current electric rate and are not NYSEG’s official balance.</small>
+      </div>
+      <div class="entries-credit-bank-grid">
+        <div class="entries-credit-bank-card"><span id="entries-month-credit-bank-label-current">Current month</span><strong id="entries-month-credit-bank-current">—</strong><small id="entries-month-credit-bank-value-current">≈ —</small></div>
+        <div class="entries-credit-bank-card"><span id="entries-month-credit-bank-label-previous">Previous month</span><strong id="entries-month-credit-bank-previous">—</strong><small id="entries-month-credit-bank-value-previous">≈ —</small></div>
+        <div class="entries-credit-bank-card"><span id="entries-month-credit-bank-label-earlier">Two months ago</span><strong id="entries-month-credit-bank-earlier">—</strong><small id="entries-month-credit-bank-value-earlier">≈ —</small></div>
+        <div class="entries-credit-bank-card entries-credit-bank-card-total"><span>Running balance</span><strong id="entries-month-credit-bank-running">—</strong><small id="entries-month-credit-bank-value-running">≈ —</small></div>
+      </div>
+    </aside>  </div>
 </section>        <div class="calculation-color-legend" aria-label="Calculation color key">
           <span><i class="calculation-positive" aria-hidden="true"></i>Positive</span>
           <span><i class="calculation-negative" aria-hidden="true"></i>Negative</span>

@@ -27620,26 +27620,50 @@ This is a reconciliation, not an independent measurement, because EDC includes S
     });
     const electricRate = Number(entriesPageState.config?.current_electric_rate || defaultConfig.current_electric_rate || 0);
     const creditBankByMonth = /* @__PURE__ */ new Map();
+    const monthlyCreditChangeByMonth = /* @__PURE__ */ new Map();
     let estimatedCreditBankKwh = 0;
     completedEntries.forEach((entry) => {
       const differences = meterDifferences.get(entry.entry_date) || {};
       if (!Number.isFinite(differences.dayBalance)) return;
+      const monthKey = String(entry.entry_date || "").slice(0, 7);
+      monthlyCreditChangeByMonth.set(monthKey, (monthlyCreditChangeByMonth.get(monthKey) || 0) + differences.dayBalance);
       estimatedCreditBankKwh = Math.max(0, estimatedCreditBankKwh + differences.dayBalance);
-      creditBankByMonth.set(String(entry.entry_date || "").slice(0, 7), estimatedCreditBankKwh);
+      creditBankByMonth.set(monthKey, estimatedCreditBankKwh);
     });
-    ["current", "previous", "earlier"].forEach((position, index) => {
-      const target = document.getElementById(`entries-month-credit-bank-${position}`);
-      const bankKwh = creditBankByMonth.get(monthKeys[index]);
-      if (!target) return;
+    const formatCreditBankCard = (bankKwh, label, kwhTarget, valueTarget, { signed = false } = {}) => {
+      if (!kwhTarget || !valueTarget) return;
       if (!Number.isFinite(bankKwh)) {
-        target.textContent = "\u2014";
-        target.removeAttribute("title");
+        kwhTarget.textContent = "\u2014";
+        valueTarget.textContent = "\u2248 \u2014";
+        kwhTarget.removeAttribute("title");
         return;
       }
       const estimatedValue = bankKwh * electricRate;
-      target.textContent = `${bankKwh.toFixed(1)} kWh \xB7 ${formatCurrency(estimatedValue)}`;
-      target.title = `Estimated credit bank at the end of ${monthLabels[index]} from tracked meter history. ${bankKwh.toFixed(1)} kWh \xD7 $${electricRate.toFixed(3)}/kWh = ${formatCurrency(estimatedValue)}. This is not the official NYSEG balance.`;
+      const direction = signed && bankKwh >= 0 ? "+" : "";
+      const explanation = `Estimated ${label} from tracked meter history. ${direction}${bankKwh.toFixed(1)} kWh \xD7 $${electricRate.toFixed(3)}/kWh \u2248 ${formatCurrency(estimatedValue)}. This is not the official NYSEG balance.`;
+      kwhTarget.textContent = `${direction}${bankKwh.toFixed(1)} kWh`;
+      valueTarget.textContent = `\u2248 ${formatCurrency(estimatedValue)}`;
+      kwhTarget.title = explanation;
+      valueTarget.title = explanation;
+    };
+    ["current", "previous", "earlier"].forEach((position, index) => {
+      const labelTarget = document.getElementById(`entries-month-credit-bank-label-${position}`);
+      if (labelTarget) labelTarget.textContent = `${monthLabels[index]} net credit`;
+      formatCreditBankCard(
+        monthlyCreditChangeByMonth.get(monthKeys[index]),
+        `net credit for ${monthLabels[index]}`,
+        document.getElementById(`entries-month-credit-bank-${position}`),
+        document.getElementById(`entries-month-credit-bank-value-${position}`),
+        { signed: true }
+      );
     });
+    const latestBankMonth = Array.from(creditBankByMonth.keys()).sort().at(-1);
+    formatCreditBankCard(
+      latestBankMonth ? creditBankByMonth.get(latestBankMonth) : null,
+      latestBankMonth ? `through ${(/* @__PURE__ */ new Date(`${latestBankMonth}-01T12:00:00`)).toLocaleDateString("en-US", { month: "long", year: "numeric" })}` : "",
+      document.getElementById("entries-month-credit-bank-running"),
+      document.getElementById("entries-month-credit-bank-value-running")
+    );
     const sparklineChart = document.getElementById("entries-month-sparkline-chart");
     if (sparklineChart) {
       sparklineChart.innerHTML = Object.entries(monthlyMetrics).map(([metric, details]) => {
