@@ -24014,7 +24014,7 @@ This typically indicates that your device does not have a healthy Internet conne
   var meterSimulationMonitorStartMinute = 0;
   var meterSimulationMonitorEndMinute = 23 * 60 + 59;
   var meterSimulationMonitorIntervalMinutes = 60;
-  var dailyAutoCreateHour = 7;
+  var dailyAutoCreateHour = 6;
   var dailyAutoCreateMinute = 30;
   var oneTimeManualAutoCreateDate = "2026-07-22";
   var oneTimeManualAutoCreateStorageKey = "solar-one-time-autocreate-2026-07-22";
