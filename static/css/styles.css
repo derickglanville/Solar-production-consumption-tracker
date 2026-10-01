@@ -3597,3 +3597,16 @@ body[data-page="dashboard"].dashboard-compact-mode .btn-contract {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+.entries-month-comparison .table-responsive,
+.entries-credit-bank-grid,
+.entries-month-trend-chart {
+  overflow-x: auto;
+}
+
+.entries-credit-bank-grid {
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+
+.entries-month-line-chart {
+  min-width: 344px;
+}

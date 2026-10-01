@@ -27544,41 +27544,19 @@ ${formatNumber(totalConsumption, 1, 1)} - ${formatNumber(totals.m01, 1, 1)} + ${
 Sunrun CSV total for matching filtered dates: ${formatNumber(sunrunProductionTotal, 1, 1)} kWh.
 This is a reconciliation, not an independent measurement, because EDC includes Sunrun production.` : "Production reconciliation requires calculated consumption and meter differences.";
     }
-    const monthKeys = Array.from({ length: 3 }, (_, offset) => {
-      const month = /* @__PURE__ */ new Date(`${getTodayIsoDate().slice(0, 7)}-01T12:00:00`);
-      month.setMonth(month.getMonth() - offset);
-      return `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, "0")}`;
-    });
-    const monthLabels = monthKeys.map((monthKey) => (/* @__PURE__ */ new Date(`${monthKey}-01T12:00:00`)).toLocaleDateString("en-US", {
-      month: "short",
-      year: "numeric"
-    }));
-    ["current", "previous", "earlier"].forEach((position, index) => {
-      const heading = document.getElementById(`entries-month-comparison-${position}`);
-      if (heading) heading.textContent = monthLabels[index];
-    });
-    const completedEntries = allEntries.filter((entry) => String(entry.entry_date || "") < getTodayIsoDate());
+    const todayIsoDate = getTodayIsoDate();
+    const completedEntries = allEntries.filter((entry) => String(entry.entry_date || "") < todayIsoDate);
+    const monthKeys = [...new Set(allEntries.filter((entry) => String(entry.entry_date || "") <= todayIsoDate).map((entry) => String(entry.entry_date || "").slice(0, 7)))].filter(Boolean).sort().reverse();
+    const monthLabels = monthKeys.map((monthKey) => (/* @__PURE__ */ new Date(`${monthKey}-01T12:00:00`)).toLocaleDateString("en-US", { month: "short", year: "numeric" }));
     const monthlyTotals = monthKeys.reduce((result, monthKey) => {
-      result[monthKey] = {
-        power: 0,
-        m01: 0,
-        m02: 0,
-        edc: 0,
-        dayBalance: 0,
-        powerCount: 0,
-        m01Count: 0,
-        m02Count: 0,
-        edcCount: 0,
-        dayBalanceCount: 0
-      };
+      result[monthKey] = { power: 0, m01: 0, m02: 0, edc: 0, dayBalance: 0, powerCount: 0, m01Count: 0, m02Count: 0, edcCount: 0, dayBalanceCount: 0 };
       return result;
     }, {});
     completedEntries.forEach((entry) => {
-      const monthKey = String(entry.entry_date || "").slice(0, 7);
-      const summary = monthlyTotals[monthKey];
+      const summary = monthlyTotals[String(entry.entry_date || "").slice(0, 7)];
       if (!summary) return;
-      const power = Number(entry.production_kwh);
       const differences = meterDifferences.get(entry.entry_date) || {};
+      const power = Number(entry.production_kwh);
       if (Number.isFinite(power)) {
         summary.power += power;
         summary.powerCount += 1;
@@ -27604,20 +27582,22 @@ This is a reconciliation, not an independent measurement, because EDC includes S
       }
     });
     const monthlyMetrics = {
-      power: { label: "Power", color: "#8a641c", domId: "power", description: "Solar energy produced during completed days. Total: sum of daily production readings in kWh." },
-      m01: { label: "M01 import", color: "#c15a16", domId: "m01", description: "Electricity imported from the grid during completed days. Total: sum of each daily increase in Meter 01." },
-      m02: { label: "M02 export", color: "#176f51", domId: "m02", description: "Surplus solar exported to the grid during completed days. Total: sum of each daily increase in Meter 02." },
-      edc: { label: "EDC", color: "#2e6f9e", domId: "edc", description: "Estimated daily consumption. Each day: Power + M01 import minus M02 export; total: sum of completed days." },
-      dayBalance: { label: "Day balance", color: "#4c6170", domId: "day-balance", description: "Net energy flow for completed days. Positive means more export than import; negative means more import than export. Each day: Power minus EDC, or M02 export minus M01 import. This tracker does not add it to the official NYSEG credit-bank balance." }
+      power: { label: "Power", color: "#8a641c", description: "Solar energy produced during completed days. Total: sum of daily production readings in kWh." },
+      m01: { label: "M01 import", color: "#c15a16", description: "Electricity imported from the grid during completed days. Total: sum of each daily increase in Meter 01." },
+      m02: { label: "M02 export", color: "#176f51", description: "Surplus solar exported to the grid during completed days. Total: sum of each daily increase in Meter 02." },
+      edc: { label: "EDC", color: "#2e6f9e", description: "Estimated daily consumption. Each day: Power + M01 import minus M02 export; total: sum of completed days." },
+      dayBalance: { label: "Day balance", color: "#4c6170", description: "Net energy flow for completed days. Positive means more export than import; negative means more import than export." }
     };
-    Object.entries(monthlyMetrics).forEach(([metric, details]) => {
-      ["current", "previous", "earlier"].forEach((position, index) => {
-        const target = document.getElementById(`entries-month-${details.domId}-${position}`);
-        const summary = monthlyTotals[monthKeys[index]];
+    const tableHead = document.getElementById("entries-month-comparison-head");
+    const tableBody = document.getElementById("entries-month-comparison-body");
+    if (tableHead && tableBody) {
+      tableHead.innerHTML = `<tr><th scope="col">Metric</th>${monthLabels.map((label) => `<th scope="col">${label}</th>`).join("")}</tr>`;
+      tableBody.innerHTML = Object.entries(monthlyMetrics).map(([metric, details]) => `<tr><th scope="row"><span class="entries-month-metric-label" title="${details.description}">${details.label}</span></th>${monthKeys.map((monthKey) => {
+        const summary = monthlyTotals[monthKey];
         const count = summary?.[`${metric}Count`] || 0;
-        if (target) target.textContent = count ? `${summary[metric].toFixed(1)} kWh` : "\u2014";
-      });
-    });
+        return `<td>${count ? `${summary[metric].toFixed(1)} kWh` : "\u2014"}</td>`;
+      }).join("")}</tr>`).join("");
+    }
     const electricRate = Number(entriesPageState.config?.current_electric_rate || defaultConfig.current_electric_rate || 0);
     const creditBankByMonth = /* @__PURE__ */ new Map();
     const monthlyCreditChangeByMonth = /* @__PURE__ */ new Map();
@@ -27630,40 +27610,18 @@ This is a reconciliation, not an independent measurement, because EDC includes S
       estimatedCreditBankKwh = Math.max(0, estimatedCreditBankKwh + differences.dayBalance);
       creditBankByMonth.set(monthKey, estimatedCreditBankKwh);
     });
-    const formatCreditBankCard = (bankKwh, label, kwhTarget, valueTarget, { signed = false } = {}) => {
-      if (!kwhTarget || !valueTarget) return;
-      if (!Number.isFinite(bankKwh)) {
-        kwhTarget.textContent = "\u2014";
-        valueTarget.textContent = "\u2248 \u2014";
-        kwhTarget.removeAttribute("title");
-        return;
-      }
-      const estimatedValue = bankKwh * electricRate;
-      const direction = signed && bankKwh >= 0 ? "+" : "";
-      const explanation = `Estimated ${label} from tracked meter history. ${direction}${bankKwh.toFixed(1)} kWh \xD7 $${electricRate.toFixed(3)}/kWh \u2248 ${formatCurrency(estimatedValue)}. This is not the official NYSEG balance.`;
-      kwhTarget.textContent = `${direction}${bankKwh.toFixed(1)} kWh`;
-      valueTarget.textContent = `\u2248 ${formatCurrency(estimatedValue)}`;
-      kwhTarget.title = explanation;
-      valueTarget.title = explanation;
-    };
-    ["current", "previous", "earlier"].forEach((position, index) => {
-      const labelTarget = document.getElementById(`entries-month-credit-bank-label-${position}`);
-      if (labelTarget) labelTarget.textContent = `${monthLabels[index]} net credit`;
-      formatCreditBankCard(
-        monthlyCreditChangeByMonth.get(monthKeys[index]),
-        `net credit for ${monthLabels[index]}`,
-        document.getElementById(`entries-month-credit-bank-${position}`),
-        document.getElementById(`entries-month-credit-bank-value-${position}`),
-        { signed: true }
-      );
-    });
-    const latestBankMonth = Array.from(creditBankByMonth.keys()).sort().at(-1);
-    formatCreditBankCard(
-      latestBankMonth ? creditBankByMonth.get(latestBankMonth) : null,
-      latestBankMonth ? `through ${(/* @__PURE__ */ new Date(`${latestBankMonth}-01T12:00:00`)).toLocaleDateString("en-US", { month: "long", year: "numeric" })}` : "",
-      document.getElementById("entries-month-credit-bank-running"),
-      document.getElementById("entries-month-credit-bank-value-running")
-    );
+    const creditGrid = document.getElementById("entries-credit-bank-grid");
+    if (creditGrid) {
+      const cards = monthKeys.map((monthKey, index) => {
+        const net = monthlyCreditChangeByMonth.get(monthKey);
+        const value = Number.isFinite(net) ? net * electricRate : null;
+        return `<div class="entries-credit-bank-card"><span>${monthLabels[index]} net credit</span><strong>${Number.isFinite(net) ? `${net >= 0 ? "+" : ""}${net.toFixed(1)} kWh` : "\u2014"}</strong><small>${Number.isFinite(value) ? `\u2248 ${formatCurrency(value)}` : "\u2248 \u2014"}</small></div>`;
+      });
+      const latestBankMonth = Array.from(creditBankByMonth.keys()).sort().at(-1);
+      const running = latestBankMonth ? creditBankByMonth.get(latestBankMonth) : null;
+      cards.push(`<div class="entries-credit-bank-card entries-credit-bank-card-total"><span>Running balance</span><strong>${Number.isFinite(running) ? `${running.toFixed(1)} kWh` : "\u2014"}</strong><small>${Number.isFinite(running) ? `\u2248 ${formatCurrency(running * electricRate)}` : "\u2248 \u2014"}</small></div>`);
+      creditGrid.innerHTML = cards.join("");
+    }
     const sparklineChart = document.getElementById("entries-month-sparkline-chart");
     if (sparklineChart) {
       sparklineChart.innerHTML = Object.entries(monthlyMetrics).map(([metric, details]) => {
@@ -27677,11 +27635,11 @@ This is a reconciliation, not an independent measurement, because EDC includes S
         const max = Math.max(...finiteValues);
         const range = max - min || 1;
         const points = values.map((value, index) => {
-          const x2 = 8 + index * 67;
+          const x2 = 8 + index * ((Math.max(150, values.length * 48) - 16) / Math.max(1, values.length - 1));
           const y = Number.isFinite(value) ? 23 - (value - min) / range * 18 : 23;
           return `${x2.toFixed(1)},${y.toFixed(1)}`;
         }).join(" ");
-        return `<div class="entries-month-sparkline"><span title="${details.description}">${details.label}</span><svg viewBox="0 0 150 30" role="img" aria-label="${details.label} three-month progression"><path d="M8 23H142" class="entries-month-sparkline-baseline"></path><polyline points="${points}" fill="none" stroke="${details.color}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></polyline></svg></div>`;
+        return `<div class="entries-month-sparkline"><span title="${details.description}">${details.label}</span><svg viewBox="0 0 ${Math.max(150, values.length * 48)} 30" role="img" aria-label="${details.label} three-month progression"><path d="M8 23H142" class="entries-month-sparkline-baseline"></path><polyline points="${points}" fill="none" stroke="${details.color}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></polyline></svg></div>`;
       }).join("");
     }
     const trendChart = document.getElementById("entries-month-trend-chart");
@@ -27700,8 +27658,9 @@ This is a reconciliation, not an independent measurement, because EDC includes S
         trendChart.innerHTML = "<small>No completed data is available for this comparison.</small>";
       } else {
         const max = Math.max(...finiteValues, 1);
-        const xCoordinates = [36, 172, 308];
         const labels = monthLabels.slice().reverse().map((label) => label.replace(/\s\d{4}$/, ""));
+        const chartWidth = Math.max(344, labels.length * 88);
+        const xCoordinates = labels.map((_, index) => 36 + index * ((chartWidth - 72) / Math.max(1, labels.length - 1)));
         const seriesMarkup = series.map((item) => {
           const points = item.values.map((value, index) => {
             const x2 = xCoordinates[index];
@@ -27716,7 +27675,7 @@ This is a reconciliation, not an independent measurement, because EDC includes S
           return `<circle cx="${xCoordinates[index]}" cy="${y.toFixed(1)}" r="3.5" fill="${item.color}"></circle>`;
         }).join("")).join("");
         const legendMarkup = series.map((item) => `<span><i style="background:${item.color}"></i>${item.label}</span>`).join("");
-        trendChart.innerHTML = `<div class="entries-month-trend-legend">${legendMarkup}</div><svg class="entries-month-line-chart" viewBox="0 0 344 140" role="img" aria-label="Three-month comparison of Power, M01 import, M02 export, and EDC in kilowatt-hours"><path d="M36 24H308M36 68H308M36 112H308" class="entries-month-line-grid"></path>${seriesMarkup}${dotsMarkup}${labels.map((label, index) => `<text x="${xCoordinates[index]}" y="134" text-anchor="middle">${label}</text>`).join("")}</svg>`;
+        trendChart.innerHTML = `<div class="entries-month-trend-legend">${legendMarkup}</div><svg class="entries-month-line-chart" viewBox="0 0 ${chartWidth} 140" role="img" aria-label="All-month comparison of Power, M01 import, M02 export, and EDC in kilowatt-hours"><path d="M36 24H${chartWidth - 36}M36 68H${chartWidth - 36}M36 112H${chartWidth - 36}" class="entries-month-line-grid"></path>${seriesMarkup}${dotsMarkup}${labels.map((label, index) => `<text x="${xCoordinates[index]}" y="134" text-anchor="middle">${label}</text>`).join("")}</svg>`;
       }
     }
     const savedRuns = allEntries.flatMap((entry) => Array.isArray(entry.meter_simulation_runs) ? entry.meter_simulation_runs.filter((run) => ["hourly", "checkpoint"].includes(String(run.run_type || "")) && run.recorded_at).map((run) => ({ ...run, entry_date: entry.entry_date })) : []).sort((left, right) => new Date(right.recorded_at).getTime() - new Date(left.recorded_at).getTime());

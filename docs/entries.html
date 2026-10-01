@@ -304,15 +304,8 @@
     <div class="entries-month-comparison-layout">
       <div class="table-responsive">
         <table class="table table-sm entries-month-comparison-table">
-          <thead><tr><th scope="col">Metric</th><th scope="col" id="entries-month-comparison-current">Current month</th><th scope="col" id="entries-month-comparison-previous">Previous month</th><th scope="col" id="entries-month-comparison-earlier">Two months ago</th></tr></thead>
-          <tbody>
-            <tr><th scope="row"><span class="entries-month-metric-label" title="Solar energy produced during completed days. Total: sum of daily production readings in kWh.">Power</span></th><td id="entries-month-power-current">—</td><td id="entries-month-power-previous">—</td><td id="entries-month-power-earlier">—</td></tr>
-            <tr><th scope="row"><span class="entries-month-metric-label" title="Electricity imported from the grid during completed days. Total: sum of each daily increase in Meter 01.">M01 import</span></th><td id="entries-month-m01-current">—</td><td id="entries-month-m01-previous">—</td><td id="entries-month-m01-earlier">—</td></tr>
-            <tr><th scope="row"><span class="entries-month-metric-label" title="Surplus solar exported to the grid during completed days. Total: sum of each daily increase in Meter 02.">M02 export</span></th><td id="entries-month-m02-current">—</td><td id="entries-month-m02-previous">—</td><td id="entries-month-m02-earlier">—</td></tr>
-            <tr><th scope="row"><span class="entries-month-metric-label" title="Estimated daily consumption. Each day: Power + M01 import − M02 export; total: sum of completed days.">EDC</span></th><td id="entries-month-edc-current">—</td><td id="entries-month-edc-previous">—</td><td id="entries-month-edc-earlier">—</td></tr>
-            <tr><th scope="row"><span class="entries-month-metric-label" title="Net energy flow for completed days. Positive means more export than import; negative means more import than export. Each day: Power − EDC, or M02 export − M01 import. This tracker does not add it to the official NYSEG credit-bank balance.">Day balance</span></th><td id="entries-month-day-balance-current">—</td><td id="entries-month-day-balance-previous">—</td><td id="entries-month-day-balance-earlier">—</td></tr>
-
-          </tbody>
+          <thead id="entries-month-comparison-head"><tr><th scope="col">Metric</th></tr></thead>
+          <tbody id="entries-month-comparison-body"></tbody>
         </table>
       </div>
       <figure class="entries-month-sparklines" aria-labelledby="entries-month-sparklines-title">
@@ -332,12 +325,7 @@
         </div>
         <small>Monthly cards show credits added or used; Running balance accumulates them. Dollar values use the current electric rate and are not NYSEG’s official balance.</small>
       </div>
-      <div class="entries-credit-bank-grid">
-        <div class="entries-credit-bank-card"><span id="entries-month-credit-bank-label-current">Current month</span><strong id="entries-month-credit-bank-current">—</strong><small id="entries-month-credit-bank-value-current">≈ —</small></div>
-        <div class="entries-credit-bank-card"><span id="entries-month-credit-bank-label-previous">Previous month</span><strong id="entries-month-credit-bank-previous">—</strong><small id="entries-month-credit-bank-value-previous">≈ —</small></div>
-        <div class="entries-credit-bank-card"><span id="entries-month-credit-bank-label-earlier">Two months ago</span><strong id="entries-month-credit-bank-earlier">—</strong><small id="entries-month-credit-bank-value-earlier">≈ —</small></div>
-        <div class="entries-credit-bank-card entries-credit-bank-card-total"><span>Running balance</span><strong id="entries-month-credit-bank-running">—</strong><small id="entries-month-credit-bank-value-running">≈ —</small></div>
-      </div>
+<div class="entries-credit-bank-grid" id="entries-credit-bank-grid"></div>
     </aside>  </div>
 </section>        <div class="calculation-color-legend" aria-label="Calculation color key">
           <span><i class="calculation-positive" aria-hidden="true"></i>Positive</span>
