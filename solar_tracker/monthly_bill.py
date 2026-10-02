@@ -40,7 +40,15 @@ BILL_REFERENCE_DATA: dict[str, dict[str, Any]] = {
         "supply_rate_per_kwh": 0.07220077,
         "meter_note": "Register 01 recorded 518 kWh imported; Register 02 recorded 1,260 kWh exported.",
     },
-}
+    "09_16_26 - 09_03_26.pdf": {
+        "statement_date": "2026-09-16", "billing_start_date": "2026-08-06", "billing_end_date": "2026-09-03", "days_in_period": 29,
+        "imported_kwh": 518.0, "smart_meter_import_kwh": 518.0, "exported_kwh": 1260.0,
+        "delivery_charges": 40.99, "supply_charges": 0.0, "taxes": 2.58, "miscellaneous_charges": 0.95,
+        "total_energy_charges": 43.57, "amount_due": 913.73, "budget_billing_amount": 0.0,
+        "payment_agreement_amount": 10.00, "balance_forward": 859.21, "total_adjustments": 0.0, "supply_rate_per_kwh": 0.0,
+        "prior_excess_generation_kwh": 1376.0, "remaining_excess_generation_kwh": 0.0, "credited_usage_kwh": 518.0,
+        "meter_note": "NYSEG offset the 518 kWh of billed use. Its excess-generation table shows 1,376 kWh prior excess and 0 kWh remaining after a corrected prior bill.",
+    },}
 
 
 @dataclass
@@ -259,3 +267,17 @@ def monthly_bill_to_dict(summary: MonthlyBillSummary) -> dict[str, Any]:
         "usage_totals": summary.usage_totals,
         "net_metering": summary.net_metering,
     }
+
+def build_net_metering_report(start_date: date = date(2026, 7, 16)) -> dict[str, Any]:
+    candidates = [item for item in _load_billing_records(DEFAULT_BILLS_DIR) if date.fromisoformat(item["billing_end_date"]) >= start_date]
+    latest_by_period: dict[tuple[str, str], dict[str, Any]] = {}
+    for record in candidates:
+        key = (record["billing_start_date"], record["billing_end_date"])
+        if key not in latest_by_period or record["statement_date"] > latest_by_period[key]["statement_date"]:
+            latest_by_period[key] = record
+    records = list(latest_by_period.values())
+    rows = []
+    for record in sorted(records, key=lambda item: (item["statement_date"], item["display_name"])):
+        credited = _number(record.get("credited_usage_kwh"))
+        rows.append({**record, "meter_net_export_kwh": _number(record["exported_kwh"]) - _number(record["smart_meter_import_kwh"]), "remaining_excess_generation_kwh": record.get("remaining_excess_generation_kwh"), "official_credit_note": f"NYSEG offset {credited:,.0f} kWh of billed use; only fixed and non-bypassable charges remained." if credited else "Export is measured on the bill; no official credit balance is itemized."})
+    return {"start_date": start_date.isoformat(), "rows": rows, "total_import_kwh": sum(_number(row["smart_meter_import_kwh"]) for row in rows), "total_export_kwh": sum(_number(row["exported_kwh"]) for row in rows), "notes": ["Meter net export is export minus smart-meter import. It measures energy flow, not a dollar credit.", "The September 16 bill confirms NYSEG offset 518 kWh of billed use and charged only fixed and non-bypassable items."]}

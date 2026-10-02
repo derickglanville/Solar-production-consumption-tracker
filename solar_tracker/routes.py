@@ -22,7 +22,7 @@ from .energy_references import (
 )
 from .firestore import AppConfig, DailySolarEntry
 from .historical_usage import historical_usage_to_dict, load_historical_usage_summary
-from .monthly_bill import load_monthly_bill_summary, monthly_bill_to_dict
+from .monthly_bill import build_net_metering_report, load_monthly_bill_summary, monthly_bill_to_dict
 from .seed import build_sample_entries
 from .sunrun_production import (
     SUNRUN_CSV_PATH,
@@ -442,6 +442,11 @@ def dashboard():
         billing_outlook=billing_outlook,
         energy_impact=energy_impact,
     )
+
+
+@main_blueprint.route("/nyseg-net-metering")
+def nyseg_net_metering():
+    return render_template("nyseg_net_metering.html", page_name="nyseg-net-metering", local_snapshot_mode=False, bootstrap_data=build_bootstrap_data(), report=build_net_metering_report())
 
 
 @main_blueprint.route("/entries")
