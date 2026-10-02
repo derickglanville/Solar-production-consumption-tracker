@@ -24638,15 +24638,18 @@ This typically indicates that your device does not have a healthy Internet conne
   function entryNeedsTemperatureBackfill(entry) {
     return parseOptionalNumber(entry?.temperature_high_f) === null || parseOptionalNumber(entry?.temperature_low_f) === null;
   }
+  function hasFirestoreRestValue(value, key) {
+    return Object.prototype.hasOwnProperty.call(value, key);
+  }
   function decodeFirestoreRestValue(value) {
     if (!value || typeof value !== "object") return value;
-    if (Object.hasOwn(value, "nullValue")) return null;
-    if (Object.hasOwn(value, "booleanValue")) return value.booleanValue;
-    if (Object.hasOwn(value, "integerValue") || Object.hasOwn(value, "doubleValue")) return Number(value.integerValue ?? value.doubleValue);
-    if (Object.hasOwn(value, "stringValue")) return value.stringValue;
-    if (Object.hasOwn(value, "timestampValue")) return value.timestampValue;
-    if (Object.hasOwn(value, "arrayValue")) return (value.arrayValue.values || []).map(decodeFirestoreRestValue);
-    if (Object.hasOwn(value, "mapValue")) return Object.fromEntries(Object.entries(value.mapValue.fields || {}).map(([key, item]) => [key, decodeFirestoreRestValue(item)]));
+    if (hasFirestoreRestValue(value, "nullValue")) return null;
+    if (hasFirestoreRestValue(value, "booleanValue")) return value.booleanValue;
+    if (hasFirestoreRestValue(value, "integerValue") || hasFirestoreRestValue(value, "doubleValue")) return Number(value.integerValue ?? value.doubleValue);
+    if (hasFirestoreRestValue(value, "stringValue")) return value.stringValue;
+    if (hasFirestoreRestValue(value, "timestampValue")) return value.timestampValue;
+    if (hasFirestoreRestValue(value, "arrayValue")) return (value.arrayValue.values || []).map(decodeFirestoreRestValue);
+    if (hasFirestoreRestValue(value, "mapValue")) return Object.fromEntries(Object.entries(value.mapValue.fields || {}).map(([key, item]) => [key, decodeFirestoreRestValue(item)]));
     return value;
   }
   function decodeFirestoreRestDocument(document2) {
