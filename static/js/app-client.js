@@ -5360,32 +5360,38 @@ async function bootDashboard(db) {
 
 async function bootEntries(db) {
   const entryTools = await handleEntryForm(db);
+  let state;
   try {
-    let state = await loadFirestoreState(db);
-    const readOnlyConnection = state.connection === "rest";
-    const sunrunSync = readOnlyConnection ? { entries: state.entries, updated: false, count: 0 } : await syncSunrunProductionIntoEntries(db, state.entries);
-    if (sunrunSync.updated) state = { ...state, entries: sunrunSync.entries };
-    const backfillResult = readOnlyConnection ? { backfilled: false, entries: state.entries } : await backfillStarterEntriesIfNeeded(db, state.entries);
-    if (backfillResult.backfilled) state = { ...state, entries: backfillResult.entries };
-    const recentBackfillResult = readOnlyConnection ? { backfilled: false, entries: state.entries } : await backfillRecentHistoricalEntriesIfMissing(db, state.entries);
-    if (recentBackfillResult.backfilled) state = { ...state, entries: recentBackfillResult.entries };
-    const temperatureBackfill = readOnlyConnection ? { updated: false, entries: state.entries, count: 0 } : await backfillMissingTemperatureRanges(db, state.entries);
-    if (temperatureBackfill.updated) state = { ...state, entries: temperatureBackfill.entries };
-    const irradianceRevalidation = readOnlyConnection ? { updated: false, entries: state.entries, count: 0 } : await revalidateSuspiciousIrradiancePeaks(db, state.entries);
-    if (irradianceRevalidation.updated) state = { ...state, entries: irradianceRevalidation.entries };
-    if (backfillResult.backfilled) {
-      renderStatusAlert("entries-status", "Starter history was restored into Firebase, and live entries were refreshed.", "success");
-    } else if (sunrunSync.updated) {
-      renderStatusAlert(
-        "entries-status",
-        `Updated ${sunrunSync.count} Historical Entr${sunrunSync.count === 1 ? "y" : "ies"} with SunRun production from the daily CSV file.`,
-        "success"
-      );
-    } else if (temperatureBackfill.updated) {
-      renderStatusAlert("entries-status", `Filled missing High/Low temperatures for ${temperatureBackfill.count} record${temperatureBackfill.count === 1 ? "" : "s"}.`, "success");
-    } else if (irradianceRevalidation.updated) {
-      renderStatusAlert("entries-status", `Corrected daily peak irradiance for ${irradianceRevalidation.count} record${irradianceRevalidation.count === 1 ? "" : "s"} from Open-Meteo.`, "success");
+    state = await loadFirestoreState(db);
+  } catch (error) {
+    const snapshot = loadEntriesSnapshot();
+    if (snapshot) {
+      const entries = snapshot.entries.map(normalizeEntry);
+      entriesPageState.config = mergeConfig(snapshot.config);
+      populateEntriesTable(entries);
+      fillEntryForm(entries.find((entry) => entry.entry_date === getTodayIsoDate()) || entries[entries.length - 1]);
+      setEntriesFirebaseStatus("snapshot", `Firebase: Unavailable · Saved snapshot from ${formatEntriesSnapshotDate(snapshot)}`);
+      renderStatusAlert("entries-status", "Live Firebase data is unavailable. The most recent local Data Entry JSON snapshot is shown; refresh when the connection returns before editing.", "warning");
+    } else {
+      populateEntriesTable(sampleEntries);
+      fillEntryForm();
+      setEntriesFirebaseStatus("unavailable", "Firebase: Unavailable · No saved snapshot");
+      renderStatusAlert("entries-status", "Live Firebase data could not load and no local snapshot exists yet, so demo entries are shown. Refresh when the connection returns before editing.", "warning");
     }
+    return;
+  }
+
+  const readOnlyConnection = state.connection === "rest";
+  const entries = state.entries;
+  entriesPageState.config = mergeConfig(state.config);
+  populateEntriesTable(entries);
+  fillEntryForm(entries.find((entry) => entry.entry_date === getTodayIsoDate()) || entries[entries.length - 1]);
+  saveEntriesSnapshot(entries, entriesPageState.config);
+  setEntriesFirebaseStatus("connected", readOnlyConnection ? "Firebase: Connected · HTTPS live read" : "Firebase: Connected · Live Data");
+
+  // Automatic SunRun, weather, and meter processing is useful, but it must not
+  // replace a successful live read with a snapshot if an individual write fails.
+  try {
     await entryTools.refreshEntries({
       showMessage: false,
       runAutoCreate: !readOnlyConnection,
@@ -5398,39 +5404,14 @@ async function bootEntries(db) {
       await entryTools.refreshEntries({ showMessage: true, runAutoCreate: !readOnlyConnection, forceCreate: true });
       url.searchParams.delete("autocreate");
       window.history.replaceState({}, "", url);
-    } else if (!backfillResult.backfilled) {
-      renderStatusAlert(
-        "entries-status",
-        "Live Firebase data is connected. Solar production data comes from the SunRun CSV file. Import (01) and Export (02) are from the Smart Meter.",
-        "success"
-      );
-    } else {
-      fillEntryForm();
     }
   } catch (error) {
-    const snapshot = loadEntriesSnapshot();
-    if (snapshot) {
-      const entries = snapshot.entries.map(normalizeEntry);
-      entriesPageState.config = mergeConfig(snapshot.config);
-      populateEntriesTable(entries);
-      const todayEntry = entries.find((entry) => entry.entry_date === getTodayIsoDate());
-      fillEntryForm(todayEntry || entries[entries.length - 1]);
-      setEntriesFirebaseStatus("snapshot", `Firebase: Unavailable · Saved snapshot from ${formatEntriesSnapshotDate(snapshot)}`);
-      renderStatusAlert(
-        "entries-status",
-        "Live Firebase data is unavailable. The most recent local Data Entry JSON snapshot is shown; refresh when the connection returns before editing.",
-        "warning"
-      );
-    } else {
-      populateEntriesTable(sampleEntries);
-      fillEntryForm();
-      setEntriesFirebaseStatus("unavailable", "Firebase: Unavailable · No saved snapshot");
-      renderStatusAlert(
-        "entries-status",
-        "Live Firebase data could not load and no local snapshot exists yet, so demo entries are shown. Refresh when the connection returns before editing.",
-        "warning"
-      );
-    }
+    console.warn("Data Entry automatic processing did not finish:", error);
+    renderStatusAlert(
+      "entries-status",
+      "Live Firebase data is connected. Automatic meter or weather processing will retry on the next refresh.",
+      "warning"
+    );
   }
 }
 
