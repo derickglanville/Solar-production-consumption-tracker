@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 
 import pandas as pd
-from flask import Blueprint, Response, jsonify, render_template, request, send_file, send_from_directory
+from flask import Blueprint, Response, jsonify, redirect, render_template, request, send_file, send_from_directory, url_for
 from plotly.offline.offline import get_plotlyjs
 
 from .ai import answer_question, get_ai_status
@@ -458,14 +458,21 @@ def load_reconciliation_entries():
 
 @main_blueprint.route("/nyseg-net-metering")
 def nyseg_net_metering():
-    return render_template("nyseg_net_metering.html", page_name="nyseg-net-metering", local_snapshot_mode=False, bootstrap_data=build_bootstrap_data(), report=build_net_metering_report())
+    entries, data_as_of = load_reconciliation_entries()
+    return render_template(
+        "nyseg_net_metering.html",
+        page_name="nyseg-net-metering",
+        local_snapshot_mode=False,
+        bootstrap_data=build_bootstrap_data(),
+        report=build_net_metering_report(),
+        reconciliation=build_net_metering_reconciliation(entries),
+        data_as_of=data_as_of,
+    )
 
 
 @main_blueprint.route("/nyseg-reconciliation")
 def nyseg_reconciliation():
-    entries, data_as_of = load_reconciliation_entries()
-    reconciliation = build_net_metering_reconciliation(entries)
-    return render_template("nyseg_reconciliation.html", page_name="nyseg-reconciliation", local_snapshot_mode=False, bootstrap_data=build_bootstrap_data(), reconciliation=reconciliation, data_as_of=data_as_of)
+    return redirect(url_for("main.nyseg_net_metering"))
 
 @main_blueprint.route("/entries")
 def entries():
