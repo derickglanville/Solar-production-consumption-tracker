@@ -1,5 +1,5 @@
 from dataclasses import asdict
-from datetime import datetime
+from datetime import date, datetime
 from http.client import HTTPConnection
 from io import StringIO
 import json
@@ -22,7 +22,7 @@ from .energy_references import (
 )
 from .firestore import AppConfig, DailySolarEntry
 from .historical_usage import historical_usage_to_dict, load_historical_usage_summary
-from .monthly_bill import build_net_metering_report, load_monthly_bill_summary, monthly_bill_to_dict
+from .monthly_bill import build_net_metering_reconciliation, build_net_metering_report, load_monthly_bill_summary, monthly_bill_to_dict
 from .seed import build_sample_entries
 from .sunrun_production import (
     SUNRUN_CSV_PATH,
@@ -444,10 +444,28 @@ def dashboard():
     )
 
 
+def load_reconciliation_entries():
+    """Use the newest local Firebase snapshot for a stable bill-to-meter comparison."""
+    if LOCAL_APPLICATION_SNAPSHOT_PATH.is_file():
+        try:
+            payload = json.loads(LOCAL_APPLICATION_SNAPSHOT_PATH.read_text(encoding="utf-8"))
+            entries = hydrate_entries(payload.get("daily_entries", []))
+            if entries:
+                return entries, payload.get("generated_at", "local snapshot")
+        except (OSError, ValueError, KeyError):
+            pass
+    return build_sample_entries(), "starter records"
+
 @main_blueprint.route("/nyseg-net-metering")
 def nyseg_net_metering():
     return render_template("nyseg_net_metering.html", page_name="nyseg-net-metering", local_snapshot_mode=False, bootstrap_data=build_bootstrap_data(), report=build_net_metering_report())
 
+
+@main_blueprint.route("/nyseg-reconciliation")
+def nyseg_reconciliation():
+    entries, data_as_of = load_reconciliation_entries()
+    reconciliation = build_net_metering_reconciliation(entries)
+    return render_template("nyseg_reconciliation.html", page_name="nyseg-reconciliation", local_snapshot_mode=False, bootstrap_data=build_bootstrap_data(), reconciliation=reconciliation, data_as_of=data_as_of)
 
 @main_blueprint.route("/entries")
 def entries():

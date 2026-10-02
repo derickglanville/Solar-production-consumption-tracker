@@ -281,3 +281,55 @@ def build_net_metering_report(start_date: date = date(2026, 7, 16)) -> dict[str,
         credited = _number(record.get("credited_usage_kwh"))
         rows.append({**record, "meter_net_export_kwh": _number(record["exported_kwh"]) - _number(record["smart_meter_import_kwh"]), "remaining_excess_generation_kwh": record.get("remaining_excess_generation_kwh"), "official_credit_note": f"NYSEG offset {credited:,.0f} kWh of billed use; only fixed and non-bypassable charges remained." if credited else "Export is measured on the bill; no official credit balance is itemized."})
     return {"start_date": start_date.isoformat(), "rows": rows, "total_import_kwh": sum(_number(row["smart_meter_import_kwh"]) for row in rows), "total_export_kwh": sum(_number(row["exported_kwh"]) for row in rows), "notes": ["Meter net export is export minus smart-meter import. It measures energy flow, not a dollar credit.", "The September 16 bill confirms NYSEG offset 518 kWh of billed use and charged only fixed and non-bypassable items."]}
+
+def build_net_metering_reconciliation(entries) -> dict[str, Any]:
+    """Compare the tracker M02 cumulative register with the matching NYSEG billing periods."""
+    report = build_net_metering_report()
+    ordered = sorted(entries or [], key=lambda item: item.entry_date)
+    rows = []
+    total_tracked_export = 0.0
+    total_billed_export = 0.0
+    total_credited_use = 0.0
+
+    for bill in report["rows"]:
+        period_start = date.fromisoformat(bill["billing_start_date"])
+        period_end = date.fromisoformat(bill["billing_end_date"])
+        baseline = [item for item in ordered if item.entry_date <= period_start]
+        ending = [item for item in ordered if item.entry_date <= period_end]
+        tracker_export = None
+        variance = None
+        baseline_date = None
+        end_date = None
+        if baseline and ending:
+            start_reading = baseline[-1]
+            end_reading = ending[-1]
+            if end_reading.entry_date > start_reading.entry_date:
+                tracker_export = max(0.0, float(end_reading.meter_02_export_reading) - float(start_reading.meter_02_export_reading))
+                variance = float(bill["exported_kwh"]) - tracker_export
+                baseline_date = start_reading.entry_date.isoformat()
+                end_date = end_reading.entry_date.isoformat()
+                total_tracked_export += tracker_export
+        credited_use = _number(bill.get("credited_usage_kwh"))
+        total_credited_use += credited_use
+        total_billed_export += _number(bill["exported_kwh"])
+        rows.append({
+            **bill,
+            "tracker_export_kwh": tracker_export,
+            "export_variance_kwh": variance,
+            "baseline_reading_date": baseline_date,
+            "ending_reading_date": end_date,
+            "credited_usage_kwh": credited_use or None,
+        })
+
+    return {
+        "rows": rows,
+        "total_billed_export_kwh": total_billed_export,
+        "total_tracked_export_kwh": total_tracked_export,
+        "total_credited_usage_kwh": total_credited_use,
+        "unreconciled_difference_kwh": total_billed_export - total_tracked_export,
+        "notes": [
+            "Tracker export is calculated from the change in the cumulative M02 export register during each bill period.",
+            "NYSEG's net-metering treatment is taken only from the bill. A bill may offset billed use without showing a dollar-per-kWh credit or a remaining bank balance.",
+            "A period is unavailable until the tracker has a reading on or before both the period start and end dates.",
+        ],
+    }
