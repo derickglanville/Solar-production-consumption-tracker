@@ -140,7 +140,7 @@ const configCollectionName = "solar_tracker_config";
 const configDocumentId = "primary";
 const meterSimulationMonitorStartMinute = 0;
 const meterSimulationMonitorEndMinute = 23 * 60 + 59;
-const meterSimulationMonitorIntervalMinutes = 60;
+const meterSimulationMonitorIntervalMinutes = 5;
 const dailyAutoCreateHour = 6;
 const dailyAutoCreateMinute = 30;
 const oneTimeManualAutoCreateDate = "2026-07-22";
@@ -855,12 +855,13 @@ function getFirebaseAppContext() {
   if (missing) {
     throw new Error(`Firebase config is missing ${missing}`);
   }
-  const app = initializeApp(config);
-  const db = initializeFirestore(app, {
-    experimentalAutoDetectLongPolling: true
-  });
-  activeFirestoreDb = db;
-  return { app, db };
+  if (!activeFirestoreDb) {
+    const app = initializeApp(config);
+    activeFirestoreDb = initializeFirestore(app, {
+      experimentalAutoDetectLongPolling: true
+    });
+  }
+  return { db: activeFirestoreDb };
 }
 
 function withTimeout(promise, timeoutMs, message) {
@@ -879,31 +880,24 @@ function entryNeedsTemperatureBackfill(entry) {
 }
 
 async function loadFirestoreState(db) {
-  const configSnapshot = await withTimeout(
-    getDoc(doc(db, configCollectionName, configDocumentId)),
-    12000,
-    "Firebase configuration request timed out."
-  );
-  const config = configSnapshot.exists() ? mergeConfig(configSnapshot.data()) : mergeConfig();
-  meterSimulationCheckpoints = normalizeMeterSimulationCheckpoints(
-    config.meter_simulation_checkpoints
-  );
-
-  const entryQuery = query(collection(db, entryCollectionName), orderBy("entry_date"));
-  const entrySnapshot = await withTimeout(
-    getDocs(entryQuery),
-    12000,
-    "Firebase entries request timed out."
-  );
-  const entries = entrySnapshot.docs.map((docSnapshot) => normalizeEntry({
-    entry_date: docSnapshot.data().entry_date || docSnapshot.id,
-    ...docSnapshot.data()
-  }));
-
-  return {
-    config,
-    entries: applySunrunProductionToEntries(entries)
-  };
+  // A short retry prevents a transient browser connection from replacing live
+  // entries with the demo fallback during initial page load.
+  let lastError;
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      const configSnapshot = await withTimeout(getDoc(doc(db, configCollectionName, configDocumentId)), 12000, "Firebase configuration request timed out.");
+      const config = configSnapshot.exists() ? mergeConfig(configSnapshot.data()) : mergeConfig();
+      meterSimulationCheckpoints = normalizeMeterSimulationCheckpoints(config.meter_simulation_checkpoints);
+      const entryQuery = query(collection(db, entryCollectionName), orderBy("entry_date"));
+      const entrySnapshot = await withTimeout(getDocs(entryQuery), 12000, "Firebase entries request timed out.");
+      const entries = entrySnapshot.docs.map((docSnapshot) => normalizeEntry({ entry_date: docSnapshot.data().entry_date || docSnapshot.id, ...docSnapshot.data() }));
+      return { config, entries: applySunrunProductionToEntries(entries) };
+    } catch (error) {
+      lastError = error;
+      if (attempt === 0) await new Promise((resolve) => window.setTimeout(resolve, 600));
+    }
+  }
+  throw lastError;
 }
 
 function getEasternClockParts(now = new Date()) {
@@ -3756,11 +3750,18 @@ function getLatestDueMeterSimulationRun(minuteOfDay = getClockMinutes()) {
 
 async function syncTodaySimulatedMeters(db) {
   const today = getTodayIsoDate();
-  const dueRun = getLatestDueMeterSimulationRun();
-  if (!dueRun) return null;
-
-  const runHour = Math.floor(dueRun.minuteOfDay / 60);
-  const runMinute = dueRun.minuteOfDay % 60;
+  // Persist the same live-time calculation shown in Calibration Checkpoint,
+  // rather than a stale top-of-hour estimate.
+  const runMinuteOfDay = getClockMinutes();
+  const checkpoint = meterSimulationSchedule.find((point) => point.hour * 60 + point.minute === runMinuteOfDay);
+  const dueRun = {
+    minuteOfDay: runMinuteOfDay,
+    label: checkpoint?.label || formatMeterSimulationRunLabel(runMinuteOfDay),
+    type: checkpoint ? "checkpoint" : "five-minute",
+    checkpoint
+  };
+  const runHour = Math.floor(runMinuteOfDay / 60);
+  const runMinute = runMinuteOfDay % 60;
   const runKey = `${today}T${String(runHour).padStart(2, "0")}:${String(runMinute).padStart(2, "0")}`;
   if (meterSimulationLastAttemptedRunKey === runKey) return null;
 
@@ -3810,7 +3811,7 @@ async function syncTodaySimulatedMeters(db) {
   const simulation = {
     ...buildMeterSimulation(today, state.entries, { minuteOfDay: dueRun.minuteOfDay }),
     runKey,
-    runLabel: `${dueRun.label} ${dueRun.type === "checkpoint" ? "checkpoint" : "hourly check"}`,
+    runLabel: `${dueRun.label} ${dueRun.type === "checkpoint" ? "checkpoint" : "meter check"}`,
     runType: dueRun.type,
     scheduleKey: dueRun.checkpoint ? runKey : "",
     scheduleLabel: dueRun.checkpoint?.label || ""
@@ -4863,11 +4864,9 @@ async function handleEntryForm(db) {
 
     populateEntriesTable(entries);
 
-    if (!entriesPageState.selectedDate) {
+    if (selectCurrentDay || !entriesPageState.selectedDate) {
       const todayEntry = entries.find((entry) => entry.entry_date === getTodayIsoDate());
-      if (todayEntry) {
-        fillEntryForm(todayEntry);
-      }
+      if (todayEntry) fillEntryForm(todayEntry);
     }
 
     if (showMessage) {
@@ -5265,9 +5264,9 @@ async function bootDashboard(db) {
       sampleEntries,
       mergeConfig(),
       buildStatus(
-        "Local dashboard snapshot is being shown from the SunRun CSV file and starter smart meter history. Browser Firebase sync is optional on localhost.",
-        "local",
-        false
+        "Live Firebase data could not load, so this dashboard is showing its bundled snapshot. Refresh to try again; this view will not include recent Data Entry updates.",
+        "warning",
+        true
       )
     );
   }
@@ -5314,7 +5313,8 @@ async function bootEntries(db) {
       showMessage: false,
       runAutoCreate: true,
       forceCreate: false,
-      entryDate: getTodayIsoDate()
+      entryDate: getTodayIsoDate(),
+      selectCurrentDay: true
     });
     const url = new URL(window.location.href);
     if (url.searchParams.get("autocreate") === "1") {
@@ -5335,7 +5335,7 @@ async function bootEntries(db) {
     fillEntryForm();
     renderStatusAlert(
       "entries-status",
-      "Browser Firebase could not load live data, so demo entries are being shown.",
+      "Live Firebase data could not load after a retry, so the table is showing demo entries. Refresh the page to reconnect; edits are unavailable until live data loads.",
       "warning"
     );
   }

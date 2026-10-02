@@ -24013,7 +24013,7 @@ This typically indicates that your device does not have a healthy Internet conne
   var configDocumentId = "primary";
   var meterSimulationMonitorStartMinute = 0;
   var meterSimulationMonitorEndMinute = 23 * 60 + 59;
-  var meterSimulationMonitorIntervalMinutes = 60;
+  var meterSimulationMonitorIntervalMinutes = 5;
   var dailyAutoCreateHour = 6;
   var dailyAutoCreateMinute = 30;
   var oneTimeManualAutoCreateDate = "2026-07-22";
@@ -24619,12 +24619,13 @@ This typically indicates that your device does not have a healthy Internet conne
     if (missing) {
       throw new Error(`Firebase config is missing ${missing}`);
     }
-    const app = initializeApp(config);
-    const db = initializeFirestore(app, {
-      experimentalAutoDetectLongPolling: true
-    });
-    activeFirestoreDb = db;
-    return { app, db };
+    if (!activeFirestoreDb) {
+      const app = initializeApp(config);
+      activeFirestoreDb = initializeFirestore(app, {
+        experimentalAutoDetectLongPolling: true
+      });
+    }
+    return { db: activeFirestoreDb };
   }
   function withTimeout(promise, timeoutMs, message) {
     let timeoutId;
@@ -24637,29 +24638,22 @@ This typically indicates that your device does not have a healthy Internet conne
     return parseOptionalNumber(entry?.temperature_high_f) === null || parseOptionalNumber(entry?.temperature_low_f) === null;
   }
   async function loadFirestoreState(db) {
-    const configSnapshot = await withTimeout(
-      getDoc(doc(db, configCollectionName, configDocumentId)),
-      12e3,
-      "Firebase configuration request timed out."
-    );
-    const config = configSnapshot.exists() ? mergeConfig(configSnapshot.data()) : mergeConfig();
-    meterSimulationCheckpoints = normalizeMeterSimulationCheckpoints(
-      config.meter_simulation_checkpoints
-    );
-    const entryQuery = query(collection(db, entryCollectionName), orderBy("entry_date"));
-    const entrySnapshot = await withTimeout(
-      getDocs(entryQuery),
-      12e3,
-      "Firebase entries request timed out."
-    );
-    const entries = entrySnapshot.docs.map((docSnapshot) => normalizeEntry({
-      entry_date: docSnapshot.data().entry_date || docSnapshot.id,
-      ...docSnapshot.data()
-    }));
-    return {
-      config,
-      entries: applySunrunProductionToEntries(entries)
-    };
+    let lastError;
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      try {
+        const configSnapshot = await withTimeout(getDoc(doc(db, configCollectionName, configDocumentId)), 12e3, "Firebase configuration request timed out.");
+        const config = configSnapshot.exists() ? mergeConfig(configSnapshot.data()) : mergeConfig();
+        meterSimulationCheckpoints = normalizeMeterSimulationCheckpoints(config.meter_simulation_checkpoints);
+        const entryQuery = query(collection(db, entryCollectionName), orderBy("entry_date"));
+        const entrySnapshot = await withTimeout(getDocs(entryQuery), 12e3, "Firebase entries request timed out.");
+        const entries = entrySnapshot.docs.map((docSnapshot) => normalizeEntry({ entry_date: docSnapshot.data().entry_date || docSnapshot.id, ...docSnapshot.data() }));
+        return { config, entries: applySunrunProductionToEntries(entries) };
+      } catch (error) {
+        lastError = error;
+        if (attempt === 0) await new Promise((resolve) => window.setTimeout(resolve, 600));
+      }
+    }
+    throw lastError;
   }
   function getEasternClockParts(now = /* @__PURE__ */ new Date()) {
     const formatter = new Intl.DateTimeFormat("en-CA", {
@@ -26940,10 +26934,16 @@ This typically indicates that your device does not have a healthy Internet conne
   }
   async function syncTodaySimulatedMeters(db) {
     const today = getTodayIsoDate();
-    const dueRun = getLatestDueMeterSimulationRun();
-    if (!dueRun) return null;
-    const runHour = Math.floor(dueRun.minuteOfDay / 60);
-    const runMinute = dueRun.minuteOfDay % 60;
+    const runMinuteOfDay = getClockMinutes();
+    const checkpoint = meterSimulationSchedule.find((point) => point.hour * 60 + point.minute === runMinuteOfDay);
+    const dueRun = {
+      minuteOfDay: runMinuteOfDay,
+      label: checkpoint?.label || formatMeterSimulationRunLabel(runMinuteOfDay),
+      type: checkpoint ? "checkpoint" : "five-minute",
+      checkpoint
+    };
+    const runHour = Math.floor(runMinuteOfDay / 60);
+    const runMinute = runMinuteOfDay % 60;
     const runKey = `${today}T${String(runHour).padStart(2, "0")}:${String(runMinute).padStart(2, "0")}`;
     if (meterSimulationLastAttemptedRunKey === runKey) return null;
     let state = await loadFirestoreState(db);
@@ -26959,7 +26959,7 @@ This typically indicates that your device does not have a healthy Internet conne
       todayEntry = state.entries.find((entry2) => String(entry2.entry_date) === String(today));
     }
     if (!todayEntry) return null;
-    const latestTodayCheckpoint = normalizeMeterSimulationCheckpoints(meterSimulationCheckpoints).filter((checkpoint) => checkpoint.entry_date === String(today)).sort((left, right) => left.minute_of_day - right.minute_of_day).at(-1);
+    const latestTodayCheckpoint = normalizeMeterSimulationCheckpoints(meterSimulationCheckpoints).filter((checkpoint2) => checkpoint2.entry_date === String(today)).sort((left, right) => left.minute_of_day - right.minute_of_day).at(-1);
     if (latestTodayCheckpoint?.minute_of_day > dueRun.minuteOfDay) {
       meterSimulationLastAttemptedRunKey = runKey;
       return { entry: todayEntry, simulation: null, updated: false };
@@ -26981,7 +26981,7 @@ This typically indicates that your device does not have a healthy Internet conne
     const simulation = {
       ...buildMeterSimulation(today, state.entries, { minuteOfDay: dueRun.minuteOfDay }),
       runKey,
-      runLabel: `${dueRun.label} ${dueRun.type === "checkpoint" ? "checkpoint" : "hourly check"}`,
+      runLabel: `${dueRun.label} ${dueRun.type === "checkpoint" ? "checkpoint" : "meter check"}`,
       runType: dueRun.type,
       scheduleKey: dueRun.checkpoint ? runKey : "",
       scheduleLabel: dueRun.checkpoint?.label || ""
@@ -27869,11 +27869,9 @@ This is a reconciliation, not an independent measurement, because EDC includes S
         }
       }
       populateEntriesTable(entries);
-      if (!entriesPageState.selectedDate) {
+      if (selectCurrentDay || !entriesPageState.selectedDate) {
         const todayEntry = entries.find((entry) => entry.entry_date === getTodayIsoDate());
-        if (todayEntry) {
-          fillEntryForm(todayEntry);
-        }
+        if (todayEntry) fillEntryForm(todayEntry);
       }
       if (showMessage) {
         const message = autoCreateMessage || "Entry data refreshed from Firebase Firestore.";
@@ -28236,9 +28234,9 @@ This is a reconciliation, not an independent measurement, because EDC includes S
         sampleEntries,
         mergeConfig(),
         buildStatus(
-          "Local dashboard snapshot is being shown from the SunRun CSV file and starter smart meter history. Browser Firebase sync is optional on localhost.",
-          "local",
-          false
+          "Live Firebase data could not load, so this dashboard is showing its bundled snapshot. Refresh to try again; this view will not include recent Data Entry updates.",
+          "warning",
+          true
         )
       );
     }
@@ -28284,7 +28282,8 @@ This is a reconciliation, not an independent measurement, because EDC includes S
         showMessage: false,
         runAutoCreate: true,
         forceCreate: false,
-        entryDate: getTodayIsoDate()
+        entryDate: getTodayIsoDate(),
+        selectCurrentDay: true
       });
       const url = new URL(window.location.href);
       if (url.searchParams.get("autocreate") === "1") {
@@ -28305,7 +28304,7 @@ This is a reconciliation, not an independent measurement, because EDC includes S
       fillEntryForm();
       renderStatusAlert(
         "entries-status",
-        "Browser Firebase could not load live data, so demo entries are being shown.",
+        "Live Firebase data could not load after a retry, so the table is showing demo entries. Refresh the page to reconnect; edits are unavailable until live data loads.",
         "warning"
       );
     }

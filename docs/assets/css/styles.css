@@ -3610,3 +3610,27 @@ body[data-page="dashboard"].dashboard-compact-mode .btn-contract {
 .entries-month-line-chart {
   min-width: 344px;
 }
+.entries-month-comparison {
+  padding: .25rem .6rem;
+}
+
+.entries-month-comparison-toggle {
+  padding: .08rem .15rem;
+}
+
+.entries-month-comparison-title {
+  display: inline-flex;
+  align-items: baseline;
+  gap: .38rem;
+}
+
+.entries-month-comparison-toggle .eyebrow,
+.entries-month-comparison-toggle strong {
+  display: inline;
+  margin: 0;
+}
+
+.entries-month-comparison-toggle .eyebrow::after {
+  content: "·";
+  margin-left: .38rem;
+}
