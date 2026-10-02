@@ -880,25 +880,59 @@ function entryNeedsTemperatureBackfill(entry) {
   );
 }
 
+function decodeFirestoreRestValue(value) {
+  if (!value || typeof value !== "object") return value;
+  if (Object.hasOwn(value, "nullValue")) return null;
+  if (Object.hasOwn(value, "booleanValue")) return value.booleanValue;
+  if (Object.hasOwn(value, "integerValue") || Object.hasOwn(value, "doubleValue")) return Number(value.integerValue ?? value.doubleValue);
+  if (Object.hasOwn(value, "stringValue")) return value.stringValue;
+  if (Object.hasOwn(value, "timestampValue")) return value.timestampValue;
+  if (Object.hasOwn(value, "arrayValue")) return (value.arrayValue.values || []).map(decodeFirestoreRestValue);
+  if (Object.hasOwn(value, "mapValue")) return Object.fromEntries(Object.entries(value.mapValue.fields || {}).map(([key, item]) => [key, decodeFirestoreRestValue(item)]));
+  return value;
+}
+
+function decodeFirestoreRestDocument(document) {
+  return Object.fromEntries(Object.entries(document?.fields || {}).map(([key, value]) => [key, decodeFirestoreRestValue(value)]));
+}
+
+async function loadFirestoreRestState() {
+  const config = window.SOLAR_FIREBASE_CONFIG || {};
+  const baseUrl = `https://firestore.googleapis.com/v1/projects/${encodeURIComponent(config.projectId)}/databases/(default)/documents`;
+  const key = encodeURIComponent(config.apiKey || "");
+  const [configResponse, entriesResponse] = await Promise.all([
+    fetch(`${baseUrl}/${configCollectionName}/${configDocumentId}?key=${key}`, { cache: "no-store" }),
+    fetch(`${baseUrl}/${entryCollectionName}?orderBy=entry_date&pageSize=500&key=${key}`, { cache: "no-store" })
+  ]);
+  if (!configResponse.ok || !entriesResponse.ok) {
+    throw new Error(`Firebase HTTPS read failed (${configResponse.status}/${entriesResponse.status}).`);
+  }
+  const [configDocument, entriesPayload] = await Promise.all([configResponse.json(), entriesResponse.json()]);
+  const resolvedConfig = mergeConfig(decodeFirestoreRestDocument(configDocument));
+  meterSimulationCheckpoints = normalizeMeterSimulationCheckpoints(resolvedConfig.meter_simulation_checkpoints);
+  const entries = (entriesPayload.documents || []).map((document) => {
+    const values = decodeFirestoreRestDocument(document);
+    return normalizeEntry({ entry_date: values.entry_date || document.name.split("/").pop(), ...values });
+  });
+  return { config: resolvedConfig, entries: applySunrunProductionToEntries(entries), connection: "rest" };
+}
+
 async function loadFirestoreState(db) {
-  // A short retry prevents a transient browser connection from replacing live
-  // entries with the demo fallback during initial page load.
-  let lastError;
-  for (let attempt = 0; attempt < 2; attempt += 1) {
+  try {
+    const configSnapshot = await withTimeout(getDoc(doc(db, configCollectionName, configDocumentId)), 8000, "Firebase SDK configuration request timed out.");
+    const config = configSnapshot.exists() ? mergeConfig(configSnapshot.data()) : mergeConfig();
+    meterSimulationCheckpoints = normalizeMeterSimulationCheckpoints(config.meter_simulation_checkpoints);
+    const entryQuery = query(collection(db, entryCollectionName), orderBy("entry_date"));
+    const entrySnapshot = await withTimeout(getDocs(entryQuery), 8000, "Firebase SDK entries request timed out.");
+    const entries = entrySnapshot.docs.map((docSnapshot) => normalizeEntry({ entry_date: docSnapshot.data().entry_date || docSnapshot.id, ...docSnapshot.data() }));
+    return { config, entries: applySunrunProductionToEntries(entries), connection: "sdk" };
+  } catch (sdkError) {
     try {
-      const configSnapshot = await withTimeout(getDoc(doc(db, configCollectionName, configDocumentId)), 12000, "Firebase configuration request timed out.");
-      const config = configSnapshot.exists() ? mergeConfig(configSnapshot.data()) : mergeConfig();
-      meterSimulationCheckpoints = normalizeMeterSimulationCheckpoints(config.meter_simulation_checkpoints);
-      const entryQuery = query(collection(db, entryCollectionName), orderBy("entry_date"));
-      const entrySnapshot = await withTimeout(getDocs(entryQuery), 12000, "Firebase entries request timed out.");
-      const entries = entrySnapshot.docs.map((docSnapshot) => normalizeEntry({ entry_date: docSnapshot.data().entry_date || docSnapshot.id, ...docSnapshot.data() }));
-      return { config, entries: applySunrunProductionToEntries(entries) };
-    } catch (error) {
-      lastError = error;
-      if (attempt === 0) await new Promise((resolve) => window.setTimeout(resolve, 600));
+      return await loadFirestoreRestState();
+    } catch (restError) {
+      throw new Error(`Firebase SDK and HTTPS reads both failed. ${restError.message}`);
     }
   }
-  throw lastError;
 }
 
 function setEntriesFirebaseStatus(kind, message) {
@@ -4884,11 +4918,14 @@ async function handleEntryForm(db) {
     } = options;
     const state = await loadFirestoreState(db);
     entriesPageState.config = mergeConfig(state.config);
-    const sunrunSync = await syncSunrunProductionIntoEntries(db, state.entries);
+    const readOnlyConnection = state.connection === "rest";
+    const sunrunSync = readOnlyConnection
+      ? { entries: state.entries, updated: false, count: 0 }
+      : await syncSunrunProductionIntoEntries(db, state.entries);
     let entries = sunrunSync.updated ? sunrunSync.entries : state.entries;
     let autoCreateMessage = "";
 
-    if (runAutoCreate) {
+    if (runAutoCreate && !readOnlyConnection) {
       const result = await ensureDailyPlaceholderRecord(db, entries, {
         forceCreate,
         entryDate,
@@ -4907,7 +4944,7 @@ async function handleEntryForm(db) {
 
     populateEntriesTable(entries);
     saveEntriesSnapshot(entries, entriesPageState.config);
-    setEntriesFirebaseStatus("connected", "Firebase: Connected · Live Data");
+    setEntriesFirebaseStatus("connected", readOnlyConnection ? "Firebase: Connected · HTTPS live read" : "Firebase: Connected · Live Data");
 
     if (selectCurrentDay || !entriesPageState.selectedDate) {
       const todayEntry = entries.find((entry) => entry.entry_date === getTodayIsoDate());
@@ -5321,26 +5358,17 @@ async function bootEntries(db) {
   const entryTools = await handleEntryForm(db);
   try {
     let state = await loadFirestoreState(db);
-    const sunrunSync = await syncSunrunProductionIntoEntries(db, state.entries);
-    if (sunrunSync.updated) {
-      state = { ...state, entries: sunrunSync.entries };
-    }
-    const backfillResult = await backfillStarterEntriesIfNeeded(db, state.entries);
-    if (backfillResult.backfilled) {
-      state = { ...state, entries: backfillResult.entries };
-    }
-    const recentBackfillResult = await backfillRecentHistoricalEntriesIfMissing(db, state.entries);
-    if (recentBackfillResult.backfilled) {
-      state = { ...state, entries: recentBackfillResult.entries };
-    }
-    const temperatureBackfill = await backfillMissingTemperatureRanges(db, state.entries);
-    if (temperatureBackfill.updated) {
-      state = { ...state, entries: temperatureBackfill.entries };
-    }
-    const irradianceRevalidation = await revalidateSuspiciousIrradiancePeaks(db, state.entries);
-    if (irradianceRevalidation.updated) {
-      state = { ...state, entries: irradianceRevalidation.entries };
-    }
+    const readOnlyConnection = state.connection === "rest";
+    const sunrunSync = readOnlyConnection ? { entries: state.entries, updated: false, count: 0 } : await syncSunrunProductionIntoEntries(db, state.entries);
+    if (sunrunSync.updated) state = { ...state, entries: sunrunSync.entries };
+    const backfillResult = readOnlyConnection ? { backfilled: false, entries: state.entries } : await backfillStarterEntriesIfNeeded(db, state.entries);
+    if (backfillResult.backfilled) state = { ...state, entries: backfillResult.entries };
+    const recentBackfillResult = readOnlyConnection ? { backfilled: false, entries: state.entries } : await backfillRecentHistoricalEntriesIfMissing(db, state.entries);
+    if (recentBackfillResult.backfilled) state = { ...state, entries: recentBackfillResult.entries };
+    const temperatureBackfill = readOnlyConnection ? { updated: false, entries: state.entries, count: 0 } : await backfillMissingTemperatureRanges(db, state.entries);
+    if (temperatureBackfill.updated) state = { ...state, entries: temperatureBackfill.entries };
+    const irradianceRevalidation = readOnlyConnection ? { updated: false, entries: state.entries, count: 0 } : await revalidateSuspiciousIrradiancePeaks(db, state.entries);
+    if (irradianceRevalidation.updated) state = { ...state, entries: irradianceRevalidation.entries };
     if (backfillResult.backfilled) {
       renderStatusAlert("entries-status", "Starter history was restored into Firebase, and live entries were refreshed.", "success");
     } else if (sunrunSync.updated) {
@@ -5356,14 +5384,14 @@ async function bootEntries(db) {
     }
     await entryTools.refreshEntries({
       showMessage: false,
-      runAutoCreate: true,
+      runAutoCreate: !readOnlyConnection,
       forceCreate: false,
       entryDate: getTodayIsoDate(),
       selectCurrentDay: true
     });
     const url = new URL(window.location.href);
     if (url.searchParams.get("autocreate") === "1") {
-      await entryTools.refreshEntries({ showMessage: true, runAutoCreate: true, forceCreate: true });
+      await entryTools.refreshEntries({ showMessage: true, runAutoCreate: !readOnlyConnection, forceCreate: true });
       url.searchParams.delete("autocreate");
       window.history.replaceState({}, "", url);
     } else if (!backfillResult.backfilled) {
