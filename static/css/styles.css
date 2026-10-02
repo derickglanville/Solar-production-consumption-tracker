@@ -3634,3 +3634,39 @@ body[data-page="dashboard"].dashboard-compact-mode .btn-contract {
   content: "·";
   margin-left: .38rem;
 }
+.entries-status-row {
+  display: flex;
+  justify-content: flex-end;
+  margin: 0 0 .35rem;
+}
+
+.entries-firebase-status {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid #c8d7df;
+  border-radius: 999px;
+  padding: .24rem .62rem;
+  color: #496575;
+  background: #f8fbfc;
+  font-size: .72rem;
+  font-weight: 800;
+  letter-spacing: .02em;
+}
+
+.entries-firebase-status-connected {
+  border-color: #a8d4bf;
+  background: #edf8f1;
+  color: #176f51;
+}
+
+.entries-firebase-status-snapshot {
+  border-color: #ecd18c;
+  background: #fff8df;
+  color: #87610a;
+}
+
+.entries-firebase-status-unavailable {
+  border-color: #e1b9b1;
+  background: #fff1ef;
+  color: #a33d2e;
+}

@@ -24122,6 +24122,7 @@ This typically indicates that your device does not have a healthy Internet conne
   var sunrunProductionBootstrap = bootstrap.sunrun_production || { available: false, by_date: {} };
   var dashboardCompactModeStorageKey = "solar-dashboard-compact-mode";
   var localSnapshotSyncStorageKey = "solar-local-json-last-sync-hour";
+  var entriesSnapshotStorageKey = "solar-data-entry-snapshot-v1";
   var localSnapshotSyncStartHour = 9;
   var localSnapshotSyncEndHour = 20;
   var localSnapshotSyncTimer = null;
@@ -24654,6 +24655,43 @@ This typically indicates that your device does not have a healthy Internet conne
       }
     }
     throw lastError;
+  }
+  function setEntriesFirebaseStatus(kind, message) {
+    const target = document.getElementById("entries-firebase-status");
+    if (!target) return;
+    target.className = `entries-firebase-status entries-firebase-status-${kind}`;
+    target.textContent = message;
+  }
+  function saveEntriesSnapshot(entries, config) {
+    const snapshot = {
+      schema_version: 1,
+      generated_at: (/* @__PURE__ */ new Date()).toISOString(),
+      entries,
+      config
+    };
+    try {
+      window.localStorage.setItem(entriesSnapshotStorageKey, JSON.stringify(snapshot));
+      return snapshot;
+    } catch (error) {
+      console.warn("Data Entry JSON snapshot was not saved:", error);
+      return null;
+    }
+  }
+  function loadEntriesSnapshot() {
+    try {
+      const rawSnapshot = window.localStorage.getItem(entriesSnapshotStorageKey);
+      if (!rawSnapshot) return null;
+      const snapshot = JSON.parse(rawSnapshot);
+      if (!Array.isArray(snapshot?.entries) || !snapshot.entries.length) return null;
+      return snapshot;
+    } catch (error) {
+      console.warn("Data Entry JSON snapshot could not be read:", error);
+      return null;
+    }
+  }
+  function formatEntriesSnapshotDate(snapshot) {
+    const date = new Date(snapshot?.generated_at || "");
+    return Number.isNaN(date.getTime()) ? "an earlier session" : date.toLocaleString();
   }
   function getEasternClockParts(now = /* @__PURE__ */ new Date()) {
     const formatter = new Intl.DateTimeFormat("en-CA", {
@@ -27845,7 +27883,8 @@ This is a reconciliation, not an independent measurement, because EDC includes S
         showMessage = true,
         runAutoCreate = false,
         forceCreate = false,
-        entryDate = getActiveEntryDate()
+        entryDate = getActiveEntryDate(),
+        selectCurrentDay = false
       } = options;
       const state = await loadFirestoreState(db);
       entriesPageState.config = mergeConfig(state.config);
@@ -27869,6 +27908,8 @@ This is a reconciliation, not an independent measurement, because EDC includes S
         }
       }
       populateEntriesTable(entries);
+      saveEntriesSnapshot(entries, entriesPageState.config);
+      setEntriesFirebaseStatus("connected", "Firebase: Connected \xB7 Live Data");
       if (selectCurrentDay || !entriesPageState.selectedDate) {
         const todayEntry = entries.find((entry) => entry.entry_date === getTodayIsoDate());
         if (todayEntry) fillEntryForm(todayEntry);
@@ -28300,13 +28341,29 @@ This is a reconciliation, not an independent measurement, because EDC includes S
         fillEntryForm();
       }
     } catch (error) {
-      populateEntriesTable(sampleEntries);
-      fillEntryForm();
-      renderStatusAlert(
-        "entries-status",
-        "Live Firebase data could not load after a retry, so the table is showing demo entries. Refresh the page to reconnect; edits are unavailable until live data loads.",
-        "warning"
-      );
+      const snapshot = loadEntriesSnapshot();
+      if (snapshot) {
+        const entries = snapshot.entries.map(normalizeEntry);
+        entriesPageState.config = mergeConfig(snapshot.config);
+        populateEntriesTable(entries);
+        const todayEntry = entries.find((entry) => entry.entry_date === getTodayIsoDate());
+        fillEntryForm(todayEntry || entries[entries.length - 1]);
+        setEntriesFirebaseStatus("snapshot", `Firebase: Unavailable \xB7 Saved snapshot from ${formatEntriesSnapshotDate(snapshot)}`);
+        renderStatusAlert(
+          "entries-status",
+          "Live Firebase data is unavailable. The most recent local Data Entry JSON snapshot is shown; refresh when the connection returns before editing.",
+          "warning"
+        );
+      } else {
+        populateEntriesTable(sampleEntries);
+        fillEntryForm();
+        setEntriesFirebaseStatus("unavailable", "Firebase: Unavailable \xB7 No saved snapshot");
+        renderStatusAlert(
+          "entries-status",
+          "Live Firebase data could not load and no local snapshot exists yet, so demo entries are shown. Refresh when the connection returns before editing.",
+          "warning"
+        );
+      }
     }
   }
   async function bootSettings(db) {
@@ -28347,8 +28404,19 @@ This is a reconciliation, not an independent measurement, because EDC includes S
           )
         );
       } else if (getPageName() === "entries") {
-        populateEntriesTable(sampleEntries);
-        renderStatusAlert("entries-status", "Firebase browser setup is incomplete. Demo entries are shown.", "warning");
+        const snapshot = loadEntriesSnapshot();
+        if (snapshot) {
+          entriesPageState.config = mergeConfig(snapshot.config);
+          const entries = snapshot.entries.map(normalizeEntry);
+          populateEntriesTable(entries);
+          fillEntryForm(entries.find((entry) => entry.entry_date === getTodayIsoDate()) || entries[entries.length - 1]);
+          setEntriesFirebaseStatus("snapshot", `Firebase: Setup unavailable \xB7 Saved snapshot from ${formatEntriesSnapshotDate(snapshot)}`);
+          renderStatusAlert("entries-status", "Firebase setup is unavailable. The local Data Entry JSON snapshot is shown.", "warning");
+        } else {
+          populateEntriesTable(sampleEntries);
+          setEntriesFirebaseStatus("unavailable", "Firebase: Setup unavailable \xB7 No saved snapshot");
+          renderStatusAlert("entries-status", "Firebase browser setup is incomplete and no local snapshot exists yet. Demo entries are shown.", "warning");
+        }
       } else if (getPageName() === "settings") {
         populateSettingsForm(defaultConfig);
         renderStatusAlert("settings-status", "Firebase browser setup is incomplete. Default settings are shown.", "warning");
