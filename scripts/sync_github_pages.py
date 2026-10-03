@@ -17,7 +17,7 @@ from solar_tracker.routes import build_bootstrap_data
 
 
 DOCS = ROOT / "docs"
-ASSET_VERSION = "20261003-photo-review"
+ASSET_VERSION = "20261003-verified-readings"
 
 ROUTE_REPLACEMENTS = {
     'href="/"': 'href="index.html"',

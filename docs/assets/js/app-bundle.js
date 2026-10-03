@@ -28259,14 +28259,19 @@ This is a reconciliation, not an independent measurement, because EDC includes S
           );
           return;
         }
-        if (Math.abs(actualM01 - predictedM01) > 75 || Math.abs(actualM02 - predictedM02) > 150) {
+        const priorEntry = getMostRecentEntryBefore(sortEntries(entriesPageState.entries), entryDate);
+        if (priorEntry && (actualM01 < Number(priorEntry.meter_01_import_reading || 0) || actualM02 < Number(priorEntry.meter_02_export_reading || 0))) {
           renderStatusAlert(
             "entries-status",
-            "Checkpoint rejected because the difference is too large. Confirm that Sim and Actual fields contain cumulative M01/M02 meter readings, not daily usage amounts.",
+            "Checkpoint rejected because a cumulative meter reading cannot be lower than the prior confirmed reading. Recheck the photos and meter values.",
             "warning"
           );
           return;
         }
+        const largeModelCorrection = Math.abs(actualM01 - predictedM01) > 75 || Math.abs(actualM02 - predictedM02) > 150;
+        if (largeModelCorrection && !window.confirm(
+          `These verified readings differ substantially from the simulation. Save M01 ${actualM01.toFixed(1)} and M02 ${actualM02.toFixed(1)} as the new calibration anchor?`
+        )) return;
         const selectedEntry = getEntryByDate(entryDate);
         const checkpointSimulation = buildMeterSimulation(
           entryDate,
