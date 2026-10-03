@@ -2,7 +2,21 @@
 
 {% block content %}
 <div class="entries-status-row"><span id="entries-firebase-status" class="entries-firebase-status entries-firebase-status-connecting" role="status">Firebase: Connecting…</span></div><div id="entries-status"></div>
-<div class="row g-4">
+<div class="card tracker-card meter-photo-quick-card mb-4">
+  <div class="card-body">
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+      <div><p class="eyebrow mb-1">Current calibration checkpoint</p><h2 class="h5 mb-1">Update meters from photos</h2><p class="text-muted small mb-0">1. Capture M01. 2. Capture M02. 3. Verify the values shown. 4. Save the checkpoint.</p></div>
+      <span class="meter-photo-quick-step" id="entry-meter-photo-quick-status" role="status">Capture both meter photos.</span>
+    </div>
+    <div class="meter-photo-quick-actions mt-3">
+      <label class="btn btn-sun" for="entry-meter-photo-quick-m01">1 · Capture M01<input type="file" id="entry-meter-photo-quick-m01" accept="image/*" capture="environment" hidden></label>
+      <label class="btn btn-sun" for="entry-meter-photo-quick-m02">2 · Capture M02<input type="file" id="entry-meter-photo-quick-m02" accept="image/*" capture="environment" hidden></label>
+      <button type="button" class="btn btn-contract" id="entry-meter-photo-quick-save" disabled>3 · Update Calibration Checkpoint</button>
+    </div>
+    <div class="meter-photo-save-actions mt-2" id="entry-meter-photo-save-actions"></div>
+    <p class="form-text mb-0">After each capture, use <strong>Save photo to Pictures</strong> and choose <strong>Save Image</strong> in the iPhone share sheet. The app then reads the number and saves the confirmed M01/M02 values to today’s Calibration Checkpoint.</p>
+  </div>
+</div><div class="row g-4">
   <div class="col-lg-4 col-xl-3">
     <div class="card tracker-card">
       <div class="card-body">
@@ -134,10 +148,7 @@
                     <label>Sim M02<input type="number" step="0.1" id="entry-meter-checkpoint-predicted-m02" class="form-control form-control-sm"></label>
                     <label>Actual M01<input type="number" step="0.1" id="entry-meter-checkpoint-actual-m01" class="form-control form-control-sm"></label>
                     <label>Actual M02<input type="number" step="0.1" id="entry-meter-checkpoint-actual-m02" class="form-control form-control-sm"></label>
-                    <div class="meter-photo-actions">
-                      <label class="btn btn-outline-primary btn-sm mb-0" for="entry-meter-photo-m01">Read M01 photo<input type="file" id="entry-meter-photo-m01" accept="image/*" capture="environment" hidden></label>
-                      <label class="btn btn-outline-primary btn-sm mb-0" for="entry-meter-photo-m02">Read M02 photo<input type="file" id="entry-meter-photo-m02" accept="image/*" capture="environment" hidden></label>
-                    </div>                    <button type="button" id="entry-meter-checkpoint-save" class="btn btn-contract btn-sm">Train Model</button>
+                    <button type="button" id="entry-meter-checkpoint-save" class="btn btn-contract btn-sm">Train Model</button>
                   </div>
                   <div class="meter-calibration-history mt-3">
                     <div class="meter-calibration-history-heading">
@@ -610,6 +621,10 @@
     font-size: 0.72rem;
   }
 
+  .meter-photo-quick-card { border-color: rgba(46, 115, 145, 0.28); background: linear-gradient(105deg, #f8fcff, #edf8f2); }
+  .meter-photo-quick-actions, .meter-photo-save-actions { display: flex; flex-wrap: wrap; gap: 0.55rem; align-items: center; }
+  .meter-photo-quick-step { color: #2d5f77; font-size: 0.82rem; font-weight: 700; }
+  .meter-photo-save-actions:empty { display: none; }
   .meter-photo-actions {
     display: flex;
     gap: 0.35rem;

@@ -4887,12 +4887,55 @@ async function handleEntryForm(db) {
   const checkpointActualM02 = document.getElementById("entry-meter-checkpoint-actual-m02");
   const meterPhotoM01 = document.getElementById("entry-meter-photo-m01");
   const meterPhotoM02 = document.getElementById("entry-meter-photo-m02");
+  const quickMeterPhotoM01 = document.getElementById("entry-meter-photo-quick-m01");
+  const quickMeterPhotoM02 = document.getElementById("entry-meter-photo-quick-m02");
+  const quickMeterPhotoSave = document.getElementById("entry-meter-photo-quick-save");
+  const quickMeterPhotoStatus = document.getElementById("entry-meter-photo-quick-status");
+  const meterPhotoSaveActions = document.getElementById("entry-meter-photo-save-actions");
+  const pendingMeterPhotos = { m01: null, m02: null };
 
   function meterPhotoCandidates(text) {
     return String(text || "").replace(/[Oo]/g, "0").replace(/,/g, ".")
       .match(/\d{3,5}(?:\.\d{1,2})?/g)?.map(Number).filter(Number.isFinite) || [];
   }
 
+  function renderMeterPhotoSaveActions() {
+    if (!meterPhotoSaveActions) return;
+    const controls = Object.entries(pendingMeterPhotos).filter(([, file]) => file).map(([meter, file]) =>
+      `<button type="button" class="btn btn-outline-secondary btn-sm" data-save-meter-photo="${meter}">Save ${meter.toUpperCase()} photo to Pictures</button>`
+    );
+    meterPhotoSaveActions.innerHTML = controls.join("");
+    meterPhotoSaveActions.querySelectorAll("[data-save-meter-photo]").forEach((button) => {
+      button.addEventListener("click", async () => {
+        const meter = button.dataset.saveMeterPhoto;
+        const file = pendingMeterPhotos[meter];
+        if (!file) return;
+        try {
+          const shareFile = new File([file], `${meter.toUpperCase()}-${getActiveEntryDate()}.${file.name.split(".").pop() || "jpg"}`, { type: file.type || "image/jpeg" });
+          if (navigator.canShare?.({ files: [shareFile] })) {
+            await navigator.share({ title: `${meter.toUpperCase()} meter photo`, files: [shareFile] });
+            renderStatusAlert("entries-status", `Choose “Save Image” in the iPhone share sheet to keep the ${meter.toUpperCase()} photo in Pictures.`, "info");
+          } else {
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(file);
+            link.download = shareFile.name;
+            link.click();
+            URL.revokeObjectURL(link.href);
+          }
+        } catch (error) {
+          if (error?.name !== "AbortError") renderStatusAlert("entries-status", `Could not open the save menu for ${meter.toUpperCase()}.`, "warning");
+        }
+      });
+    });
+  }
+
+  function updateQuickMeterPhotoStatus() {
+    if (!quickMeterPhotoStatus) return;
+    const m01 = checkpointActualM01?.value ? `M01 ${Number(checkpointActualM01.value).toFixed(1)}` : "M01 needed";
+    const m02 = checkpointActualM02?.value ? `M02 ${Number(checkpointActualM02.value).toFixed(1)}` : "M02 needed";
+    quickMeterPhotoStatus.textContent = `${m01} · ${m02}. ${pendingMeterPhotos.m01 && pendingMeterPhotos.m02 ? "Ready to update." : "Capture both meter photos."}`;
+    if (quickMeterPhotoSave) quickMeterPhotoSave.disabled = !(pendingMeterPhotos.m01 && pendingMeterPhotos.m02 && checkpointActualM01?.value && checkpointActualM02?.value);
+  }
   async function readMeterPhoto(file, targetInput, simulatedInput, meterName) {
     if (!file || !targetInput) return;
     if (file.size > 12 * 1024 * 1024) {
@@ -4919,7 +4962,10 @@ async function handleEntryForm(db) {
       }
       targetInput.value = reading.toFixed(1);
       targetInput.dispatchEvent(new Event("input", { bubbles: true }));
-      renderStatusAlert("entries-status", `${meterName} photo read as ${reading.toFixed(1)}. Review it, then select Train Model to save this calibration checkpoint.`, "success");
+      pendingMeterPhotos[meterName.toLowerCase()] = file;
+      renderMeterPhotoSaveActions();
+      updateQuickMeterPhotoStatus();
+      renderStatusAlert("entries-status", `${meterName} photo read as ${reading.toFixed(1)}. Capture the other meter, then select Update Calibration Checkpoint.`, "success");
     } catch (error) {
       console.error("Meter photo reading failed", error);
       renderStatusAlert("entries-status", `Could not read the ${meterName} photo. Use a clear, close camera photo of the numeric display and try again.`, "warning");
@@ -5199,6 +5245,10 @@ async function handleEntryForm(db) {
   }
   if (meterPhotoM01) meterPhotoM01.addEventListener("change", () => readMeterPhoto(meterPhotoM01.files?.[0], checkpointActualM01, checkpointPredictedM01, "M01"));
   if (meterPhotoM02) meterPhotoM02.addEventListener("change", () => readMeterPhoto(meterPhotoM02.files?.[0], checkpointActualM02, checkpointPredictedM02, "M02"));
+  if (quickMeterPhotoM01) quickMeterPhotoM01.addEventListener("change", () => readMeterPhoto(quickMeterPhotoM01.files?.[0], checkpointActualM01, checkpointPredictedM01, "M01"));
+  if (quickMeterPhotoM02) quickMeterPhotoM02.addEventListener("change", () => readMeterPhoto(quickMeterPhotoM02.files?.[0], checkpointActualM02, checkpointPredictedM02, "M02"));
+  if (quickMeterPhotoSave) quickMeterPhotoSave.addEventListener("click", () => checkpointButton?.click());
+  updateQuickMeterPhotoStatus();
 
   if (checkpointButton) {
     checkpointButton.addEventListener("click", async () => {
@@ -5303,7 +5353,7 @@ async function handleEntryForm(db) {
       }
       renderStatusAlert(
         "entries-status",
-        `Calibration checkpoint saved for ${entryDate} at ${checkpoint.checkpoint_time}. Historical Entries now uses actual M01 ${actualM01.toFixed(1)} and M02 ${actualM02.toFixed(1)}. Observed prediction error was M01 ${(actualM01 - predictedM01) >= 0 ? "+" : ""}${(actualM01 - predictedM01).toFixed(1)} and M02 ${(actualM02 - predictedM02) >= 0 ? "+" : ""}${(actualM02 - predictedM02).toFixed(1)}.${isCurrentDayCheckpoint ? " Today remains simulation-managed and will update at the next hourly run." : " This completed historical row is locked."}`,
+        `Calibration checkpoint updated for ${entryDate} at ${checkpoint.checkpoint_time}: M01 is now ${actualM01.toFixed(1)} (Sim M01 before update: ${predictedM01.toFixed(1)}) and M02 is now ${actualM02.toFixed(1)} (Sim M02 before update: ${predictedM02.toFixed(1)}).${isCurrentDayCheckpoint ? " Today remains simulation-managed and will update at the next hourly run." : " This completed historical row is locked."}`,
         "success"
       );
     });
