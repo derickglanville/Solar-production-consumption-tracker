@@ -134,7 +134,10 @@
                     <label>Sim M02<input type="number" step="0.1" id="entry-meter-checkpoint-predicted-m02" class="form-control form-control-sm"></label>
                     <label>Actual M01<input type="number" step="0.1" id="entry-meter-checkpoint-actual-m01" class="form-control form-control-sm"></label>
                     <label>Actual M02<input type="number" step="0.1" id="entry-meter-checkpoint-actual-m02" class="form-control form-control-sm"></label>
-                    <button type="button" id="entry-meter-checkpoint-save" class="btn btn-contract btn-sm">Train Model</button>
+                    <div class="meter-photo-actions">
+                      <label class="btn btn-outline-primary btn-sm mb-0" for="entry-meter-photo-m01">Read M01 photo<input type="file" id="entry-meter-photo-m01" accept="image/*" capture="environment" hidden></label>
+                      <label class="btn btn-outline-primary btn-sm mb-0" for="entry-meter-photo-m02">Read M02 photo<input type="file" id="entry-meter-photo-m02" accept="image/*" capture="environment" hidden></label>
+                    </div>                    <button type="button" id="entry-meter-checkpoint-save" class="btn btn-contract btn-sm">Train Model</button>
                   </div>
                   <div class="meter-calibration-history mt-3">
                     <div class="meter-calibration-history-heading">
@@ -607,6 +610,13 @@
     font-size: 0.72rem;
   }
 
+  .meter-photo-actions {
+    display: flex;
+    gap: 0.35rem;
+    flex-wrap: wrap;
+  }
+
+  .meter-photo-actions .btn { white-space: nowrap; }
   @media (max-width: 767px) {
     .meter-checkpoint-grid {
       grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -614,4 +624,8 @@
   }
 </style>
 
+{% endblock %}
+
+{% block extra_scripts %}
+<script defer src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 {% endblock %}

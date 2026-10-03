@@ -2099,7 +2099,7 @@
   var EventType;
   var ErrorCode;
   var Stat;
-  var Event;
+  var Event2;
   var getStatEventTarget;
   var createWebChannelTransport;
   (function() {
@@ -4127,7 +4127,7 @@
     getStatEventTarget = webchannel_blob_es2018.getStatEventTarget = function() {
       return jb();
     };
-    Event = webchannel_blob_es2018.Event = I;
+    Event2 = webchannel_blob_es2018.Event = I;
     Stat = webchannel_blob_es2018.Stat = { jb: 0, mb: 1, nb: 2, Hb: 3, Mb: 4, Jb: 5, Kb: 6, Ib: 7, Gb: 8, Lb: 9, PROXY: 10, NOPROXY: 11, Eb: 12, Ab: 13, Bb: 14, zb: 15, Cb: 16, Db: 17, fb: 18, eb: 19, gb: 20 };
     ub.NO_ERROR = 0;
     ub.TIMEOUT = 8;
@@ -13811,7 +13811,7 @@
     static rn() {
       if (!___PRIVATE_WebChannelConnection.sn) {
         const e = getStatEventTarget();
-        __PRIVATE_unguardedEventListen(e, Event.STAT_EVENT, (e2) => {
+        __PRIVATE_unguardedEventListen(e, Event2.STAT_EVENT, (e2) => {
           e2.stat === Stat.PROXY ? __PRIVATE_logDebug(Ct, "STAT_EVENT: detected buffering proxy") : e2.stat === Stat.NOPROXY && __PRIVATE_logDebug(Ct, "STAT_EVENT: detected no buffering proxy");
         }), ___PRIVATE_WebChannelConnection.sn = true;
       }
@@ -27892,6 +27892,42 @@ This is a reconciliation, not an independent measurement, because EDC includes S
     const checkpointPredictedM02 = document.getElementById("entry-meter-checkpoint-predicted-m02");
     const checkpointActualM01 = document.getElementById("entry-meter-checkpoint-actual-m01");
     const checkpointActualM02 = document.getElementById("entry-meter-checkpoint-actual-m02");
+    const meterPhotoM01 = document.getElementById("entry-meter-photo-m01");
+    const meterPhotoM02 = document.getElementById("entry-meter-photo-m02");
+    function meterPhotoCandidates(text) {
+      return String(text || "").replace(/[Oo]/g, "0").replace(/,/g, ".").match(/\d{3,5}(?:\.\d{1,2})?/g)?.map(Number).filter(Number.isFinite) || [];
+    }
+    async function readMeterPhoto(file, targetInput, simulatedInput, meterName) {
+      if (!file || !targetInput) return;
+      if (file.size > 12 * 1024 * 1024) {
+        renderStatusAlert("entries-status", `${meterName} photo is too large. Use a photo smaller than 12 MB.`, "warning");
+        return;
+      }
+      if (!window.Tesseract?.recognize) {
+        renderStatusAlert("entries-status", "Meter-photo reading is still loading. Wait a moment and try the photo again.", "warning");
+        return;
+      }
+      renderStatusAlert("entries-status", `Reading ${meterName} from the photo on this device\u2026`, "info");
+      try {
+        const result = await window.Tesseract.recognize(file, "eng", { logger: (progress) => {
+          if (progress.status === "recognizing text" && Number.isFinite(progress.progress)) {
+            renderStatusAlert("entries-status", `Reading ${meterName} from the photo\u2026 ${Math.round(progress.progress * 100)}%`, "info");
+          }
+        } });
+        const simulated = Number(simulatedInput?.value);
+        const reading = meterPhotoCandidates(result?.data?.text).sort((left, right) => Math.abs(left - simulated) - Math.abs(right - simulated))[0];
+        if (!Number.isFinite(reading)) {
+          renderStatusAlert("entries-status", `No ${meterName} reading was found. Retake the photo tightly around the meter display, then enter the value manually if needed.`, "warning");
+          return;
+        }
+        targetInput.value = reading.toFixed(1);
+        targetInput.dispatchEvent(new Event("input", { bubbles: true }));
+        renderStatusAlert("entries-status", `${meterName} photo read as ${reading.toFixed(1)}. Review it, then select Train Model to save this calibration checkpoint.`, "success");
+      } catch (error) {
+        console.error("Meter photo reading failed", error);
+        renderStatusAlert("entries-status", `Could not read the ${meterName} photo. Use a clear, close camera photo of the numeric display and try again.`, "warning");
+      }
+    }
     const viewDayEstimatesButton = document.getElementById("entry-meter-sim-view-day");
     const simulationDialog = document.getElementById("entry-meter-sim-dialog");
     const simulationDialogClose = document.getElementById("entry-meter-sim-dialog-close");
@@ -28141,6 +28177,8 @@ This is a reconciliation, not an independent measurement, because EDC includes S
       checkpointTime.value = formatCheckpointTime(getClockMinutes());
       checkpointTime.addEventListener("change", refreshCheckpointPrediction);
     }
+    if (meterPhotoM01) meterPhotoM01.addEventListener("change", () => readMeterPhoto(meterPhotoM01.files?.[0], checkpointActualM01, checkpointPredictedM01, "M01"));
+    if (meterPhotoM02) meterPhotoM02.addEventListener("change", () => readMeterPhoto(meterPhotoM02.files?.[0], checkpointActualM02, checkpointPredictedM02, "M02"));
     if (checkpointButton) {
       checkpointButton.addEventListener("click", async () => {
         const entryDate = getActiveEntryDate();
