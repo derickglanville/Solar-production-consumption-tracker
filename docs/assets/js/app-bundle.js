@@ -26781,6 +26781,81 @@ This typically indicates that your device does not have a healthy Internet conne
       })
     };
   }
+  function weightedQuantile(samples, quantile) {
+    const usable = samples.filter((sample) => Number.isFinite(sample.value) && Number.isFinite(sample.weight) && sample.weight > 0).sort((a, b) => a.value - b.value);
+    if (!usable.length) return 0;
+    const target = sum(usable.map((sample) => sample.weight)) * Math.min(1, Math.max(0, quantile));
+    let running = 0;
+    for (const sample of usable) {
+      running += sample.weight;
+      if (running >= target) return sample.value;
+    }
+    return usable[usable.length - 1].value;
+  }
+  function checkpointMoment(checkpoint) {
+    return `${checkpoint.entry_date}T${String(checkpoint.minute_of_day).padStart(4, "0")}`;
+  }
+  function getV2IntervalHours(checkpoint, checkpoints, entries) {
+    const priorSameDay = checkpoints.filter((item) => item.entry_date === checkpoint.entry_date && item.minute_of_day < checkpoint.minute_of_day).sort((a, b) => b.minute_of_day - a.minute_of_day)[0];
+    if (priorSameDay) return Math.max(0.25, (checkpoint.minute_of_day - priorSameDay.minute_of_day) / 60);
+    const priorEntry = getMostRecentEntryBefore(entries, checkpoint.entry_date);
+    if (!priorEntry) return 24;
+    const days = Math.max(1, Math.round((/* @__PURE__ */ new Date(`${checkpoint.entry_date}T00:00:00`) - /* @__PURE__ */ new Date(`${priorEntry.entry_date}T00:00:00`)) / 864e5));
+    return days * 24;
+  }
+  function getCalibrationV2Samples(entryDate, minuteOfDay, targetEntry, entries, checkpoints, cutoff = null) {
+    const target = { entry_date: String(entryDate), minute_of_day: Number(minuteOfDay) };
+    const eligible = normalizeMeterSimulationCheckpoints(checkpoints).filter((checkpoint) => {
+      if (checkpoint.entry_date > target.entry_date || checkpoint.entry_date === target.entry_date && checkpoint.minute_of_day >= target.minute_of_day) return false;
+      return !cutoff || checkpointMoment(checkpoint) < cutoff;
+    });
+    const targetInterval = getV2IntervalHours(target, eligible, entries);
+    return eligible.map((checkpoint) => {
+      const hours = getV2IntervalHours(checkpoint, eligible, entries);
+      const weight = getCheckpointSimilarityWeight(checkpoint, entryDate, minuteOfDay, targetEntry) * Math.min(1.5, Math.max(0.35, Math.sqrt(targetInterval / hours)));
+      return { checkpoint, weight, importRate: (checkpoint.actual_m01 - checkpoint.predicted_m01) / hours, exportRate: (checkpoint.actual_m02 - checkpoint.predicted_m02) / hours };
+    }).filter((sample) => sample.weight >= 0.02).sort((a, b) => b.weight - a.weight).slice(0, 18).map((sample) => ({ ...sample, targetInterval }));
+  }
+  function buildCalibrationEngineV2(entryDate, entries, options = {}) {
+    const minuteOfDay = Number.isFinite(Number(options.minuteOfDay)) ? Number(options.minuteOfDay) : getClockMinutes();
+    const targetEntry = entries.find((entry) => String(entry.entry_date) === String(entryDate)) || {};
+    const v1 = options.v1 || buildMeterSimulation(entryDate, entries, { minuteOfDay });
+    const checkpoints = options.checkpoints || meterSimulationCheckpoints;
+    const sameDayAnchor = normalizeMeterSimulationCheckpoints(checkpoints).filter((item) => item.entry_date === String(entryDate) && item.minute_of_day <= minuteOfDay).at(-1);
+    const samples = getCalibrationV2Samples(entryDate, minuteOfDay, targetEntry, entries, checkpoints, options.cutoff || null);
+    const intervalHours = samples[0]?.targetInterval || 24;
+    const importBias = sameDayAnchor ? 0 : weightedMedian(samples.map((sample) => ({ value: sample.importRate * intervalHours, weight: sample.weight })));
+    const exportBias = sameDayAnchor ? 0 : weightedMedian(samples.map((sample) => ({ value: sample.exportRate * intervalHours, weight: sample.weight })));
+    const importResidual = samples.map((sample) => ({ value: Math.abs(sample.importRate * intervalHours - importBias), weight: sample.weight }));
+    const exportResidual = samples.map((sample) => ({ value: Math.abs(sample.exportRate * intervalHours - exportBias), weight: sample.weight }));
+    const importRange = Math.max(1.5, weightedQuantile(importResidual, 0.8) * 1.35);
+    const exportRange = Math.max(2.5, weightedQuantile(exportResidual, 0.8) * 1.35);
+    const currentImport = Number((v1.currentImport + importBias).toFixed(1));
+    const currentExport = Number((v1.currentExport + exportBias).toFixed(1));
+    const eodV1 = buildMeterSimulation(entryDate, entries, { minuteOfDay: 20 * 60 });
+    const eodImport = Number((eodV1.currentImport + importBias).toFixed(1));
+    const eodExport = Number((eodV1.currentExport + exportBias).toFixed(1));
+    return { version: "V2", mode: "shadow", currentImport, currentExport, eodImport, eodExport, importBias, exportBias, intervalHours, sampleCount: samples.length, sameDayAnchor: Boolean(sameDayAnchor), confidence: { importLow: Number((currentImport - importRange).toFixed(1)), importHigh: Number((currentImport + importRange).toFixed(1)), exportLow: Number((currentExport - exportRange).toFixed(1)), exportHigh: Number((currentExport + exportRange).toFixed(1)) }, eodConfidence: { importLow: Number((eodImport - importRange).toFixed(1)), importHigh: Number((eodImport + importRange).toFixed(1)), exportLow: Number((eodExport - exportRange).toFixed(1)), exportHigh: Number((eodExport + exportRange).toFixed(1)) }, basis: sameDayAnchor ? `today's actual checkpoint + ${samples.length} similar historical checkpoints` : `${samples.length} weather, irradiance, cloud, time and interval-weighted checkpoints` };
+  }
+  function backtestCalibrationEngineV2(entries, checkpoints = meterSimulationCheckpoints) {
+    const ordered = normalizeMeterSimulationCheckpoints(checkpoints).sort((a, b) => checkpointMoment(a).localeCompare(checkpointMoment(b)));
+    const results = [];
+    for (const checkpoint of ordered) {
+      const prior = ordered.filter((item) => checkpointMoment(item) < checkpointMoment(checkpoint));
+      if (prior.length < 8) continue;
+      const targetEntry = entries.find((entry) => entry.entry_date === checkpoint.entry_date) || {};
+      const samples = getCalibrationV2Samples(checkpoint.entry_date, checkpoint.minute_of_day, targetEntry, entries, prior, checkpointMoment(checkpoint));
+      if (samples.length < 4) continue;
+      const hours = samples[0].targetInterval;
+      const importBias = weightedMedian(samples.map((sample) => ({ value: sample.importRate * hours, weight: sample.weight })));
+      const exportBias = weightedMedian(samples.map((sample) => ({ value: sample.exportRate * hours, weight: sample.weight })));
+      results.push({ v1Import: Math.abs(checkpoint.actual_m01 - checkpoint.predicted_m01), v1Export: Math.abs(checkpoint.actual_m02 - checkpoint.predicted_m02), v2Import: Math.abs(checkpoint.actual_m01 - (checkpoint.predicted_m01 + importBias)), v2Export: Math.abs(checkpoint.actual_m02 - (checkpoint.predicted_m02 + exportBias)) });
+    }
+    const average = (key) => results.length ? sum(results.map((row) => row[key])) / results.length : 0;
+    const v1Mae = (average("v1Import") + average("v1Export")) / 2;
+    const v2Mae = (average("v2Import") + average("v2Export")) / 2;
+    return { sampleCount: results.length, v1Mae, v2Mae, improvementPct: v1Mae ? (v1Mae - v2Mae) / v1Mae * 100 : 0, improved: results.length >= 8 && v2Mae < v1Mae };
+  }
   function renderMeterSimulation(entryDate = entriesPageState.selectedDate, { autoApply = false } = {}) {
     const summary = document.getElementById("entry-meter-sim-summary");
     const body = document.getElementById("entry-meter-sim-body");
@@ -26788,6 +26863,10 @@ This typically indicates that your device does not have a healthy Internet conne
     renderCalibrationHistory();
     if (!summary || !body || !form || !entryDate) return null;
     const simulation = buildMeterSimulation(entryDate, entriesPageState.entries);
+    const calibrationV2 = buildCalibrationEngineV2(entryDate, entriesPageState.entries, { v1: simulation });
+    const v2Backtest = backtestCalibrationEngineV2(entriesPageState.entries);
+    const v2Panel = document.getElementById("entry-calibration-v2-panel");
+    if (v2Panel) v2Panel.innerHTML = `<strong>Calibration Engine V2 \xB7 Shadow mode</strong> \u2014 V1 remains active. V2 M01 <strong>${calibrationV2.currentImport.toFixed(1)}</strong> (${calibrationV2.confidence.importLow.toFixed(1)}\u2013${calibrationV2.confidence.importHigh.toFixed(1)}), M02 <strong>${calibrationV2.currentExport.toFixed(1)}</strong> (${calibrationV2.confidence.exportLow.toFixed(1)}\u2013${calibrationV2.confidence.exportHigh.toFixed(1)}). EOD M01 ${calibrationV2.eodImport.toFixed(1)}, M02 ${calibrationV2.eodExport.toFixed(1)}. ${calibrationV2.basis}. Backtest: ${v2Backtest.sampleCount} checkpoints; V1 MAE ${v2Backtest.v1Mae.toFixed(1)}, V2 MAE ${v2Backtest.v2Mae.toFixed(1)} (${v2Backtest.improvementPct >= 0 ? "+" : ""}${v2Backtest.improvementPct.toFixed(1)}%).`;
     const basisDescription = simulation.basis === "weather-matched" ? `${escapeHtml(simulation.weatherBucket)} historical median (${simulation.sampleCount} comparable days)` : `overall historical median (${simulation.sampleCount} usable days; limited ${escapeHtml(simulation.weatherBucket)} history)`;
     summary.innerHTML = `
     Prior cumulative readings: <strong>M01 ${simulation.baseImport.toFixed(1)}</strong> and
@@ -26935,6 +27014,7 @@ This typically indicates that your device does not have a healthy Internet conne
       Number(simulation.currentExport || 0)
     );
     const existingRuns = Array.isArray(existingEntry.meter_simulation_runs) ? existingEntry.meter_simulation_runs : [];
+    const calibrationV2 = buildCalibrationEngineV2(entryDate, entries, { minuteOfDay: simulation.currentMinute, v1: simulation });
     const monitoringRun = simulation.runKey ? {
       run_key: simulation.runKey,
       run_label: simulation.runLabel,
@@ -26951,6 +27031,8 @@ This typically indicates that your device does not have a healthy Internet conne
       wind_mph: parseOptionalNumber(existingEntry.wind_mph),
       model_basis: simulation.basis,
       calibration_basis: simulation.calibration?.basis || "",
+      calibration_v2: calibrationV2,
+      calibration_v2_mode: "shadow",
       overnight_import_kwh: simulation.overnightImport,
       overnight_basis: simulation.overnightBasis,
       sunrise_time: existingEntry.sunrise_time || "",
@@ -26981,6 +27063,10 @@ This typically indicates that your device does not have a healthy Internet conne
       updated_at: timestamp
     });
     await setDoc2(doc(db, entryCollectionName, entryDate), simulatedEntry, { merge: true });
+    const priorV2 = entriesPageState.config?.calibration_engine_v2 || {};
+    await setDoc2(doc(db, configCollectionName, configDocumentId), {
+      calibration_engine_v2: { version: "2", mode: "shadow", started_at: priorV2.started_at || timestamp, review_after: priorV2.review_after || new Date(Date.now() + 14 * 864e5).toISOString(), last_run_at: timestamp, backtest: backtestCalibrationEngineV2(entries, meterSimulationCheckpoints) }
+    }, { merge: true });
     return simulatedEntry;
   }
   function formatMeterSimulationRunLabel(minuteOfDay) {
