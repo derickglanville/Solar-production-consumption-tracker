@@ -28309,14 +28309,16 @@ This is a reconciliation, not an independent measurement, because EDC includes S
         meterSimulationLastAttemptedRunKey = latestDueRun ? `${getTodayIsoDate()}T${String(Math.floor(latestDueRun.minuteOfDay / 60)).padStart(2, "0")}:${String(latestDueRun.minuteOfDay % 60).padStart(2, "0")}` : "";
         renderMeterSimulation(entryDate, { autoApply: true });
         const isCurrentDayCheckpoint = String(entryDate) === String(getTodayIsoDate());
+        const afterSunset = minuteOfDay >= getSolarWindow(selectedEntry || {}).sunsetMinute;
+        const lockVerifiedReading = !isCurrentDayCheckpoint || afterSunset;
         const savedEntry = normalizeEntry({
           ...selectedEntry,
           entry_date: entryDate,
           meter_01_import_reading: actualM01,
           meter_02_export_reading: actualM02,
-          meter_values_estimated: isCurrentDayCheckpoint,
-          meter_values_confirmed: !isCurrentDayCheckpoint,
-          meter_values_calibrated: isCurrentDayCheckpoint,
+          meter_values_estimated: !lockVerifiedReading,
+          meter_values_confirmed: lockVerifiedReading,
+          meter_values_calibrated: true,
           meter_simulation_updated_at: checkpointRecordedAt,
           updated_at: checkpointRecordedAt
         });
@@ -28335,7 +28337,7 @@ This is a reconciliation, not an independent measurement, because EDC includes S
         }
         renderStatusAlert(
           "entries-status",
-          `Calibration checkpoint updated for ${entryDate} at ${checkpoint.checkpoint_time}: M01 is now ${actualM01.toFixed(1)} (Sim M01 before update: ${predictedM01.toFixed(1)}) and M02 is now ${actualM02.toFixed(1)} (Sim M02 before update: ${predictedM02.toFixed(1)}).${isCurrentDayCheckpoint ? " Today remains simulation-managed and will update at the next hourly run." : " This completed historical row is locked."}`,
+          `Calibration checkpoint updated for ${entryDate} at ${checkpoint.checkpoint_time}: M01 is now ${actualM01.toFixed(1)} (Sim M01 before update: ${predictedM01.toFixed(1)}) and M02 is now ${actualM02.toFixed(1)} (Sim M02 before update: ${predictedM02.toFixed(1)}).${lockVerifiedReading ? " This verified reading is locked and will not be replaced by another simulation." : " Today remains simulation-managed and will update at the next hourly run."}`,
           "success"
         );
       });
