@@ -27899,9 +27899,23 @@ This is a reconciliation, not an independent measurement, because EDC includes S
     const quickMeterPhotoSave = document.getElementById("entry-meter-photo-quick-save");
     const quickMeterPhotoStatus = document.getElementById("entry-meter-photo-quick-status");
     const meterPhotoSaveActions = document.getElementById("entry-meter-photo-save-actions");
+    const meterPhotoReview = document.getElementById("entry-meter-photo-review");
+    const meterPhotoReviewGrid = document.getElementById("entry-meter-photo-review-grid");
     const pendingMeterPhotos = { m01: null, m02: null };
     function meterPhotoCandidates(text) {
       return String(text || "").replace(/[Oo]/g, "0").replace(/,/g, ".").match(/\d{3,5}(?:\.\d{1,2})?/g)?.map(Number).filter(Number.isFinite) || [];
+    }
+    function renderMeterPhotoReview() {
+      if (!meterPhotoReview || !meterPhotoReviewGrid) return;
+      const photos = Object.entries(pendingMeterPhotos).filter(([, file]) => file);
+      meterPhotoReview.hidden = !photos.length;
+      meterPhotoReviewGrid.innerHTML = photos.map(([meter, file]) => {
+        const value = meter === "m01" ? checkpointActualM01?.value : checkpointActualM02?.value;
+        const simulation = meter === "m01" ? checkpointPredictedM01?.value : checkpointPredictedM02?.value;
+        const url = URL.createObjectURL(file);
+        window.setTimeout(() => URL.revokeObjectURL(url), 6e4);
+        return `<article class="meter-photo-review-card"><img src="${url}" alt="${meter.toUpperCase()} meter photo to review"><div><strong>${meter.toUpperCase()} \xB7 ${Number(value).toFixed(1)}</strong><br>Sim before update: ${Number(simulation).toFixed(1)}</div></article>`;
+      }).join("");
     }
     function renderMeterPhotoSaveActions() {
       if (!meterPhotoSaveActions) return;
@@ -27966,8 +27980,9 @@ This is a reconciliation, not an independent measurement, because EDC includes S
         targetInput.dispatchEvent(new Event("input", { bubbles: true }));
         pendingMeterPhotos[meterName.toLowerCase()] = file;
         renderMeterPhotoSaveActions();
+        renderMeterPhotoReview();
         updateQuickMeterPhotoStatus();
-        renderStatusAlert("entries-status", `${meterName} photo read as ${reading.toFixed(1)}. Capture the other meter, then select Update Calibration Checkpoint.`, "success");
+        renderStatusAlert("entries-status", `${meterName} photo read as ${reading.toFixed(1)}. Review the photo and reading below, capture the other meter, then update the Calibration Checkpoint.`, "success");
       } catch (error) {
         console.error("Meter photo reading failed", error);
         renderStatusAlert("entries-status", `Could not read the ${meterName} photo. Use a clear, close camera photo of the numeric display and try again.`, "warning");

@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/styles.css?v=20261003-photo-flow">
+  <link rel="stylesheet" href="assets/css/styles.css?v=20261003-photo-review">
   <script src="https://cdn.plot.ly/plotly-3.4.0.min.js"></script>
 </head>
 <body data-page="entries" data-local-snapshot-mode="false">
@@ -48,7 +48,11 @@
       <label class="btn btn-sun" for="entry-meter-photo-quick-m02">2 · Capture M02<input type="file" id="entry-meter-photo-quick-m02" accept="image/*" capture="environment" hidden></label>
       <button type="button" class="btn btn-contract" id="entry-meter-photo-quick-save" disabled>3 · Update Calibration Checkpoint</button>
     </div>
-    <div class="meter-photo-save-actions mt-2" id="entry-meter-photo-save-actions"></div>
+    <div class="meter-photo-save-actions mt-2" id="entry-meter-photo-save-actions"></div>`r`n    <div class="meter-photo-review mt-3" id="entry-meter-photo-review" hidden>
+      <strong>Review before updating</strong>
+      <span>Confirm both display photos and readings match the meters, then update the checkpoint.</span>
+      <div class="meter-photo-review-grid" id="entry-meter-photo-review-grid"></div>
+    </div>
     <p class="form-text mb-0">After each capture, use <strong>Save photo to Pictures</strong> and choose <strong>Save Image</strong> in the iPhone share sheet. The app then reads the number and saves the confirmed M01/M02 values to today’s Calibration Checkpoint.</p>
   </div>
 </div><div class="row g-4">
@@ -993,6 +997,14 @@
     font-size: 0.72rem;
   }
 
+  .meter-photo-review { border-top: 1px solid rgba(92, 124, 146, 0.2); padding-top: 0.75rem; }
+  .meter-photo-review > strong { display: block; color: #24495d; font-size: 0.9rem; }
+  .meter-photo-review > span { color: #667b8c; display: block; font-size: 0.78rem; margin: 0.15rem 0 0.55rem; }
+  .meter-photo-review-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.65rem; }
+  .meter-photo-review-card { background: #fff; border: 1px solid #cfe0e9; border-radius: 0.55rem; overflow: hidden; }
+  .meter-photo-review-card img { width: 100%; height: 150px; object-fit: contain; background: #eef3f6; display: block; }
+  .meter-photo-review-card div { padding: 0.45rem 0.55rem; color: #365367; font-size: 0.78rem; }
+  .meter-photo-review-card strong { color: #123a53; font-size: 0.95rem; }
   .meter-photo-quick-card { border-color: rgba(46, 115, 145, 0.28); background: linear-gradient(105deg, #f8fcff, #edf8f2); }
   .meter-photo-quick-actions, .meter-photo-save-actions { display: flex; flex-wrap: wrap; gap: 0.55rem; align-items: center; }
   .meter-photo-quick-step { color: #2d5f77; font-size: 0.82rem; font-weight: 700; }
@@ -1015,9 +1027,9 @@
     </div>
   </main>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/js/bootstrap.bundle.min.js"></script>
-  <script src="assets/js/site-bootstrap.js?v=20261003-photo-flow"></script>
-  <script src="assets/js/firebase-config.js?v=20261003-photo-flow"></script>
-  <script defer src="assets/js/app-bundle.js?v=20261003-photo-flow"></script>
+  <script src="assets/js/site-bootstrap.js?v=20261003-photo-review"></script>
+  <script src="assets/js/firebase-config.js?v=20261003-photo-review"></script>
+  <script defer src="assets/js/app-bundle.js?v=20261003-photo-review"></script>
 
 <script defer src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 
