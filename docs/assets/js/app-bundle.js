@@ -2099,7 +2099,7 @@
   var EventType;
   var ErrorCode;
   var Stat;
-  var Event;
+  var Event2;
   var getStatEventTarget;
   var createWebChannelTransport;
   (function() {
@@ -4127,7 +4127,7 @@
     getStatEventTarget = webchannel_blob_es2018.getStatEventTarget = function() {
       return jb();
     };
-    Event = webchannel_blob_es2018.Event = I;
+    Event2 = webchannel_blob_es2018.Event = I;
     Stat = webchannel_blob_es2018.Stat = { jb: 0, mb: 1, nb: 2, Hb: 3, Mb: 4, Jb: 5, Kb: 6, Ib: 7, Gb: 8, Lb: 9, PROXY: 10, NOPROXY: 11, Eb: 12, Ab: 13, Bb: 14, zb: 15, Cb: 16, Db: 17, fb: 18, eb: 19, gb: 20 };
     ub.NO_ERROR = 0;
     ub.TIMEOUT = 8;
@@ -13811,7 +13811,7 @@
     static rn() {
       if (!___PRIVATE_WebChannelConnection.sn) {
         const e = getStatEventTarget();
-        __PRIVATE_unguardedEventListen(e, Event.STAT_EVENT, (e2) => {
+        __PRIVATE_unguardedEventListen(e, Event2.STAT_EVENT, (e2) => {
           e2.stat === Stat.PROXY ? __PRIVATE_logDebug(Ct, "STAT_EVENT: detected buffering proxy") : e2.stat === Stat.NOPROXY && __PRIVATE_logDebug(Ct, "STAT_EVENT: detected no buffering proxy");
         }), ___PRIVATE_WebChannelConnection.sn = true;
       }
@@ -24013,7 +24013,7 @@ This typically indicates that your device does not have a healthy Internet conne
   var configDocumentId = "primary";
   var meterSimulationMonitorStartMinute = 0;
   var meterSimulationMonitorEndMinute = 23 * 60 + 59;
-  var meterSimulationMonitorIntervalMinutes = 60;
+  var meterSimulationMonitorIntervalMinutes = 5;
   var dailyAutoCreateHour = 6;
   var dailyAutoCreateMinute = 30;
   var oneTimeManualAutoCreateDate = "2026-07-22";
@@ -24122,6 +24122,7 @@ This typically indicates that your device does not have a healthy Internet conne
   var sunrunProductionBootstrap = bootstrap.sunrun_production || { available: false, by_date: {} };
   var dashboardCompactModeStorageKey = "solar-dashboard-compact-mode";
   var localSnapshotSyncStorageKey = "solar-local-json-last-sync-hour";
+  var entriesSnapshotStorageKey = "solar-data-entry-snapshot-v1";
   var localSnapshotSyncStartHour = 9;
   var localSnapshotSyncEndHour = 20;
   var localSnapshotSyncTimer = null;
@@ -24619,12 +24620,13 @@ This typically indicates that your device does not have a healthy Internet conne
     if (missing) {
       throw new Error(`Firebase config is missing ${missing}`);
     }
-    const app = initializeApp(config);
-    const db = initializeFirestore(app, {
-      experimentalAutoDetectLongPolling: true
-    });
-    activeFirestoreDb = db;
-    return { app, db };
+    if (!activeFirestoreDb) {
+      const app = initializeApp(config);
+      activeFirestoreDb = initializeFirestore(app, {
+        experimentalAutoDetectLongPolling: true
+      });
+    }
+    return { db: activeFirestoreDb };
   }
   function withTimeout(promise, timeoutMs, message) {
     let timeoutId;
@@ -24636,30 +24638,96 @@ This typically indicates that your device does not have a healthy Internet conne
   function entryNeedsTemperatureBackfill(entry) {
     return parseOptionalNumber(entry?.temperature_high_f) === null || parseOptionalNumber(entry?.temperature_low_f) === null;
   }
+  function hasFirestoreRestValue(value, key) {
+    return Object.prototype.hasOwnProperty.call(value, key);
+  }
+  function decodeFirestoreRestValue(value) {
+    if (!value || typeof value !== "object") return value;
+    if (hasFirestoreRestValue(value, "nullValue")) return null;
+    if (hasFirestoreRestValue(value, "booleanValue")) return value.booleanValue;
+    if (hasFirestoreRestValue(value, "integerValue") || hasFirestoreRestValue(value, "doubleValue")) return Number(value.integerValue ?? value.doubleValue);
+    if (hasFirestoreRestValue(value, "stringValue")) return value.stringValue;
+    if (hasFirestoreRestValue(value, "timestampValue")) return value.timestampValue;
+    if (hasFirestoreRestValue(value, "arrayValue")) return (value.arrayValue.values || []).map(decodeFirestoreRestValue);
+    if (hasFirestoreRestValue(value, "mapValue")) return Object.fromEntries(Object.entries(value.mapValue.fields || {}).map(([key, item]) => [key, decodeFirestoreRestValue(item)]));
+    return value;
+  }
+  function decodeFirestoreRestDocument(document2) {
+    return Object.fromEntries(Object.entries(document2?.fields || {}).map(([key, value]) => [key, decodeFirestoreRestValue(value)]));
+  }
+  async function loadFirestoreRestState() {
+    const config = window.SOLAR_FIREBASE_CONFIG || {};
+    const baseUrl = `https://firestore.googleapis.com/v1/projects/${encodeURIComponent(config.projectId)}/databases/(default)/documents`;
+    const key = encodeURIComponent(config.apiKey || "");
+    const [configResponse, entriesResponse] = await Promise.all([
+      fetch(`${baseUrl}/${configCollectionName}/${configDocumentId}?key=${key}`, { cache: "no-store" }),
+      fetch(`${baseUrl}/${entryCollectionName}?orderBy=entry_date&pageSize=500&key=${key}`, { cache: "no-store" })
+    ]);
+    if (!configResponse.ok || !entriesResponse.ok) {
+      throw new Error(`Firebase HTTPS read failed (${configResponse.status}/${entriesResponse.status}).`);
+    }
+    const [configDocument, entriesPayload] = await Promise.all([configResponse.json(), entriesResponse.json()]);
+    const resolvedConfig = mergeConfig(decodeFirestoreRestDocument(configDocument));
+    meterSimulationCheckpoints = normalizeMeterSimulationCheckpoints(resolvedConfig.meter_simulation_checkpoints);
+    const entries = (entriesPayload.documents || []).map((document2) => {
+      const values = decodeFirestoreRestDocument(document2);
+      return normalizeEntry({ entry_date: values.entry_date || document2.name.split("/").pop(), ...values });
+    });
+    return { config: resolvedConfig, entries: applySunrunProductionToEntries(entries), connection: "rest" };
+  }
   async function loadFirestoreState(db) {
-    const configSnapshot = await withTimeout(
-      getDoc(doc(db, configCollectionName, configDocumentId)),
-      12e3,
-      "Firebase configuration request timed out."
-    );
-    const config = configSnapshot.exists() ? mergeConfig(configSnapshot.data()) : mergeConfig();
-    meterSimulationCheckpoints = normalizeMeterSimulationCheckpoints(
-      config.meter_simulation_checkpoints
-    );
-    const entryQuery = query(collection(db, entryCollectionName), orderBy("entry_date"));
-    const entrySnapshot = await withTimeout(
-      getDocs(entryQuery),
-      12e3,
-      "Firebase entries request timed out."
-    );
-    const entries = entrySnapshot.docs.map((docSnapshot) => normalizeEntry({
-      entry_date: docSnapshot.data().entry_date || docSnapshot.id,
-      ...docSnapshot.data()
-    }));
-    return {
-      config,
-      entries: applySunrunProductionToEntries(entries)
+    try {
+      const configSnapshot = await withTimeout(getDoc(doc(db, configCollectionName, configDocumentId)), 8e3, "Firebase SDK configuration request timed out.");
+      const config = configSnapshot.exists() ? mergeConfig(configSnapshot.data()) : mergeConfig();
+      meterSimulationCheckpoints = normalizeMeterSimulationCheckpoints(config.meter_simulation_checkpoints);
+      const entryQuery = query(collection(db, entryCollectionName), orderBy("entry_date"));
+      const entrySnapshot = await withTimeout(getDocs(entryQuery), 8e3, "Firebase SDK entries request timed out.");
+      const entries = entrySnapshot.docs.map((docSnapshot) => normalizeEntry({ entry_date: docSnapshot.data().entry_date || docSnapshot.id, ...docSnapshot.data() }));
+      return { config, entries: applySunrunProductionToEntries(entries), connection: "sdk" };
+    } catch (sdkError) {
+      try {
+        return await loadFirestoreRestState();
+      } catch (restError) {
+        throw new Error(`Firebase SDK and HTTPS reads both failed. ${restError.message}`);
+      }
+    }
+  }
+  function setEntriesFirebaseStatus(kind, message) {
+    const target = document.getElementById("entries-firebase-status");
+    if (!target) return;
+    target.className = `entries-firebase-status entries-firebase-status-${kind}`;
+    target.textContent = message;
+  }
+  function saveEntriesSnapshot(entries, config) {
+    const snapshot = {
+      schema_version: 1,
+      generated_at: (/* @__PURE__ */ new Date()).toISOString(),
+      entries,
+      config
     };
+    try {
+      window.localStorage.setItem(entriesSnapshotStorageKey, JSON.stringify(snapshot));
+      return snapshot;
+    } catch (error) {
+      console.warn("Data Entry JSON snapshot was not saved:", error);
+      return null;
+    }
+  }
+  function loadEntriesSnapshot() {
+    try {
+      const rawSnapshot = window.localStorage.getItem(entriesSnapshotStorageKey);
+      if (!rawSnapshot) return null;
+      const snapshot = JSON.parse(rawSnapshot);
+      if (!Array.isArray(snapshot?.entries) || !snapshot.entries.length) return null;
+      return snapshot;
+    } catch (error) {
+      console.warn("Data Entry JSON snapshot could not be read:", error);
+      return null;
+    }
+  }
+  function formatEntriesSnapshotDate(snapshot) {
+    const date = new Date(snapshot?.generated_at || "");
+    return Number.isNaN(date.getTime()) ? "an earlier session" : date.toLocaleString();
   }
   function getEasternClockParts(now = /* @__PURE__ */ new Date()) {
     const formatter = new Intl.DateTimeFormat("en-CA", {
@@ -26940,10 +27008,16 @@ This typically indicates that your device does not have a healthy Internet conne
   }
   async function syncTodaySimulatedMeters(db) {
     const today = getTodayIsoDate();
-    const dueRun = getLatestDueMeterSimulationRun();
-    if (!dueRun) return null;
-    const runHour = Math.floor(dueRun.minuteOfDay / 60);
-    const runMinute = dueRun.minuteOfDay % 60;
+    const runMinuteOfDay = getClockMinutes();
+    const checkpoint = meterSimulationSchedule.find((point) => point.hour * 60 + point.minute === runMinuteOfDay);
+    const dueRun = {
+      minuteOfDay: runMinuteOfDay,
+      label: checkpoint?.label || formatMeterSimulationRunLabel(runMinuteOfDay),
+      type: checkpoint ? "checkpoint" : "five-minute",
+      checkpoint
+    };
+    const runHour = Math.floor(runMinuteOfDay / 60);
+    const runMinute = runMinuteOfDay % 60;
     const runKey = `${today}T${String(runHour).padStart(2, "0")}:${String(runMinute).padStart(2, "0")}`;
     if (meterSimulationLastAttemptedRunKey === runKey) return null;
     let state = await loadFirestoreState(db);
@@ -26959,7 +27033,7 @@ This typically indicates that your device does not have a healthy Internet conne
       todayEntry = state.entries.find((entry2) => String(entry2.entry_date) === String(today));
     }
     if (!todayEntry) return null;
-    const latestTodayCheckpoint = normalizeMeterSimulationCheckpoints(meterSimulationCheckpoints).filter((checkpoint) => checkpoint.entry_date === String(today)).sort((left, right) => left.minute_of_day - right.minute_of_day).at(-1);
+    const latestTodayCheckpoint = normalizeMeterSimulationCheckpoints(meterSimulationCheckpoints).filter((checkpoint2) => checkpoint2.entry_date === String(today)).sort((left, right) => left.minute_of_day - right.minute_of_day).at(-1);
     if (latestTodayCheckpoint?.minute_of_day > dueRun.minuteOfDay) {
       meterSimulationLastAttemptedRunKey = runKey;
       return { entry: todayEntry, simulation: null, updated: false };
@@ -26981,7 +27055,7 @@ This typically indicates that your device does not have a healthy Internet conne
     const simulation = {
       ...buildMeterSimulation(today, state.entries, { minuteOfDay: dueRun.minuteOfDay }),
       runKey,
-      runLabel: `${dueRun.label} ${dueRun.type === "checkpoint" ? "checkpoint" : "hourly check"}`,
+      runLabel: `${dueRun.label} ${dueRun.type === "checkpoint" ? "checkpoint" : "meter check"}`,
       runType: dueRun.type,
       scheduleKey: dueRun.checkpoint ? runKey : "",
       scheduleLabel: dueRun.checkpoint?.label || ""
@@ -27818,6 +27892,42 @@ This is a reconciliation, not an independent measurement, because EDC includes S
     const checkpointPredictedM02 = document.getElementById("entry-meter-checkpoint-predicted-m02");
     const checkpointActualM01 = document.getElementById("entry-meter-checkpoint-actual-m01");
     const checkpointActualM02 = document.getElementById("entry-meter-checkpoint-actual-m02");
+    const meterPhotoM01 = document.getElementById("entry-meter-photo-m01");
+    const meterPhotoM02 = document.getElementById("entry-meter-photo-m02");
+    function meterPhotoCandidates(text) {
+      return String(text || "").replace(/[Oo]/g, "0").replace(/,/g, ".").match(/\d{3,5}(?:\.\d{1,2})?/g)?.map(Number).filter(Number.isFinite) || [];
+    }
+    async function readMeterPhoto(file, targetInput, simulatedInput, meterName) {
+      if (!file || !targetInput) return;
+      if (file.size > 12 * 1024 * 1024) {
+        renderStatusAlert("entries-status", `${meterName} photo is too large. Use a photo smaller than 12 MB.`, "warning");
+        return;
+      }
+      if (!window.Tesseract?.recognize) {
+        renderStatusAlert("entries-status", "Meter-photo reading is still loading. Wait a moment and try the photo again.", "warning");
+        return;
+      }
+      renderStatusAlert("entries-status", `Reading ${meterName} from the photo on this device\u2026`, "info");
+      try {
+        const result = await window.Tesseract.recognize(file, "eng", { logger: (progress) => {
+          if (progress.status === "recognizing text" && Number.isFinite(progress.progress)) {
+            renderStatusAlert("entries-status", `Reading ${meterName} from the photo\u2026 ${Math.round(progress.progress * 100)}%`, "info");
+          }
+        } });
+        const simulated = Number(simulatedInput?.value);
+        const reading = meterPhotoCandidates(result?.data?.text).sort((left, right) => Math.abs(left - simulated) - Math.abs(right - simulated))[0];
+        if (!Number.isFinite(reading)) {
+          renderStatusAlert("entries-status", `No ${meterName} reading was found. Retake the photo tightly around the meter display, then enter the value manually if needed.`, "warning");
+          return;
+        }
+        targetInput.value = reading.toFixed(1);
+        targetInput.dispatchEvent(new Event("input", { bubbles: true }));
+        renderStatusAlert("entries-status", `${meterName} photo read as ${reading.toFixed(1)}. Review it, then select Train Model to save this calibration checkpoint.`, "success");
+      } catch (error) {
+        console.error("Meter photo reading failed", error);
+        renderStatusAlert("entries-status", `Could not read the ${meterName} photo. Use a clear, close camera photo of the numeric display and try again.`, "warning");
+      }
+    }
     const viewDayEstimatesButton = document.getElementById("entry-meter-sim-view-day");
     const simulationDialog = document.getElementById("entry-meter-sim-dialog");
     const simulationDialogClose = document.getElementById("entry-meter-sim-dialog-close");
@@ -27845,14 +27955,16 @@ This is a reconciliation, not an independent measurement, because EDC includes S
         showMessage = true,
         runAutoCreate = false,
         forceCreate = false,
-        entryDate = getActiveEntryDate()
+        entryDate = getActiveEntryDate(),
+        selectCurrentDay = false
       } = options;
       const state = await loadFirestoreState(db);
       entriesPageState.config = mergeConfig(state.config);
-      const sunrunSync = await syncSunrunProductionIntoEntries(db, state.entries);
+      const readOnlyConnection = state.connection === "rest";
+      const sunrunSync = readOnlyConnection ? { entries: state.entries, updated: false, count: 0 } : await syncSunrunProductionIntoEntries(db, state.entries);
       let entries = sunrunSync.updated ? sunrunSync.entries : state.entries;
       let autoCreateMessage = "";
-      if (runAutoCreate) {
+      if (runAutoCreate && !readOnlyConnection) {
         const result = await ensureDailyPlaceholderRecord(db, entries, {
           forceCreate,
           entryDate,
@@ -27869,11 +27981,11 @@ This is a reconciliation, not an independent measurement, because EDC includes S
         }
       }
       populateEntriesTable(entries);
-      if (!entriesPageState.selectedDate) {
+      saveEntriesSnapshot(entries, entriesPageState.config);
+      setEntriesFirebaseStatus("connected", readOnlyConnection ? "Firebase: Connected \xB7 HTTPS live read" : "Firebase: Connected \xB7 Live Data");
+      if (selectCurrentDay || !entriesPageState.selectedDate) {
         const todayEntry = entries.find((entry) => entry.entry_date === getTodayIsoDate());
-        if (todayEntry) {
-          fillEntryForm(todayEntry);
-        }
+        if (todayEntry) fillEntryForm(todayEntry);
       }
       if (showMessage) {
         const message = autoCreateMessage || "Entry data refreshed from Firebase Firestore.";
@@ -28065,6 +28177,8 @@ This is a reconciliation, not an independent measurement, because EDC includes S
       checkpointTime.value = formatCheckpointTime(getClockMinutes());
       checkpointTime.addEventListener("change", refreshCheckpointPrediction);
     }
+    if (meterPhotoM01) meterPhotoM01.addEventListener("change", () => readMeterPhoto(meterPhotoM01.files?.[0], checkpointActualM01, checkpointPredictedM01, "M01"));
+    if (meterPhotoM02) meterPhotoM02.addEventListener("change", () => readMeterPhoto(meterPhotoM02.files?.[0], checkpointActualM02, checkpointPredictedM02, "M02"));
     if (checkpointButton) {
       checkpointButton.addEventListener("click", async () => {
         const entryDate = getActiveEntryDate();
@@ -28236,76 +28350,61 @@ This is a reconciliation, not an independent measurement, because EDC includes S
         sampleEntries,
         mergeConfig(),
         buildStatus(
-          "Local dashboard snapshot is being shown from the SunRun CSV file and starter smart meter history. Browser Firebase sync is optional on localhost.",
-          "local",
-          false
+          "Live Firebase data could not load, so this dashboard is showing its bundled snapshot. Refresh to try again; this view will not include recent Data Entry updates.",
+          "warning",
+          true
         )
       );
     }
   }
   async function bootEntries(db) {
     const entryTools = await handleEntryForm(db);
+    let state;
     try {
-      let state = await loadFirestoreState(db);
-      const sunrunSync = await syncSunrunProductionIntoEntries(db, state.entries);
-      if (sunrunSync.updated) {
-        state = { ...state, entries: sunrunSync.entries };
+      state = await loadFirestoreState(db);
+    } catch (error) {
+      const snapshot = loadEntriesSnapshot();
+      if (snapshot) {
+        const entries2 = snapshot.entries.map(normalizeEntry);
+        entriesPageState.config = mergeConfig(snapshot.config);
+        populateEntriesTable(entries2);
+        fillEntryForm(entries2.find((entry) => entry.entry_date === getTodayIsoDate()) || entries2[entries2.length - 1]);
+        setEntriesFirebaseStatus("snapshot", `Firebase: Unavailable \xB7 Saved snapshot from ${formatEntriesSnapshotDate(snapshot)}`);
+        renderStatusAlert("entries-status", "Live Firebase data is unavailable. The most recent local Data Entry JSON snapshot is shown; refresh when the connection returns before editing.", "warning");
+      } else {
+        populateEntriesTable(sampleEntries);
+        fillEntryForm();
+        setEntriesFirebaseStatus("unavailable", "Firebase: Unavailable \xB7 No saved snapshot");
+        renderStatusAlert("entries-status", "Live Firebase data could not load and no local snapshot exists yet, so demo entries are shown. Refresh when the connection returns before editing.", "warning");
       }
-      const backfillResult = await backfillStarterEntriesIfNeeded(db, state.entries);
-      if (backfillResult.backfilled) {
-        state = { ...state, entries: backfillResult.entries };
-      }
-      const recentBackfillResult = await backfillRecentHistoricalEntriesIfMissing(db, state.entries);
-      if (recentBackfillResult.backfilled) {
-        state = { ...state, entries: recentBackfillResult.entries };
-      }
-      const temperatureBackfill = await backfillMissingTemperatureRanges(db, state.entries);
-      if (temperatureBackfill.updated) {
-        state = { ...state, entries: temperatureBackfill.entries };
-      }
-      const irradianceRevalidation = await revalidateSuspiciousIrradiancePeaks(db, state.entries);
-      if (irradianceRevalidation.updated) {
-        state = { ...state, entries: irradianceRevalidation.entries };
-      }
-      if (backfillResult.backfilled) {
-        renderStatusAlert("entries-status", "Starter history was restored into Firebase, and live entries were refreshed.", "success");
-      } else if (sunrunSync.updated) {
-        renderStatusAlert(
-          "entries-status",
-          `Updated ${sunrunSync.count} Historical Entr${sunrunSync.count === 1 ? "y" : "ies"} with SunRun production from the daily CSV file.`,
-          "success"
-        );
-      } else if (temperatureBackfill.updated) {
-        renderStatusAlert("entries-status", `Filled missing High/Low temperatures for ${temperatureBackfill.count} record${temperatureBackfill.count === 1 ? "" : "s"}.`, "success");
-      } else if (irradianceRevalidation.updated) {
-        renderStatusAlert("entries-status", `Corrected daily peak irradiance for ${irradianceRevalidation.count} record${irradianceRevalidation.count === 1 ? "" : "s"} from Open-Meteo.`, "success");
-      }
+      return;
+    }
+    const readOnlyConnection = state.connection === "rest";
+    const entries = state.entries;
+    entriesPageState.config = mergeConfig(state.config);
+    populateEntriesTable(entries);
+    fillEntryForm(entries.find((entry) => entry.entry_date === getTodayIsoDate()) || entries[entries.length - 1]);
+    saveEntriesSnapshot(entries, entriesPageState.config);
+    setEntriesFirebaseStatus("connected", readOnlyConnection ? "Firebase: Connected \xB7 HTTPS live read" : "Firebase: Connected \xB7 Live Data");
+    try {
       await entryTools.refreshEntries({
         showMessage: false,
-        runAutoCreate: true,
+        runAutoCreate: !readOnlyConnection,
         forceCreate: false,
-        entryDate: getTodayIsoDate()
+        entryDate: getTodayIsoDate(),
+        selectCurrentDay: true
       });
       const url = new URL(window.location.href);
       if (url.searchParams.get("autocreate") === "1") {
-        await entryTools.refreshEntries({ showMessage: true, runAutoCreate: true, forceCreate: true });
+        await entryTools.refreshEntries({ showMessage: true, runAutoCreate: !readOnlyConnection, forceCreate: true });
         url.searchParams.delete("autocreate");
         window.history.replaceState({}, "", url);
-      } else if (!backfillResult.backfilled) {
-        renderStatusAlert(
-          "entries-status",
-          "Live Firebase data is connected. Solar production data comes from the SunRun CSV file. Import (01) and Export (02) are from the Smart Meter.",
-          "success"
-        );
-      } else {
-        fillEntryForm();
       }
     } catch (error) {
-      populateEntriesTable(sampleEntries);
-      fillEntryForm();
+      console.warn("Data Entry automatic processing did not finish:", error);
       renderStatusAlert(
         "entries-status",
-        "Browser Firebase could not load live data, so demo entries are being shown.",
+        "Live Firebase data is connected. Automatic meter or weather processing will retry on the next refresh.",
         "warning"
       );
     }
@@ -28348,8 +28447,19 @@ This is a reconciliation, not an independent measurement, because EDC includes S
           )
         );
       } else if (getPageName() === "entries") {
-        populateEntriesTable(sampleEntries);
-        renderStatusAlert("entries-status", "Firebase browser setup is incomplete. Demo entries are shown.", "warning");
+        const snapshot = loadEntriesSnapshot();
+        if (snapshot) {
+          entriesPageState.config = mergeConfig(snapshot.config);
+          const entries = snapshot.entries.map(normalizeEntry);
+          populateEntriesTable(entries);
+          fillEntryForm(entries.find((entry) => entry.entry_date === getTodayIsoDate()) || entries[entries.length - 1]);
+          setEntriesFirebaseStatus("snapshot", `Firebase: Setup unavailable \xB7 Saved snapshot from ${formatEntriesSnapshotDate(snapshot)}`);
+          renderStatusAlert("entries-status", "Firebase setup is unavailable. The local Data Entry JSON snapshot is shown.", "warning");
+        } else {
+          populateEntriesTable(sampleEntries);
+          setEntriesFirebaseStatus("unavailable", "Firebase: Setup unavailable \xB7 No saved snapshot");
+          renderStatusAlert("entries-status", "Firebase browser setup is incomplete and no local snapshot exists yet. Demo entries are shown.", "warning");
+        }
       } else if (getPageName() === "settings") {
         populateSettingsForm(defaultConfig);
         renderStatusAlert("settings-status", "Firebase browser setup is incomplete. Default settings are shown.", "warning");

@@ -17,11 +17,13 @@ from solar_tracker.routes import build_bootstrap_data
 
 
 DOCS = ROOT / "docs"
-ASSET_VERSION = "20260908-sync104"
+ASSET_VERSION = "20261003-meter-photo"
 
 ROUTE_REPLACEMENTS = {
     'href="/"': 'href="index.html"',
     'href="/entries"': 'href="entries.html"',
+    'href="/nyseg-net-metering"': 'href="nyseg-net-metering.html"',
+    'href="/nyseg-reconciliation"': 'href="nyseg-net-metering.html"',
     'href="/sunrun-production"': 'href="sunrun-production.html"',
     'href="/appliances"': 'href="appliances.html"',
     'href="/light-bulbs"': 'href="light-bulbs.html"',
@@ -173,6 +175,7 @@ def main() -> None:
     static_pages = {
         "index.html": "/",
         "entries.html": "/entries",
+        "nyseg-net-metering.html": "/nyseg-net-metering",
         "sunrun-production.html": "/sunrun-production",
         "appliances.html": "/appliances",
         "light-bulbs.html": "/light-bulbs",

@@ -209,6 +209,36 @@ window.SOLAR_BOOTSTRAP = {
         "total_energy_charges": 121.27
       },
       {
+        "amount_due": 913.73,
+        "average_daily_use_kwh": 17.862068965517242,
+        "balance_forward": 859.21,
+        "billing_end_date": "2026-09-03",
+        "billing_start_date": "2026-08-06",
+        "budget_billing_amount": 0.0,
+        "credited_usage_kwh": 518.0,
+        "current_usage_kwh": 518.0,
+        "days_in_period": 29,
+        "delivery_charges": 40.99,
+        "display_name": "09_16_26 - 09_03_26.pdf",
+        "effective_energy_rate": 0.08411196911196911,
+        "exported_kwh": 1260.0,
+        "imported_kwh": 518.0,
+        "meter_note": "NYSEG offset the 518 kWh of billed use. Its excess-generation table shows 1,376 kWh prior excess and 0 kWh remaining after a corrected prior bill.",
+        "miscellaneous_charges": 0.95,
+        "net_direction": "Net export",
+        "net_grid_kwh": -742.0,
+        "payment_agreement_amount": 10.0,
+        "prior_excess_generation_kwh": 1376.0,
+        "remaining_excess_generation_kwh": 0.0,
+        "smart_meter_import_kwh": 518.0,
+        "statement_date": "2026-09-16",
+        "supply_charges": 0.0,
+        "supply_rate_per_kwh": 0.0,
+        "taxes": 2.58,
+        "total_adjustments": 0.0,
+        "total_energy_charges": 43.57
+      },
+      {
         "amount_due": 921.82,
         "average_daily_use_kwh": 23.142857142857142,
         "balance_forward": 0.0,
@@ -265,13 +295,13 @@ window.SOLAR_BOOTSTRAP = {
     ],
     "billing_start_date": "2026-08-06",
     "billing_totals": {
-      "amount_due": 2492.76,
-      "delivery_charges": 222.99,
-      "energy_charges": 387.62,
-      "miscellaneous_charges": 2.8499999999999996,
-      "record_count": 3,
+      "amount_due": 3406.4900000000002,
+      "delivery_charges": 263.98,
+      "energy_charges": 431.19,
+      "miscellaneous_charges": 3.8,
+      "record_count": 4,
       "supply_charges": 144.65,
-      "taxes": 19.980000000000004
+      "taxes": 22.560000000000002
     },
     "budget_billing_amount": 0.0,
     "current_usage_kwh": 518.0,
@@ -280,16 +310,16 @@ window.SOLAR_BOOTSTRAP = {
     "miscellaneous_charges": 0.95,
     "net_metering": {
       "billing_period_direction": "Net export",
-      "billing_period_import_kwh": 1446.0,
-      "billing_period_net_kwh": -839.0,
-      "export_kwh": 2285.0,
+      "billing_period_import_kwh": 1964.0,
+      "billing_period_net_kwh": -1581.0,
+      "export_kwh": 3545.0,
       "smart_meter_direction": "Net export",
-      "smart_meter_import_kwh": 909.0,
-      "smart_meter_net_kwh": -1376.0,
-      "solar_bill_count": 2
+      "smart_meter_import_kwh": 1427.0,
+      "smart_meter_net_kwh": -2118.0,
+      "solar_bill_count": 3
     },
     "notes": [
-      "Loaded 36 monthly usage/cost records and 3 detailed bill PDFs.",
+      "Loaded 36 monthly usage/cost records and 4 detailed bill PDFs.",
       "Register 01 is electricity imported from NYSEG; Register 02 is solar electricity exported to NYSEG.",
       "The July 2-August 5 bill spans the old and smart meters, so total billed import and smart-meter-only import are shown separately."
     ],
@@ -981,31 +1011,31 @@ window.SOLAR_BOOTSTRAP = {
       },
       "2026-07-27": {
         "available": true,
-        "end_of_day_meter_kwh": 1274.83,
+        "end_of_day_meter_kwh": 1274.831,
         "entry_date": "2026-07-27",
         "production_kwh": 82.989
       },
       "2026-07-28": {
         "available": true,
-        "end_of_day_meter_kwh": 1311.399,
+        "end_of_day_meter_kwh": 1311.4,
         "entry_date": "2026-07-28",
         "production_kwh": 36.569
       },
       "2026-07-29": {
         "available": true,
-        "end_of_day_meter_kwh": 1371.646,
+        "end_of_day_meter_kwh": 1371.647,
         "entry_date": "2026-07-29",
         "production_kwh": 60.247
       },
       "2026-07-30": {
         "available": true,
-        "end_of_day_meter_kwh": 1420.267,
+        "end_of_day_meter_kwh": 1420.268,
         "entry_date": "2026-07-30",
         "production_kwh": 48.621
       },
       "2026-07-31": {
         "available": true,
-        "end_of_day_meter_kwh": 1483.707,
+        "end_of_day_meter_kwh": 1483.708,
         "entry_date": "2026-07-31",
         "production_kwh": 63.44
       },
@@ -1053,198 +1083,336 @@ window.SOLAR_BOOTSTRAP = {
       },
       "2026-08-08": {
         "available": true,
-        "end_of_day_meter_kwh": 2014.698,
+        "end_of_day_meter_kwh": 2014.737,
         "entry_date": "2026-08-08",
-        "production_kwh": 71.5
+        "production_kwh": 71.539
       },
       "2026-08-09": {
         "available": true,
-        "end_of_day_meter_kwh": 2095.598,
+        "end_of_day_meter_kwh": 2095.7,
         "entry_date": "2026-08-09",
-        "production_kwh": 80.9
+        "production_kwh": 80.964
       },
       "2026-08-10": {
         "available": true,
-        "end_of_day_meter_kwh": 2155.598,
+        "end_of_day_meter_kwh": 2155.756,
         "entry_date": "2026-08-10",
-        "production_kwh": 60.0
+        "production_kwh": 60.055
       },
       "2026-08-11": {
         "available": true,
-        "end_of_day_meter_kwh": 2213.298,
+        "end_of_day_meter_kwh": 2213.553,
         "entry_date": "2026-08-11",
-        "production_kwh": 57.7
+        "production_kwh": 57.798
       },
       "2026-08-12": {
         "available": true,
-        "end_of_day_meter_kwh": 2291.498,
+        "end_of_day_meter_kwh": 2291.767,
         "entry_date": "2026-08-12",
-        "production_kwh": 78.2
+        "production_kwh": 78.213
       },
       "2026-08-13": {
         "available": true,
-        "end_of_day_meter_kwh": 2356.398,
+        "end_of_day_meter_kwh": 2356.684,
         "entry_date": "2026-08-13",
-        "production_kwh": 64.9
+        "production_kwh": 64.917
       },
       "2026-08-14": {
         "available": true,
-        "end_of_day_meter_kwh": 2428.098,
+        "end_of_day_meter_kwh": 2428.421,
         "entry_date": "2026-08-14",
-        "production_kwh": 71.7
+        "production_kwh": 71.737
       },
       "2026-08-15": {
         "available": true,
-        "end_of_day_meter_kwh": 2506.998,
+        "end_of_day_meter_kwh": 2507.325,
         "entry_date": "2026-08-15",
-        "production_kwh": 78.9
+        "production_kwh": 78.904
       },
       "2026-08-16": {
         "available": true,
-        "end_of_day_meter_kwh": 2547.078,
+        "end_of_day_meter_kwh": 2546.399,
         "entry_date": "2026-08-16",
-        "production_kwh": 40.08
+        "production_kwh": 39.074
       },
       "2026-08-17": {
         "available": true,
-        "end_of_day_meter_kwh": 2584.778,
+        "end_of_day_meter_kwh": 2584.131,
         "entry_date": "2026-08-17",
-        "production_kwh": 37.7
+        "production_kwh": 37.732
       },
       "2026-08-18": {
         "available": true,
-        "end_of_day_meter_kwh": 2654.338,
+        "end_of_day_meter_kwh": 2651.952,
         "entry_date": "2026-08-18",
-        "production_kwh": 69.56
+        "production_kwh": 67.821
       },
       "2026-08-19": {
         "available": true,
-        "end_of_day_meter_kwh": 2733.788,
+        "end_of_day_meter_kwh": 2729.42,
         "entry_date": "2026-08-19",
-        "production_kwh": 79.45
+        "production_kwh": 77.469
       },
       "2026-08-20": {
         "available": true,
-        "end_of_day_meter_kwh": 2764.868,
+        "end_of_day_meter_kwh": 2759.722,
         "entry_date": "2026-08-20",
-        "production_kwh": 31.08
+        "production_kwh": 30.302
       },
       "2026-08-21": {
         "available": true,
-        "end_of_day_meter_kwh": 2832.278,
+        "end_of_day_meter_kwh": 2825.448,
         "entry_date": "2026-08-21",
-        "production_kwh": 67.41
+        "production_kwh": 65.726
       },
       "2026-08-22": {
         "available": true,
-        "end_of_day_meter_kwh": 2889.648,
+        "end_of_day_meter_kwh": 2881.379,
         "entry_date": "2026-08-22",
-        "production_kwh": 57.37
+        "production_kwh": 55.931
       },
       "2026-08-23": {
         "available": true,
-        "end_of_day_meter_kwh": 2955.568,
+        "end_of_day_meter_kwh": 2945.648,
         "entry_date": "2026-08-23",
-        "production_kwh": 65.92
+        "production_kwh": 64.268
       },
       "2026-08-24": {
         "available": true,
-        "end_of_day_meter_kwh": 3026.228,
+        "end_of_day_meter_kwh": 3014.539,
         "entry_date": "2026-08-24",
-        "production_kwh": 70.66
+        "production_kwh": 68.892
       },
       "2026-08-25": {
         "available": true,
-        "end_of_day_meter_kwh": 3098.858,
+        "end_of_day_meter_kwh": 3085.353,
         "entry_date": "2026-08-25",
-        "production_kwh": 72.63
+        "production_kwh": 70.813
       },
       "2026-08-26": {
         "available": true,
-        "end_of_day_meter_kwh": 3163.808,
+        "end_of_day_meter_kwh": 3148.676,
         "entry_date": "2026-08-26",
-        "production_kwh": 64.95
+        "production_kwh": 63.323
       },
       "2026-08-27": {
         "available": true,
-        "end_of_day_meter_kwh": 3190.828,
+        "end_of_day_meter_kwh": 3175.018,
         "entry_date": "2026-08-27",
-        "production_kwh": 27.02
+        "production_kwh": 26.342
       },
       "2026-08-28": {
         "available": true,
-        "end_of_day_meter_kwh": 3263.628,
+        "end_of_day_meter_kwh": 3246.001,
         "entry_date": "2026-08-28",
-        "production_kwh": 72.8
+        "production_kwh": 70.984
       },
       "2026-08-29": {
         "available": true,
-        "end_of_day_meter_kwh": 3345.448,
+        "end_of_day_meter_kwh": 3325.772,
         "entry_date": "2026-08-29",
-        "production_kwh": 81.82
+        "production_kwh": 79.771
       },
       "2026-08-30": {
         "available": true,
-        "end_of_day_meter_kwh": 3387.468,
+        "end_of_day_meter_kwh": 3366.74,
         "entry_date": "2026-08-30",
-        "production_kwh": 42.02
+        "production_kwh": 40.967
       },
       "2026-08-31": {
         "available": true,
-        "end_of_day_meter_kwh": 3426.428,
+        "end_of_day_meter_kwh": 3404.728,
         "entry_date": "2026-08-31",
-        "production_kwh": 38.96
+        "production_kwh": 37.988
       },
       "2026-09-01": {
         "available": true,
-        "end_of_day_meter_kwh": 3455.038,
+        "end_of_day_meter_kwh": 3432.622,
         "entry_date": "2026-09-01",
-        "production_kwh": 28.61
+        "production_kwh": 27.894
       },
       "2026-09-02": {
         "available": true,
-        "end_of_day_meter_kwh": 3473.738,
+        "end_of_day_meter_kwh": 3450.853,
         "entry_date": "2026-09-02",
-        "production_kwh": 18.7
+        "production_kwh": 18.231
       },
       "2026-09-03": {
         "available": true,
-        "end_of_day_meter_kwh": 3522.958,
+        "end_of_day_meter_kwh": 3498.839,
         "entry_date": "2026-09-03",
-        "production_kwh": 49.22
+        "production_kwh": 47.986
       },
       "2026-09-04": {
         "available": true,
-        "end_of_day_meter_kwh": 3590.948,
+        "end_of_day_meter_kwh": 3565.13,
         "entry_date": "2026-09-04",
-        "production_kwh": 67.99
+        "production_kwh": 66.291
       },
       "2026-09-05": {
         "available": true,
-        "end_of_day_meter_kwh": 3658.938,
+        "end_of_day_meter_kwh": 3632.427,
         "entry_date": "2026-09-05",
-        "production_kwh": 67.99
+        "production_kwh": 67.298
       },
       "2026-09-06": {
         "available": true,
-        "end_of_day_meter_kwh": 3722.328,
+        "end_of_day_meter_kwh": 3694.236,
         "entry_date": "2026-09-06",
-        "production_kwh": 63.39
+        "production_kwh": 61.809
       },
       "2026-09-07": {
         "available": true,
-        "end_of_day_meter_kwh": 3795.758,
+        "end_of_day_meter_kwh": 3765.83,
         "entry_date": "2026-09-07",
-        "production_kwh": 73.43
+        "production_kwh": 71.594
       },
       "2026-09-08": {
         "available": true,
-        "end_of_day_meter_kwh": 3851.308,
+        "end_of_day_meter_kwh": 3833.505,
         "entry_date": "2026-09-08",
-        "production_kwh": 55.55
+        "production_kwh": 67.675
+      },
+      "2026-09-09": {
+        "available": true,
+        "end_of_day_meter_kwh": 3870.529,
+        "entry_date": "2026-09-09",
+        "production_kwh": 37.023
+      },
+      "2026-09-10": {
+        "available": true,
+        "end_of_day_meter_kwh": 3926.292,
+        "entry_date": "2026-09-10",
+        "production_kwh": 55.764
+      },
+      "2026-09-11": {
+        "available": true,
+        "end_of_day_meter_kwh": 3998.09,
+        "entry_date": "2026-09-11",
+        "production_kwh": 71.798
+      },
+      "2026-09-12": {
+        "available": true,
+        "end_of_day_meter_kwh": 4055.079,
+        "entry_date": "2026-09-12",
+        "production_kwh": 56.989
+      },
+      "2026-09-13": {
+        "available": true,
+        "end_of_day_meter_kwh": 4078.251,
+        "entry_date": "2026-09-13",
+        "production_kwh": 23.172
+      },
+      "2026-09-14": {
+        "available": true,
+        "end_of_day_meter_kwh": 4145.622,
+        "entry_date": "2026-09-14",
+        "production_kwh": 67.371
+      },
+      "2026-09-15": {
+        "available": true,
+        "end_of_day_meter_kwh": 4211.415,
+        "entry_date": "2026-09-15",
+        "production_kwh": 65.793
+      },
+      "2026-09-16": {
+        "available": true,
+        "end_of_day_meter_kwh": 4260.702,
+        "entry_date": "2026-09-16",
+        "production_kwh": 49.287
+      },
+      "2026-09-17": {
+        "available": true,
+        "end_of_day_meter_kwh": 4286.211,
+        "entry_date": "2026-09-17",
+        "production_kwh": 25.51
+      },
+      "2026-09-18": {
+        "available": true,
+        "end_of_day_meter_kwh": 4345.86,
+        "entry_date": "2026-09-18",
+        "production_kwh": 59.648
+      },
+      "2026-09-19": {
+        "available": true,
+        "end_of_day_meter_kwh": 4403.97,
+        "entry_date": "2026-09-19",
+        "production_kwh": 58.111
+      },
+      "2026-09-20": {
+        "available": true,
+        "end_of_day_meter_kwh": 4409.109,
+        "entry_date": "2026-09-20",
+        "production_kwh": 5.138
+      },
+      "2026-09-21": {
+        "available": true,
+        "end_of_day_meter_kwh": 4467.049,
+        "entry_date": "2026-09-21",
+        "production_kwh": 57.94
+      },
+      "2026-09-22": {
+        "available": true,
+        "end_of_day_meter_kwh": 4518.053,
+        "entry_date": "2026-09-22",
+        "production_kwh": 51.004
+      },
+      "2026-09-23": {
+        "available": true,
+        "end_of_day_meter_kwh": 4573.525,
+        "entry_date": "2026-09-23",
+        "production_kwh": 55.471
+      },
+      "2026-09-24": {
+        "available": true,
+        "end_of_day_meter_kwh": 4626.281,
+        "entry_date": "2026-09-24",
+        "production_kwh": 52.757
+      },
+      "2026-09-25": {
+        "available": true,
+        "end_of_day_meter_kwh": 4663.32,
+        "entry_date": "2026-09-25",
+        "production_kwh": 37.038
+      },
+      "2026-09-26": {
+        "available": true,
+        "end_of_day_meter_kwh": 4674.925,
+        "entry_date": "2026-09-26",
+        "production_kwh": 11.605
+      },
+      "2026-09-27": {
+        "available": true,
+        "end_of_day_meter_kwh": 4694.577,
+        "entry_date": "2026-09-27",
+        "production_kwh": 19.652
+      },
+      "2026-09-28": {
+        "available": true,
+        "end_of_day_meter_kwh": 4718.174,
+        "entry_date": "2026-09-28",
+        "production_kwh": 23.597
+      },
+      "2026-09-29": {
+        "available": true,
+        "end_of_day_meter_kwh": 4749.468,
+        "entry_date": "2026-09-29",
+        "production_kwh": 31.294
+      },
+      "2026-09-30": {
+        "available": true,
+        "end_of_day_meter_kwh": 4793.326,
+        "entry_date": "2026-09-30",
+        "production_kwh": 43.858
+      },
+      "2026-10-01": {
+        "available": true,
+        "end_of_day_meter_kwh": 4822.57,
+        "entry_date": "2026-10-01",
+        "production_kwh": 29.245
       }
     },
-    "latest_available_date": "2026-09-08",
+    "latest_available_date": "2026-10-01",
     "rows": [
       {
         "available": false,
@@ -1356,31 +1524,31 @@ window.SOLAR_BOOTSTRAP = {
       },
       {
         "available": true,
-        "end_of_day_meter_kwh": 1274.83,
+        "end_of_day_meter_kwh": 1274.831,
         "entry_date": "2026-07-27",
         "production_kwh": 82.989
       },
       {
         "available": true,
-        "end_of_day_meter_kwh": 1311.399,
+        "end_of_day_meter_kwh": 1311.4,
         "entry_date": "2026-07-28",
         "production_kwh": 36.569
       },
       {
         "available": true,
-        "end_of_day_meter_kwh": 1371.646,
+        "end_of_day_meter_kwh": 1371.647,
         "entry_date": "2026-07-29",
         "production_kwh": 60.247
       },
       {
         "available": true,
-        "end_of_day_meter_kwh": 1420.267,
+        "end_of_day_meter_kwh": 1420.268,
         "entry_date": "2026-07-30",
         "production_kwh": 48.621
       },
       {
         "available": true,
-        "end_of_day_meter_kwh": 1483.707,
+        "end_of_day_meter_kwh": 1483.708,
         "entry_date": "2026-07-31",
         "production_kwh": 63.44
       },
@@ -1428,195 +1596,345 @@ window.SOLAR_BOOTSTRAP = {
       },
       {
         "available": true,
-        "end_of_day_meter_kwh": 2014.698,
+        "end_of_day_meter_kwh": 2014.737,
         "entry_date": "2026-08-08",
-        "production_kwh": 71.5
+        "production_kwh": 71.539
       },
       {
         "available": true,
-        "end_of_day_meter_kwh": 2095.598,
+        "end_of_day_meter_kwh": 2095.7,
         "entry_date": "2026-08-09",
-        "production_kwh": 80.9
+        "production_kwh": 80.964
       },
       {
         "available": true,
-        "end_of_day_meter_kwh": 2155.598,
+        "end_of_day_meter_kwh": 2155.756,
         "entry_date": "2026-08-10",
-        "production_kwh": 60.0
+        "production_kwh": 60.055
       },
       {
         "available": true,
-        "end_of_day_meter_kwh": 2213.298,
+        "end_of_day_meter_kwh": 2213.553,
         "entry_date": "2026-08-11",
-        "production_kwh": 57.7
+        "production_kwh": 57.798
       },
       {
         "available": true,
-        "end_of_day_meter_kwh": 2291.498,
+        "end_of_day_meter_kwh": 2291.767,
         "entry_date": "2026-08-12",
-        "production_kwh": 78.2
+        "production_kwh": 78.213
       },
       {
         "available": true,
-        "end_of_day_meter_kwh": 2356.398,
+        "end_of_day_meter_kwh": 2356.684,
         "entry_date": "2026-08-13",
-        "production_kwh": 64.9
+        "production_kwh": 64.917
       },
       {
         "available": true,
-        "end_of_day_meter_kwh": 2428.098,
+        "end_of_day_meter_kwh": 2428.421,
         "entry_date": "2026-08-14",
-        "production_kwh": 71.7
+        "production_kwh": 71.737
       },
       {
         "available": true,
-        "end_of_day_meter_kwh": 2506.998,
+        "end_of_day_meter_kwh": 2507.325,
         "entry_date": "2026-08-15",
-        "production_kwh": 78.9
+        "production_kwh": 78.904
       },
       {
         "available": true,
-        "end_of_day_meter_kwh": 2547.078,
+        "end_of_day_meter_kwh": 2546.399,
         "entry_date": "2026-08-16",
-        "production_kwh": 40.08
+        "production_kwh": 39.074
       },
       {
         "available": true,
-        "end_of_day_meter_kwh": 2584.778,
+        "end_of_day_meter_kwh": 2584.131,
         "entry_date": "2026-08-17",
-        "production_kwh": 37.7
+        "production_kwh": 37.732
       },
       {
         "available": true,
-        "end_of_day_meter_kwh": 2654.338,
+        "end_of_day_meter_kwh": 2651.952,
         "entry_date": "2026-08-18",
-        "production_kwh": 69.56
+        "production_kwh": 67.821
       },
       {
         "available": true,
-        "end_of_day_meter_kwh": 2733.788,
+        "end_of_day_meter_kwh": 2729.42,
         "entry_date": "2026-08-19",
-        "production_kwh": 79.45
+        "production_kwh": 77.469
       },
       {
         "available": true,
-        "end_of_day_meter_kwh": 2764.868,
+        "end_of_day_meter_kwh": 2759.722,
         "entry_date": "2026-08-20",
-        "production_kwh": 31.08
+        "production_kwh": 30.302
       },
       {
         "available": true,
-        "end_of_day_meter_kwh": 2832.278,
+        "end_of_day_meter_kwh": 2825.448,
         "entry_date": "2026-08-21",
-        "production_kwh": 67.41
+        "production_kwh": 65.726
       },
       {
         "available": true,
-        "end_of_day_meter_kwh": 2889.648,
+        "end_of_day_meter_kwh": 2881.379,
         "entry_date": "2026-08-22",
-        "production_kwh": 57.37
+        "production_kwh": 55.931
       },
       {
         "available": true,
-        "end_of_day_meter_kwh": 2955.568,
+        "end_of_day_meter_kwh": 2945.648,
         "entry_date": "2026-08-23",
-        "production_kwh": 65.92
+        "production_kwh": 64.268
       },
       {
         "available": true,
-        "end_of_day_meter_kwh": 3026.228,
+        "end_of_day_meter_kwh": 3014.539,
         "entry_date": "2026-08-24",
-        "production_kwh": 70.66
+        "production_kwh": 68.892
       },
       {
         "available": true,
-        "end_of_day_meter_kwh": 3098.858,
+        "end_of_day_meter_kwh": 3085.353,
         "entry_date": "2026-08-25",
-        "production_kwh": 72.63
+        "production_kwh": 70.813
       },
       {
         "available": true,
-        "end_of_day_meter_kwh": 3163.808,
+        "end_of_day_meter_kwh": 3148.676,
         "entry_date": "2026-08-26",
-        "production_kwh": 64.95
+        "production_kwh": 63.323
       },
       {
         "available": true,
-        "end_of_day_meter_kwh": 3190.828,
+        "end_of_day_meter_kwh": 3175.018,
         "entry_date": "2026-08-27",
-        "production_kwh": 27.02
+        "production_kwh": 26.342
       },
       {
         "available": true,
-        "end_of_day_meter_kwh": 3263.628,
+        "end_of_day_meter_kwh": 3246.001,
         "entry_date": "2026-08-28",
-        "production_kwh": 72.8
+        "production_kwh": 70.984
       },
       {
         "available": true,
-        "end_of_day_meter_kwh": 3345.448,
+        "end_of_day_meter_kwh": 3325.772,
         "entry_date": "2026-08-29",
-        "production_kwh": 81.82
+        "production_kwh": 79.771
       },
       {
         "available": true,
-        "end_of_day_meter_kwh": 3387.468,
+        "end_of_day_meter_kwh": 3366.74,
         "entry_date": "2026-08-30",
-        "production_kwh": 42.02
+        "production_kwh": 40.967
       },
       {
         "available": true,
-        "end_of_day_meter_kwh": 3426.428,
+        "end_of_day_meter_kwh": 3404.728,
         "entry_date": "2026-08-31",
-        "production_kwh": 38.96
+        "production_kwh": 37.988
       },
       {
         "available": true,
-        "end_of_day_meter_kwh": 3455.038,
+        "end_of_day_meter_kwh": 3432.622,
         "entry_date": "2026-09-01",
-        "production_kwh": 28.61
+        "production_kwh": 27.894
       },
       {
         "available": true,
-        "end_of_day_meter_kwh": 3473.738,
+        "end_of_day_meter_kwh": 3450.853,
         "entry_date": "2026-09-02",
-        "production_kwh": 18.7
+        "production_kwh": 18.231
       },
       {
         "available": true,
-        "end_of_day_meter_kwh": 3522.958,
+        "end_of_day_meter_kwh": 3498.839,
         "entry_date": "2026-09-03",
-        "production_kwh": 49.22
+        "production_kwh": 47.986
       },
       {
         "available": true,
-        "end_of_day_meter_kwh": 3590.948,
+        "end_of_day_meter_kwh": 3565.13,
         "entry_date": "2026-09-04",
-        "production_kwh": 67.99
+        "production_kwh": 66.291
       },
       {
         "available": true,
-        "end_of_day_meter_kwh": 3658.938,
+        "end_of_day_meter_kwh": 3632.427,
         "entry_date": "2026-09-05",
-        "production_kwh": 67.99
+        "production_kwh": 67.298
       },
       {
         "available": true,
-        "end_of_day_meter_kwh": 3722.328,
+        "end_of_day_meter_kwh": 3694.236,
         "entry_date": "2026-09-06",
-        "production_kwh": 63.39
+        "production_kwh": 61.809
       },
       {
         "available": true,
-        "end_of_day_meter_kwh": 3795.758,
+        "end_of_day_meter_kwh": 3765.83,
         "entry_date": "2026-09-07",
-        "production_kwh": 73.43
+        "production_kwh": 71.594
       },
       {
         "available": true,
-        "end_of_day_meter_kwh": 3851.308,
+        "end_of_day_meter_kwh": 3833.505,
         "entry_date": "2026-09-08",
-        "production_kwh": 55.55
+        "production_kwh": 67.675
+      },
+      {
+        "available": true,
+        "end_of_day_meter_kwh": 3870.529,
+        "entry_date": "2026-09-09",
+        "production_kwh": 37.023
+      },
+      {
+        "available": true,
+        "end_of_day_meter_kwh": 3926.292,
+        "entry_date": "2026-09-10",
+        "production_kwh": 55.764
+      },
+      {
+        "available": true,
+        "end_of_day_meter_kwh": 3998.09,
+        "entry_date": "2026-09-11",
+        "production_kwh": 71.798
+      },
+      {
+        "available": true,
+        "end_of_day_meter_kwh": 4055.079,
+        "entry_date": "2026-09-12",
+        "production_kwh": 56.989
+      },
+      {
+        "available": true,
+        "end_of_day_meter_kwh": 4078.251,
+        "entry_date": "2026-09-13",
+        "production_kwh": 23.172
+      },
+      {
+        "available": true,
+        "end_of_day_meter_kwh": 4145.622,
+        "entry_date": "2026-09-14",
+        "production_kwh": 67.371
+      },
+      {
+        "available": true,
+        "end_of_day_meter_kwh": 4211.415,
+        "entry_date": "2026-09-15",
+        "production_kwh": 65.793
+      },
+      {
+        "available": true,
+        "end_of_day_meter_kwh": 4260.702,
+        "entry_date": "2026-09-16",
+        "production_kwh": 49.287
+      },
+      {
+        "available": true,
+        "end_of_day_meter_kwh": 4286.211,
+        "entry_date": "2026-09-17",
+        "production_kwh": 25.51
+      },
+      {
+        "available": true,
+        "end_of_day_meter_kwh": 4345.86,
+        "entry_date": "2026-09-18",
+        "production_kwh": 59.648
+      },
+      {
+        "available": true,
+        "end_of_day_meter_kwh": 4403.97,
+        "entry_date": "2026-09-19",
+        "production_kwh": 58.111
+      },
+      {
+        "available": true,
+        "end_of_day_meter_kwh": 4409.109,
+        "entry_date": "2026-09-20",
+        "production_kwh": 5.138
+      },
+      {
+        "available": true,
+        "end_of_day_meter_kwh": 4467.049,
+        "entry_date": "2026-09-21",
+        "production_kwh": 57.94
+      },
+      {
+        "available": true,
+        "end_of_day_meter_kwh": 4518.053,
+        "entry_date": "2026-09-22",
+        "production_kwh": 51.004
+      },
+      {
+        "available": true,
+        "end_of_day_meter_kwh": 4573.525,
+        "entry_date": "2026-09-23",
+        "production_kwh": 55.471
+      },
+      {
+        "available": true,
+        "end_of_day_meter_kwh": 4626.281,
+        "entry_date": "2026-09-24",
+        "production_kwh": 52.757
+      },
+      {
+        "available": true,
+        "end_of_day_meter_kwh": 4663.32,
+        "entry_date": "2026-09-25",
+        "production_kwh": 37.038
+      },
+      {
+        "available": true,
+        "end_of_day_meter_kwh": 4674.925,
+        "entry_date": "2026-09-26",
+        "production_kwh": 11.605
+      },
+      {
+        "available": true,
+        "end_of_day_meter_kwh": 4694.577,
+        "entry_date": "2026-09-27",
+        "production_kwh": 19.652
+      },
+      {
+        "available": true,
+        "end_of_day_meter_kwh": 4718.174,
+        "entry_date": "2026-09-28",
+        "production_kwh": 23.597
+      },
+      {
+        "available": true,
+        "end_of_day_meter_kwh": 4749.468,
+        "entry_date": "2026-09-29",
+        "production_kwh": 31.294
+      },
+      {
+        "available": true,
+        "end_of_day_meter_kwh": 4793.326,
+        "entry_date": "2026-09-30",
+        "production_kwh": 43.858
+      },
+      {
+        "available": true,
+        "end_of_day_meter_kwh": 4822.57,
+        "entry_date": "2026-10-01",
+        "production_kwh": 29.245
+      },
+      {
+        "available": false,
+        "end_of_day_meter_kwh": 0.0,
+        "entry_date": "2026-10-02",
+        "production_kwh": 0.0
+      },
+      {
+        "available": false,
+        "end_of_day_meter_kwh": 0.0,
+        "entry_date": "2026-10-03",
+        "production_kwh": 0.0
       }
     ]
   },

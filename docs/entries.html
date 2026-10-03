@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/styles.css?v=20261002-entry-snapshot">
+  <link rel="stylesheet" href="assets/css/styles.css?v=20261003-meter-photo">
   <script src="https://cdn.plot.ly/plotly-3.4.0.min.js"></script>
 </head>
 <body data-page="entries" data-local-snapshot-mode="false">
@@ -19,6 +19,7 @@
 
         <a class="nav-link" href="index.html">Dashboard</a>
         <a class="nav-link" href="entries.html">Daily Entry</a>
+        <a class="nav-link" href="nyseg-net-metering.html">NYSEG Credits</a>
         <a class="nav-link" href="sunrun-production.html">SunRun Data</a>
         <a class="nav-link" href="appliances.html">Appliances</a>
         <a class="nav-link" href="contract-summary.html">Contract Summary</a>
@@ -184,7 +185,10 @@
                     <label>Sim M02<input type="number" step="0.1" id="entry-meter-checkpoint-predicted-m02" class="form-control form-control-sm"></label>
                     <label>Actual M01<input type="number" step="0.1" id="entry-meter-checkpoint-actual-m01" class="form-control form-control-sm"></label>
                     <label>Actual M02<input type="number" step="0.1" id="entry-meter-checkpoint-actual-m02" class="form-control form-control-sm"></label>
-                    <button type="button" id="entry-meter-checkpoint-save" class="btn btn-contract btn-sm">Train Model</button>
+                    <div class="meter-photo-actions">
+                      <label class="btn btn-outline-primary btn-sm mb-0" for="entry-meter-photo-m01">Read M01 photo<input type="file" id="entry-meter-photo-m01" accept="image/*" capture="environment" hidden></label>
+                      <label class="btn btn-outline-primary btn-sm mb-0" for="entry-meter-photo-m02">Read M02 photo<input type="file" id="entry-meter-photo-m02" accept="image/*" capture="environment" hidden></label>
+                    </div>                    <button type="button" id="entry-meter-checkpoint-save" class="btn btn-contract btn-sm">Train Model</button>
                   </div>
                   <div class="meter-calibration-history mt-3">
                     <div class="meter-calibration-history-heading">
@@ -978,6 +982,13 @@
     font-size: 0.72rem;
   }
 
+  .meter-photo-actions {
+    display: flex;
+    gap: 0.35rem;
+    flex-wrap: wrap;
+  }
+
+  .meter-photo-actions .btn { white-space: nowrap; }
   @media (max-width: 767px) {
     .meter-checkpoint-grid {
       grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -989,9 +1000,11 @@
     </div>
   </main>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/js/bootstrap.bundle.min.js"></script>
-  <script src="assets/js/site-bootstrap.js?v=20260910-revisions"></script>
-  <script src="assets/js/firebase-config.js?v=20261002-firestore-retry"></script>
-  <script defer src="assets/js/app-bundle-data-entry-live.js?v=20261002-data-entry-live"></script>
+  <script src="assets/js/site-bootstrap.js?v=20261003-meter-photo"></script>
+  <script src="assets/js/firebase-config.js?v=20261003-meter-photo"></script>
+  <script defer src="assets/js/app-bundle.js?v=20261003-meter-photo"></script>
+
+<script defer src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 
 </body>
 </html>
