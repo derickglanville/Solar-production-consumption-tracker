@@ -44,6 +44,7 @@
 
     <p class="text-muted mb-0">NYSEG_Daily_Usage_Data.csv contains 1,512 hourly intervals. Account-identifying columns are omitted.</p>
     <p class="small text-muted mb-0">Source location: <code>C:\Software Developement\ChatGPT Codex\Solar Energy - SunRun\SunRun Data\NYSEG_Daily_Usage_Data.csv</code></p>
+    <p class="small mb-0 text-muted" id="nyseg-sync-status" data-sync-completed-at="">Daily NYSEG sync is scheduled for 7:30 AM while this computer is signed in.</p>
 
   </div>
 
@@ -142,6 +143,23 @@
     paper_bgcolor: "rgba(0,0,0,0)",
     plot_bgcolor: "rgba(0,0,0,0)",
   }, { responsive: true, displayModeBar: false });
+})();
+</script>
+<script>
+(() => {
+  const status = document.getElementById("nyseg-sync-status");
+  if (!status || location.protocol === "file:") return;
+  const completedAt = status.dataset.syncCompletedAt || "";
+  window.setInterval(async () => {
+    try {
+      const response = await fetch("/api/nyseg-daily-sync-status", { cache: "no-store" });
+      if (!response.ok) return;
+      const latest = await response.json();
+      if (latest.status === "success" && latest.completed_at && latest.completed_at !== completedAt) window.location.reload();
+    } catch (_) {
+      // GitHub Pages does not have the private local sync endpoint.
+    }
+  }, 60_000);
 })();
 </script>
 

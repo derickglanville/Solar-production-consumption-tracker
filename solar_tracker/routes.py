@@ -51,6 +51,7 @@ WEATHER_OPTIONS = [
 LOCAL_DASHBOARD_URL = "http://127.0.0.1:8765/"
 LOCAL_JSON_DIRECTORY = Path(__file__).resolve().parent.parent / "JSON"
 LOCAL_APPLICATION_SNAPSHOT_PATH = LOCAL_JSON_DIRECTORY / "application_data_current.json"
+NYSEG_DAILY_SYNC_STATUS_PATH = Path(__file__).resolve().parent.parent / "SunRun Data" / "nyseg-daily-sync-status.json"
 CIRCUIT_BREAKER_DIRECTORY_PATH = (
     Path(__file__).resolve().parent.parent
     / "Documents"
@@ -69,6 +70,13 @@ def config_to_dict(config):
     payload["activation_date"] = config.activation_date.isoformat()
     payload["smart_meter_install_date"] = config.smart_meter_install_date.isoformat()
     return payload
+
+
+def load_nyseg_daily_sync_status() -> dict:
+    try:
+        return json.loads(NYSEG_DAILY_SYNC_STATUS_PATH.read_text(encoding="utf-8"))
+    except (OSError, ValueError, TypeError):
+        return {}
 
 
 def build_bootstrap_data():
@@ -566,7 +574,15 @@ def nyseg_usage_file():
         monthly_net_charges=monthly_net_charges,
         monthly_meter_totals=monthly_meter_totals,
         meter_totals=meter_totals,
+        nyseg_sync_status=load_nyseg_daily_sync_status(),
     )
+
+
+@main_blueprint.route("/api/nyseg-daily-sync-status")
+def nyseg_daily_sync_status_api():
+    response = jsonify(load_nyseg_daily_sync_status())
+    response.headers["Cache-Control"] = "no-store"
+    return response
 
 @main_blueprint.route("/nyseg-reconciliation")
 def nyseg_reconciliation():

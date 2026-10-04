@@ -7,6 +7,7 @@
     {% if interval_file.available %}
     <p class="text-muted mb-0">{{ interval_file.source_name }} contains {{ "{:,}".format(interval_file.rows|length) }} hourly intervals. Account-identifying columns are omitted.</p>
     <p class="small text-muted mb-0">Source location: <code>{{ interval_file.source_path }}</code></p>
+    <p class="small mb-0 {{ 'text-success' if nyseg_sync_status.status == 'success' else 'text-danger' if nyseg_sync_status.status == 'failed' else 'text-muted' }}" id="nyseg-sync-status" data-sync-completed-at="{{ nyseg_sync_status.completed_at or '' }}">{% if nyseg_sync_status.status == 'success' %}Daily sync: {{ nyseg_sync_status.saved_records }} record{{ '' if nyseg_sync_status.saved_records == 1 else 's' }} saved {{ nyseg_sync_status.completed_at }}.{% elif nyseg_sync_status.status == 'failed' %}Daily sync failed: {{ nyseg_sync_status.error }}{% else %}Daily NYSEG sync is scheduled for 7:30 AM while this computer is signed in.{% endif %}</p>
     {% else %}
     <p class="text-muted mb-0">No NYSEG daily usage CSV is available in the expected folder yet.</p>
     {% endif %}
@@ -103,4 +104,21 @@
   }, { responsive: true, displayModeBar: false });
 })();
 </script>{% endif %}
+<script>
+(() => {
+  const status = document.getElementById("nyseg-sync-status");
+  if (!status || location.protocol === "file:") return;
+  const completedAt = status.dataset.syncCompletedAt || "";
+  window.setInterval(async () => {
+    try {
+      const response = await fetch("/api/nyseg-daily-sync-status", { cache: "no-store" });
+      if (!response.ok) return;
+      const latest = await response.json();
+      if (latest.status === "success" && latest.completed_at && latest.completed_at !== completedAt) window.location.reload();
+    } catch (_) {
+      // GitHub Pages does not have the private local sync endpoint.
+    }
+  }, 60_000);
+})();
+</script>
 {% endblock %}
