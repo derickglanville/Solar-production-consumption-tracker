@@ -5733,17 +5733,18 @@ async function saveNysegMeterBackup(db, entries, updates = null) {
 
 async function setupNysegUsageFileActions(db) {
   const importButton = document.getElementById("nyseg-file-import");
+  const runSyncButton = document.getElementById("nyseg-file-run-sync");
   const backupButton = document.getElementById("nyseg-file-backup");
   const restoreButton = document.getElementById("nyseg-file-restore");
   const status = document.getElementById("nyseg-file-action-status");
-  if (!importButton && !backupButton && !restoreButton) return;
+  if (!importButton && !runSyncButton && !backupButton && !restoreButton) return;
   const show = (message, kind = "info") => {
     if (!status) return;
     status.className = `small mt-2 mb-0 text-${kind === "danger" ? "danger" : kind === "success" ? "success" : "muted"}`;
     status.textContent = message;
   };
   if (isStaticSite()) {
-    [importButton, backupButton, restoreButton].filter(Boolean).forEach((button) => {
+    [importButton, runSyncButton, backupButton, restoreButton].filter(Boolean).forEach((button) => {
       button.disabled = true;
       button.title = "These actions require the private NYSEG CSV in the local tracker.";
     });
@@ -5759,6 +5760,21 @@ async function setupNysegUsageFileActions(db) {
   }
   const backup = state.config?.nyseg_meter_import_backup;
   if (backup?.recorded_at) show(`Latest backup: ${backup.rows?.length || 0} readings saved ${new Date(backup.recorded_at).toLocaleString()}.`);
+  if (runSyncButton) runSyncButton.addEventListener("click", async () => {
+    runSyncButton.disabled = true;
+    const original = runSyncButton.textContent;
+    runSyncButton.textContent = "Starting sync…";
+    try {
+      const response = await fetch("/api/nyseg-daily-sync/run", { method: "POST" });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "The NYSEG sync could not start.");
+      show("NYSEG sync started. This page will refresh automatically when the download and Firebase import finish.", "success");
+    } catch (error) {
+      show(`Could not start the NYSEG sync: ${error.message || error}`, "danger");
+      runSyncButton.disabled = false;
+      runSyncButton.textContent = original;
+    }
+  });
   if (backupButton) backupButton.addEventListener("click", async () => {
     backupButton.disabled = true;
     try {

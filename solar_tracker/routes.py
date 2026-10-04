@@ -4,6 +4,7 @@ from http.client import HTTPConnection
 from io import StringIO
 import json
 from pathlib import Path
+import subprocess
 
 import pandas as pd
 from flask import Blueprint, Response, jsonify, redirect, render_template, request, send_file, send_from_directory, url_for
@@ -52,6 +53,7 @@ LOCAL_DASHBOARD_URL = "http://127.0.0.1:8765/"
 LOCAL_JSON_DIRECTORY = Path(__file__).resolve().parent.parent / "JSON"
 LOCAL_APPLICATION_SNAPSHOT_PATH = LOCAL_JSON_DIRECTORY / "application_data_current.json"
 NYSEG_DAILY_SYNC_STATUS_PATH = Path(__file__).resolve().parent.parent / "SunRun Data" / "nyseg-daily-sync-status.json"
+NYSEG_DAILY_SYNC_SCRIPT_PATH = Path(__file__).resolve().parent.parent / "NYSEG Download Script" / "run_nyseg_daily_sync.ps1"
 CIRCUIT_BREAKER_DIRECTORY_PATH = (
     Path(__file__).resolve().parent.parent
     / "Documents"
@@ -583,6 +585,18 @@ def nyseg_daily_sync_status_api():
     response = jsonify(load_nyseg_daily_sync_status())
     response.headers["Cache-Control"] = "no-store"
     return response
+
+
+@main_blueprint.route("/api/nyseg-daily-sync/run", methods=["POST"])
+def nyseg_daily_sync_run_api():
+    if not NYSEG_DAILY_SYNC_SCRIPT_PATH.is_file():
+        return jsonify({"error": "The NYSEG daily-sync script is unavailable."}), 404
+    subprocess.Popen(
+        ["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(NYSEG_DAILY_SYNC_SCRIPT_PATH)],
+        cwd=NYSEG_DAILY_SYNC_SCRIPT_PATH.parent.parent,
+        creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+    )
+    return jsonify({"started": True})
 
 @main_blueprint.route("/nyseg-reconciliation")
 def nyseg_reconciliation():
