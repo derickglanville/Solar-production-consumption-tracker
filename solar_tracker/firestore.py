@@ -301,6 +301,32 @@ class FirestoreRepository:
             payload=payload,
         )
 
+    def save_utility_meter_reading(
+        self,
+        entry_date: date,
+        meter_01_import_reading: float,
+        meter_02_export_reading: float,
+        notes: str,
+    ) -> None:
+        """Create a reviewed NYSEG cumulative-meter record without replacing daily data."""
+        now = datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
+        fields = {
+            "entry_date": entry_date.isoformat(),
+            "meter_01_import_reading": float(meter_01_import_reading),
+            "meter_02_export_reading": float(meter_02_export_reading),
+            "meter_values_confirmed": True,
+            "meter_values_estimated": False,
+            "estimated": False,
+            "lookup_source": "nyseg-hourly-intervals",
+            "notes": notes,
+            "updated_at": now,
+        }
+        self._request(
+            "PATCH",
+            f"{ENTRY_COLLECTION}/{entry_date.isoformat()}",
+            payload={"fields": {key: _encode_firestore_value(value) for key, value in fields.items()}},
+        )
+
     def get_config(self) -> AppConfig:
         try:
             document = self._request("GET", f"{CONFIG_COLLECTION}/{CONFIG_DOCUMENT_ID}")

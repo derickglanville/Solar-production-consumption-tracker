@@ -28625,26 +28625,15 @@ This is a reconciliation, not an independent measurement, because EDC includes S
       applyButton.textContent = "Applying\u2026";
       try {
         if (beforeApply) await beforeApply(updates);
-        for (const item of updates) {
-          const values = {
-            entry_date: item.date,
-            meter_01_import_reading: item.m01,
-            meter_02_export_reading: item.m02,
-            meter_values_confirmed: true,
-            meter_values_estimated: false,
-            estimated: false,
-            lookup_source: "nyseg-hourly-intervals",
-            updated_at: (/* @__PURE__ */ new Date()).toISOString(),
-            notes: `${item.entry?.notes || ""}${item.entry?.notes ? "\n" : ""}M01/M02 ${item.isNew ? "created" : "updated"} from NYSEG hourly Delivered/Received intervals after review.`
-          };
-          if (item.isNew) await setDoc(doc(db, entryCollectionName, item.date), values, { merge: true });
-          else await setDoc2(doc(db, entryCollectionName, item.date), values, { merge: true });
-        }
-        close();
-        const message = `NYSEG utility readings were saved for ${updates.length} day${updates.length === 1 ? "" : "s"}. The Daily Entry records now contain the reviewed M01/M02 values.`;
+        const response = await fetch("/api/nyseg-meter-intervals/apply", { method: "POST" });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || "The NYSEG utility readings could not be saved.");
+        const savedCount = Number(result.saved || 0);
+        const message = `NYSEG utility readings were saved for ${savedCount} day${savedCount === 1 ? "" : "s"}. The Daily Entry records now contain the reviewed M01/M02 values.`;
         if (onApplied) onApplied(message);
         else renderStatusAlert("entries-status", message, "success");
-        window.setTimeout(() => window.location.reload(), 1800);
+        shell.innerHTML = `<div class="calibration-v2-popout-backdrop"></div><section class="calibration-v2-popout-dialog" role="dialog" aria-modal="true"><div class="calibration-v2-heading"><div><p class="eyebrow mb-1">NYSEG import complete</p><h3>${savedCount} daily record${savedCount === 1 ? "" : "s"} saved</h3><p>${escapeHtml(message)}</p></div></div><div class="d-flex justify-content-end mt-3"><button type="button" class="btn btn-sun" data-nyseg-import-finish>View updated data</button></div></section>`;
+        shell.querySelector("[data-nyseg-import-finish]")?.addEventListener("click", () => window.location.reload());
       } catch (error) {
         applyButton.disabled = false;
         applyButton.textContent = "Apply utility readings";
