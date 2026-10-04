@@ -5674,7 +5674,7 @@ function buildNysegMeterImportPreview(entries, dailyIntervals) {
   return updates;
 }
 
-function openNysegMeterImportPreview(db, updates, sourceStart, sourceEnd, { beforeApply = null } = {}) {
+function openNysegMeterImportPreview(db, updates, sourceStart, sourceEnd, { beforeApply = null, onApplied = null } = {}) {
   document.querySelector(".nyseg-meter-import-popout")?.remove();
   const shell = document.createElement("div");
   shell.className = "calibration-v2-popout-shell nyseg-meter-import-popout";
@@ -5689,17 +5689,25 @@ function openNysegMeterImportPreview(db, updates, sourceStart, sourceEnd, { befo
     try {
       if (beforeApply) await beforeApply(updates);
       for (const item of updates) {
-        await setDoc(doc(db, entryCollectionName, item.date), {
+        const values = {
           entry_date: item.date,
           meter_01_import_reading: item.m01, meter_02_export_reading: item.m02,
           meter_values_confirmed: true, meter_values_estimated: false,
           estimated: false, lookup_source: "nyseg-hourly-intervals", updated_at: new Date().toISOString(),
           notes: `${item.entry?.notes || ""}${item.entry?.notes ? "\n" : ""}M01/M02 ${item.isNew ? "created" : "updated"} from NYSEG hourly Delivered/Received intervals after review.`
-        }, { merge: true });
+        };
+        // New NYSEG days have no prior history to protect.  Writing them
+        // directly avoids a transaction being left pending in a browser that
+        // has an old offline Firestore cache. Existing rows keep the normal
+        // revision-aware transaction path.
+        if (item.isNew) await firebaseSetDoc(doc(db, entryCollectionName, item.date), values, { merge: true });
+        else await setDoc(doc(db, entryCollectionName, item.date), values, { merge: true });
       }
       close();
-      renderStatusAlert("entries-status", `NYSEG utility readings applied for ${updates.length} day${updates.length === 1 ? "" : "s"}.`, "success");
-      window.setTimeout(() => window.location.reload(), 700);
+      const message = `NYSEG utility readings were saved for ${updates.length} day${updates.length === 1 ? "" : "s"}. The Daily Entry records now contain the reviewed M01/M02 values.`;
+      if (onApplied) onApplied(message);
+      else renderStatusAlert("entries-status", message, "success");
+      window.setTimeout(() => window.location.reload(), 1800);
     } catch (error) { applyButton.disabled = false; applyButton.textContent = "Apply utility readings"; renderStatusAlert("entries-status", `Could not apply the utility readings: ${error.message || error}`, "danger"); }
   });
   document.body.appendChild(shell);
@@ -5811,7 +5819,8 @@ async function setupNysegUsageFileActions(db) {
           const fresh = await loadFirestoreState(db);
           const saved = await saveNysegMeterBackup(db, fresh.entries);
           show(`Backup saved for ${saved.count} existing reading${saved.count === 1 ? "" : "s"}; applying reviewed utility values.`, "success");
-        }
+        },
+        onApplied: (message) => show(message, "success")
       });
     } catch (error) { show(`Could not prepare the NYSEG import: ${error.message || error}`, "danger"); }
     finally { importButton.disabled = false; importButton.textContent = original; }
