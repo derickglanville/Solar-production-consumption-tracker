@@ -27339,6 +27339,9 @@ This typically indicates that your device does not have a healthy Internet conne
     const effectiveForceCreate = forceCreate || shouldRunOneTimeManualAutoCreate(entryDate);
     const existingEntry = entries.find((entry) => entry.entry_date === entryDate);
     if (existingEntry) {
+      if (existingEntry.meter_values_confirmed) {
+        return { entry: existingEntry, created: false, hydrated: false };
+      }
       if (existingEntry.estimated && String(entryDate) === String(getTodayIsoDate())) {
         const refreshedEntry = await buildAutoEntry(entries, entryDate, sourceLabel);
         const mergedEntry = normalizeEntry({

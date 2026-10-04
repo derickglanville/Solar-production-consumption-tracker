@@ -4203,6 +4203,11 @@ async function ensureDailyPlaceholderRecord(db, entries, options = {}) {
 
   const existingEntry = entries.find((entry) => entry.entry_date === entryDate);
   if (existingEntry) {
+    // A confirmed meter reading is the source of truth. Do not let the
+    // intraday placeholder refresh replace its cumulative M01/M02 values.
+    if (existingEntry.meter_values_confirmed) {
+      return { entry: existingEntry, created: false, hydrated: false };
+    }
     if (existingEntry.estimated && String(entryDate) === String(getTodayIsoDate())) {
       const refreshedEntry = await buildAutoEntry(entries, entryDate, sourceLabel);
       const mergedEntry = normalizeEntry({
