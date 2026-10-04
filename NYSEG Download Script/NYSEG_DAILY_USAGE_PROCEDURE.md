@@ -9,8 +9,8 @@ The solar tracker reads NYSEG’s hourly `Delivered` and `Received` values from:
 ## One-time setup
 
 ```powershell
-py -m pip install playwright
-py -m playwright install chromium
+python -m pip install playwright
+python -m playwright install chromium
 ```
 
 ## First interactive download
@@ -21,7 +21,7 @@ Run this from the project folder. It opens a visible browser, signs in using cre
 $credential = Get-Credential
 $env:NYSEG_USER = $credential.UserName
 $env:NYSEG_PASS = [System.Net.NetworkCredential]::new('', $credential.Password).Password
-py '.\NYSEG Download Script\nyseg_download.py' --headed --start 2026-07-01
+python '.\NYSEG Download Script\nyseg_download.py' --headed --start 2026-07-01
 Remove-Item Env:NYSEG_USER, Env:NYSEG_PASS
 ```
 

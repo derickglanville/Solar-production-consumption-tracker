@@ -193,6 +193,7 @@ def download_usage(page: Page, start: date, end: date) -> tuple[Path, int]:
 def main() -> int:
     parser = argparse.ArgumentParser(description="Download NYSEG Usage CSV for the solar tracker.")
     parser.add_argument("--headed", action="store_true", help="show the browser for first login, MFA, or selector troubleshooting")
+    parser.add_argument("--browser", choices=("edge", "chromium"), default="edge", help="browser to automate; Edge is the Windows default")
     parser.add_argument("--start", type=date.fromisoformat, default=date(2026, 7, 1), help="first requested date, YYYY-MM-DD")
     parser.add_argument("--end", type=date.fromisoformat, default=date.today(), help="last requested date, YYYY-MM-DD")
     args = parser.parse_args()
@@ -200,9 +201,11 @@ def main() -> int:
         parser.error("--end must be on or after --start")
     PROFILE_DIRECTORY.mkdir(parents=True, exist_ok=True)
     DIAGNOSTIC_DIRECTORY.mkdir(parents=True, exist_ok=True)
+    print(f"Launching {'visible ' if args.headed else ''}{args.browser.title()} browser…", flush=True)
     with sync_playwright() as playwright:
         context = playwright.chromium.launch_persistent_context(
-            str(PROFILE_DIRECTORY), headless=not args.headed, accept_downloads=True
+            str(PROFILE_DIRECTORY), headless=not args.headed, accept_downloads=True,
+            channel="msedge" if args.browser == "edge" else None,
         )
         page = context.pages[0] if context.pages else context.new_page()
         page.set_default_timeout(20_000)
