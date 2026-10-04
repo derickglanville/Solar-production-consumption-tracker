@@ -504,6 +504,8 @@ def nyseg_usage_file():
     interval_file = load_nyseg_interval_file_rows()
     grouped = request.path.endswith("/daily")
     sunrun_by_date = load_sunrun_daily_production().get("by_date", {})
+    for row in [*interval_file.get("daily_rows", []), *interval_file.get("rows", [])]:
+        row["sunrun_power_kwh"] = sunrun_by_date.get(row["Date"], {}).get("production_kwh")
     electric_rate = AppConfig().current_electric_rate
     chart_rows = [
         {

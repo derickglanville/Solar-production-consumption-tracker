@@ -3679,7 +3679,7 @@ body[data-page="dashboard"].dashboard-compact-mode .btn-contract {
 .nyseg-usage-callout strong { color: #1d566e; display: block; margin-top: 0.13rem; }
 .nyseg-usage-callout small { color: #6a7f8f; display: block; font-size: 0.78rem; margin-top: 0.12rem; }
 .nyseg-file-table-wrap { max-height: 70vh; overflow: auto; }
-.nyseg-file-table thead th { background: #f4f8fa; box-shadow: 0 1px 0 rgba(63, 94, 112, 0.2); position: sticky; top: 0; z-index: 2; white-space: nowrap; }
+.nyseg-file-table thead th { background: #f4f8fa; box-shadow: 0 1px 0 rgba(63, 94, 112, 0.2); line-height: 1.15; max-width: 6.5rem; position: sticky; top: 0; white-space: normal; z-index: 2; }
 .nyseg-file-table th[title] { cursor: help; }
 .nyseg-file-table .nyseg-interval-count { min-width: 3.8rem; padding-left: 0.35rem; padding-right: 0.35rem; width: 3.8rem; }
 .nyseg-file-chart-card { border-color: #c7dce2; }
