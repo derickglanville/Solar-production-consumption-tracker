@@ -493,7 +493,25 @@ def nyseg_usage():
 def nyseg_usage_file():
     interval_file = load_nyseg_interval_file_rows()
     grouped = request.path.endswith("/daily")
-    return render_template("nyseg_usage_file.html", page_name="nyseg-usage-file", local_snapshot_mode=False, bootstrap_data=build_bootstrap_data(), interval_file=interval_file, grouped=grouped)
+    sunrun_by_date = load_sunrun_daily_production().get("by_date", {})
+    chart_rows = [
+        {
+            "date": row["Date"],
+            "production_kwh": sunrun_by_date.get(row["Date"], {}).get("production_kwh"),
+            "delivered_kwh": row["Delivered"],
+            "received_kwh": row["Received"],
+        }
+        for row in interval_file.get("daily_rows", [])
+    ]
+    return render_template(
+        "nyseg_usage_file.html",
+        page_name="nyseg-usage-file",
+        local_snapshot_mode=False,
+        bootstrap_data=build_bootstrap_data(),
+        interval_file=interval_file,
+        grouped=grouped,
+        chart_rows=chart_rows,
+    )
 
 @main_blueprint.route("/nyseg-reconciliation")
 def nyseg_reconciliation():

@@ -1,5 +1,40 @@
 {% extends "base.html" %}
 {% block content %}
 <section class="mb-4"><div class="d-flex flex-wrap justify-content-between gap-3 align-items-start"><div><p class="eyebrow mb-2">Local NYSEG CSV review</p><h1 class="h3 mb-2">Downloaded NYSEG usage file</h1>{% if interval_file.available %}<p class="text-muted mb-0">{{ interval_file.source_name }} contains {{ "{:,}".format(interval_file.rows|length) }} hourly intervals. Account-identifying columns are omitted.</p>{% else %}<p class="text-muted mb-0">No NYSEG daily usage CSV is available in the expected folder yet.</p>{% endif %}</div>{% if interval_file.available %}<a class="btn btn-contract" href="{{ url_for('main.nyseg_usage_file') if grouped else url_for('main.nyseg_usage_file') + '/daily' }}">{% if grouped %}Show hourly readings{% else %}Group by day{% endif %}</a>{% endif %}</div></section>
+{% if interval_file.available and chart_rows %}<section class="card tracker-card nyseg-file-chart-card mb-4"><div class="card-body"><div><p class="eyebrow mb-1">Daily comparison</p><h2 class="h5 mb-1">SunRun production and NYSEG meter flow</h2><p class="text-muted small mb-3">Each point is a daily total for the dates covered by the downloaded NYSEG file.</p></div><div id="nyseg-file-comparison-chart" class="nyseg-file-comparison-chart" aria-label="Line chart comparing daily SunRun production, NYSEG delivered energy, and NYSEG received energy"></div></div></section>{% endif %}
 {% if interval_file.available %}{% set rows = interval_file.daily_rows if grouped else interval_file.rows %}<section class="card tracker-card"><div class="card-body"><p class="text-muted small">{% if grouped %}Each row totals the day’s intervals. Temperature is the daily average.{% else %}Each row is one NYSEG hourly interval. Scroll vertically while the header stays visible.{% endif %}</p><div class="table-responsive nyseg-file-table-wrap"><table class="table table-sm align-middle nyseg-file-table"><thead><tr><th title="NYSEG service date">Date</th>{% if grouped %}<th title="First and last interval represented in the daily total">Day coverage</th><th class="text-end" title="Number of hourly intervals included">Intervals</th>{% else %}<th title="Beginning of the hourly meter interval">Start time</th><th title="End of the hourly meter interval">End time</th>{% endif %}<th class="text-end" title="Delivered minus Received: positive means net import; negative means net export">Net</th><th title="Energy unit reported by NYSEG">Units</th><th class="text-end" title="NYSEG cost field, if present">Costs</th><th class="text-end" title="Temperature reported by NYSEG; daily view shows the average">Weather</th><th class="text-end" title="Electricity NYSEG delivered to the home. This adds to M01.">Delivered / M01</th><th class="text-end" title="Electricity NYSEG received from solar. This adds to M02.">Received / M02</th></tr></thead><tbody>{% for row in rows %}<tr><td>{{ row.Date }}</td>{% if grouped %}<td>{{ row.start_label }} – {{ row.end_label }}</td><td class="text-end">{{ row.interval_count }}</td>{% else %}<td>{{ row.start_label }}</td><td>{{ row.end_label }}</td>{% endif %}<td class="text-end">{{ "{:.3f}".format(row.Net|float) }}</td><td>{{ row.Units }}</td><td class="text-end">{{ "{:.2f}".format(row.Costs|float) if row.Costs else "—" }}</td><td class="text-end">{{ "{:.0f}".format(row.Weather|float) }}°F</td><td class="text-end text-success">{{ "{:.3f}".format(row.Delivered|float) }}</td><td class="text-end text-success">{{ "{:.3f}".format(row.Received|float) }}</td></tr>{% endfor %}</tbody></table></div></div></section>{% endif %}
+{% endblock %}
+{% block extra_scripts %}
+{% if interval_file.available and chart_rows %}<script>
+(() => {
+  const chart = document.getElementById("nyseg-file-comparison-chart");
+  const rows = {{ chart_rows|tojson }};
+  if (!chart || typeof Plotly === "undefined") return;
+  const trace = (name, field, color) => ({
+    x: rows.map((row) => row.date),
+    y: rows.map((row) => row[field]),
+    name,
+    type: "scatter",
+    mode: "lines+markers",
+    line: { color, width: 2.5 },
+    marker: { color, size: 5 },
+    connectgaps: false,
+    hovertemplate: "%{x}<br>" + name + ": %{y:.2f} kWh<extra></extra>",
+  });
+  Plotly.newPlot(chart, [
+    trace("SunRun production", "production_kwh", "#b88016"),
+    trace("Delivered / M01", "delivered_kwh", "#2878a8"),
+    trace("Received / M02", "received_kwh", "#17825f"),
+  ], {
+    margin: { l: 52, r: 18, t: 12, b: 48 },
+    height: 290,
+    hovermode: "x unified",
+    legend: { orientation: "h", y: 1.13, x: 0 },
+    xaxis: { title: "Date", type: "date", tickformat: "%b %-d", showgrid: false },
+    yaxis: { title: "kWh", rangemode: "tozero", gridcolor: "#dce8ee" },
+    paper_bgcolor: "rgba(0,0,0,0)",
+    plot_bgcolor: "rgba(0,0,0,0)",
+  }, { responsive: true, displayModeBar: false });
+})();
+</script>{% endif %}
 {% endblock %}
