@@ -3696,3 +3696,5 @@ body[data-page="dashboard"].dashboard-compact-mode .btn-contract {
 
 .nyseg-monthly-net-popout { width: 100%; }
 .chart-popout-body [data-chart-popout-content] { flex: 1 1 auto; max-width: none; overflow-y: auto; }
+
+.chart-popout-body [data-chart-popout-content] .nyseg-monthly-net-list { max-height: none; overflow-y: visible; }
