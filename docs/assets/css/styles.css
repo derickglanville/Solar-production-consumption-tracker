@@ -3683,12 +3683,13 @@ body[data-page="dashboard"].dashboard-compact-mode .btn-contract {
 .nyseg-file-table .nyseg-interval-count { min-width: 3.8rem; padding-left: 0.35rem; padding-right: 0.35rem; width: 3.8rem; }
 .nyseg-file-chart-card { border-color: #c7dce2; }
 .nyseg-file-comparison-chart { min-height: 290px; width: 100%; }
-.nyseg-file-header-tools { align-items: flex-end; display: flex; flex-wrap: wrap; gap: 0.75rem; justify-content: flex-end; }
-.nyseg-monthly-net-box { background: #f7fbfc; border: 1px solid #c8dce5; border-radius: 0.75rem; max-width: 360px; padding: 0.65rem 0.75rem; width: min(360px, 100%); }
+.nyseg-file-header { align-items: start; display: grid; gap: 1.2rem; grid-template-columns: minmax(0, 1fr) 390px; }
+.nyseg-monthly-net-box { background: #f7fbfc; border: 1px solid #c8dce5; border-radius: 0.75rem; padding: 0.65rem 0.75rem; width: 100%; }
+.nyseg-monthly-net-heading { align-items: start; display: flex; gap: 0.6rem; justify-content: space-between; }
 .nyseg-monthly-net-box small { color: #617b8d; display: block; font-size: 0.72rem; }
 .nyseg-monthly-net-list { max-height: 116px; overflow-y: auto; padding-right: 0.2rem; }
 .nyseg-monthly-net-row { align-items: baseline; border-top: 1px solid #d9e7ed; display: grid; gap: 0.2rem 0.55rem; grid-template-columns: minmax(108px, 1fr) auto; padding: 0.4rem 0; }
 .nyseg-monthly-net-row strong { color: #244a60; font-size: 0.78rem; }
 .nyseg-monthly-net-row span { color: #617b8d; font-size: 0.7rem; grid-column: 1; }
 .nyseg-monthly-net-row b { font-size: 0.77rem; grid-column: 2; grid-row: 1 / span 2; white-space: nowrap; }
-@media (max-width: 575px) { .nyseg-file-header-tools { align-items: stretch; width: 100%; } .nyseg-file-header-tools > .btn { align-self: flex-start; } .nyseg-monthly-net-box { max-width: none; } }
+@media (max-width: 767px) { .nyseg-file-header { grid-template-columns: 1fr; } }
