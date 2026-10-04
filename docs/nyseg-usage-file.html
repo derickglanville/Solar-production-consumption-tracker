@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/styles.css?v=20261004-nyseg-server-anchor">
+  <link rel="stylesheet" href="assets/css/styles.css?v=20261004-nyseg-preview-production">
   <script src="https://cdn.plot.ly/plotly-3.4.0.min.js"></script>
 </head>
 <body data-page="nyseg-usage-file" data-local-snapshot-mode="false">
@@ -62,12 +62,12 @@
           <div class="nyseg-monthly-net-list"><div class="nyseg-monthly-net-row"><strong>October 2026</strong><span>M01 12.2 · M02 19.8 kWh</span><b class="text-success">Credit $1.81</b></div><div class="nyseg-monthly-net-row"><strong>September 2026</strong><span>M01 479.4 · M02 1059.4 kWh</span><b class="text-success">Credit $139.20</b></div><div class="nyseg-monthly-net-row"><strong>August 2026</strong><span>M01 571.5 · M02 1425.1 kWh</span><b class="text-success">Credit $204.86</b></div><div class="nyseg-monthly-net-row"><strong>July 2026</strong><span>M01 17.6 · M02 48.7 kWh</span><b class="text-success">Credit $7.46</b></div></div>
         </section>
       </div>
-      <div class="chart-popout-frame nyseg-monthly-meter-popout" data-chart-popout-label="Monthly M01 and M02 totals">
+      <div class="chart-popout-frame nyseg-monthly-meter-popout" data-chart-popout-label="Monthly M01, M02, SunRun, and EDC totals">
         <button type="button" class="btn btn-contract btn-sm chart-popout-button" data-chart-popout>Pop Out</button>
-        <section class="nyseg-monthly-net-box nyseg-monthly-meter-box" data-chart-popout-content aria-label="Monthly M01 and M02 totals">
-          <div class="nyseg-monthly-net-heading"><div><p class="eyebrow mb-1">Monthly M01 &amp; M02 totals</p><small>NYSEG Delivered / M01 and Received / M02, totaled within each month.</small></div></div>
-          <div class="nyseg-monthly-net-list nyseg-monthly-meter-list"><div class="nyseg-monthly-net-row"><strong>October 2026</strong><span>M01 12.2 · M02 19.8 kWh</span><b>Total 32.0 kWh</b></div><div class="nyseg-monthly-net-row"><strong>September 2026</strong><span>M01 479.4 · M02 1059.4 kWh</span><b>Total 1538.8 kWh</b></div><div class="nyseg-monthly-net-row"><strong>August 2026</strong><span>M01 571.5 · M02 1425.1 kWh</span><b>Total 1996.6 kWh</b></div><div class="nyseg-monthly-net-row"><strong>July 2026</strong><span>M01 17.6 · M02 48.7 kWh</span><b>Total 66.3 kWh</b></div></div>
-          <div class="nyseg-monthly-meter-grand-total"><strong>All months</strong><span>M01 1080.7 · M02 2552.9 kWh</span><b>Total 3633.6 kWh</b></div>
+        <section class="nyseg-monthly-net-box nyseg-monthly-meter-box" data-chart-popout-content aria-label="Monthly M01, M02, SunRun, and EDC totals">
+          <div class="nyseg-monthly-net-heading"><div><p class="eyebrow mb-1">Monthly energy totals</p><small>M01 and M02 are NYSEG meter flow; SunRun is solar production; EDC = SunRun + M01 − M02.</small></div></div>
+          <div class="nyseg-monthly-net-list nyseg-monthly-meter-list"><div class="nyseg-monthly-meter-row"><strong>October 2026</strong><div class="nyseg-monthly-meter-values"><span>M01 <b>12.2</b></span><span>M02 <b>19.8</b></span><span>SunRun <b>29.2</b></span><span>EDC <b>21.7</b></span></div><b class="nyseg-monthly-combined">M01 + M02: 32.0 kWh</b></div><div class="nyseg-monthly-meter-row"><strong>September 2026</strong><div class="nyseg-monthly-meter-values"><span>M01 <b>479.4</b></span><span>M02 <b>1059.4</b></span><span>SunRun <b>1388.6</b></span><span>EDC <b>808.6</b></span></div><b class="nyseg-monthly-combined">M01 + M02: 1538.8 kWh</b></div><div class="nyseg-monthly-meter-row"><strong>August 2026</strong><div class="nyseg-monthly-meter-values"><span>M01 <b>571.5</b></span><span>M02 <b>1425.1</b></span><span>SunRun <b>1921.0</b></span><span>EDC <b>1067.4</b></span></div><b class="nyseg-monthly-combined">M01 + M02: 1996.6 kWh</b></div><div class="nyseg-monthly-meter-row"><strong>July 2026</strong><div class="nyseg-monthly-meter-values"><span>M01 <b>17.6</b></span><span>M02 <b>48.7</b></span><span>SunRun <b>63.4</b></span><span>EDC <b>32.3</b></span></div><b class="nyseg-monthly-combined">M01 + M02: 66.3 kWh</b></div></div>
+          <div class="nyseg-monthly-meter-grand-total"><strong>All months</strong><div class="nyseg-monthly-meter-values"><span>M01 <b>1080.7</b></span><span>M02 <b>2552.9</b></span><span>SunRun <b>3402.3</b></span><span>EDC <b>1930.0</b></span></div><b class="nyseg-monthly-combined">M01 + M02: 3633.6 kWh</b></div>
         </section>
       </div>
     </div>
@@ -80,9 +80,9 @@
     </div>
   </main>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/js/bootstrap.bundle.min.js"></script>
-  <script src="assets/js/site-bootstrap.js?v=20261004-nyseg-server-anchor"></script>
-  <script src="assets/js/firebase-config.js?v=20261004-nyseg-server-anchor"></script>
-  <script defer src="assets/js/app-bundle.js?v=20261004-nyseg-server-anchor"></script>
+  <script src="assets/js/site-bootstrap.js?v=20261004-nyseg-preview-production"></script>
+  <script src="assets/js/firebase-config.js?v=20261004-nyseg-preview-production"></script>
+  <script defer src="assets/js/app-bundle.js?v=20261004-nyseg-preview-production"></script>
 
 <script>
 (() => {

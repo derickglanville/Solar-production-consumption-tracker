@@ -517,14 +517,23 @@ def nyseg_usage_file():
     monthly_costs: dict[str, dict] = {}
     for row in chart_rows:
         month_key = row["date"][:7]
-        summary = monthly_costs.setdefault(month_key, {"m01_kwh": 0.0, "m02_kwh": 0.0})
+        summary = monthly_costs.setdefault(month_key, {
+            "m01_kwh": 0.0,
+            "m02_kwh": 0.0,
+            "production_kwh": 0.0,
+            "edc_kwh": 0.0,
+        })
         summary["m01_kwh"] += row["delivered_kwh"]
         summary["m02_kwh"] += row["received_kwh"]
+        summary["production_kwh"] += float(row["production_kwh"] or 0.0)
+        summary["edc_kwh"] += float(row["edc_kwh"] or 0.0)
     monthly_net_charges = [
         {
             "month": date.fromisoformat(f"{month_key}-01").strftime("%B %Y"),
             "m01_kwh": values["m01_kwh"],
             "m02_kwh": values["m02_kwh"],
+            "production_kwh": values["production_kwh"],
+            "edc_kwh": values["edc_kwh"],
             "import_cost": values["m01_kwh"] * electric_rate,
             "export_value": values["m02_kwh"] * electric_rate,
             "net_cost": (values["m01_kwh"] - values["m02_kwh"]) * electric_rate,
@@ -541,6 +550,8 @@ def nyseg_usage_file():
     meter_totals = {
         "m01_kwh": sum(month["m01_kwh"] for month in monthly_meter_totals),
         "m02_kwh": sum(month["m02_kwh"] for month in monthly_meter_totals),
+        "production_kwh": sum(month["production_kwh"] for month in monthly_meter_totals),
+        "edc_kwh": sum(month["edc_kwh"] for month in monthly_meter_totals),
     }
     meter_totals["combined_kwh"] = meter_totals["m01_kwh"] + meter_totals["m02_kwh"]
     return render_template(
@@ -764,6 +775,8 @@ def circuit_breakers_save_api():
 def nyseg_meter_intervals_api():
     report = build_nyseg_interval_usage_report()
     anchor = None
+    preview = []
+    sunrun_by_date = load_sunrun_daily_production().get("by_date", {})
     if report["available"]:
         try:
             source_start = date.fromisoformat(report["source_start"])
@@ -782,6 +795,24 @@ def nyseg_meter_intervals_api():
                     "meter_02_export_reading": entry.meter_02_export_reading,
                     "meter_values_confirmed": True,
                 }
+                running_m01 = entry.meter_01_import_reading
+                running_m02 = entry.meter_02_export_reading
+                existing_dates = {item.entry_date for item in candidates}
+                for row in reversed(report.get("daily", [])):
+                    row_date = date.fromisoformat(row["date"])
+                    if row_date <= entry.entry_date:
+                        continue
+                    running_m01 += row["import_kwh"]
+                    running_m02 += row["export_kwh"]
+                    preview.append({
+                        "date": row["date"],
+                        "m01": round(running_m01, 1),
+                        "m02": round(running_m02, 1),
+                        "import_kwh": row["import_kwh"],
+                        "export_kwh": row["export_kwh"],
+                        "production_kwh": sunrun_by_date.get(row["date"], {}).get("production_kwh"),
+                        "is_new": row_date not in existing_dates,
+                    })
         except Exception:
             # The browser can still use its live Firebase data when a local
             # server-side read is unavailable.
@@ -795,6 +826,7 @@ def nyseg_meter_intervals_api():
             for row in reversed(report.get("daily", []))
         ],
         "anchor": anchor,
+        "preview": preview,
     })
 
 @main_blueprint.route("/api/sunrun-production")
