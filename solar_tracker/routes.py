@@ -494,12 +494,23 @@ def nyseg_usage_file():
     interval_file = load_nyseg_interval_file_rows()
     grouped = request.path.endswith("/daily")
     sunrun_by_date = load_sunrun_daily_production().get("by_date", {})
+    electric_rate = AppConfig().current_electric_rate
     chart_rows = [
         {
             "date": row["Date"],
             "production_kwh": sunrun_by_date.get(row["Date"], {}).get("production_kwh"),
             "delivered_kwh": row["Delivered"],
             "received_kwh": row["Received"],
+            "edc_kwh": (
+                sunrun_by_date.get(row["Date"], {}).get("production_kwh", 0.0)
+                + float(row["Delivered"])
+                - float(row["Received"])
+                if row["Date"] in sunrun_by_date
+                else None
+            ),
+            "import_cost": float(row["Delivered"]) * electric_rate,
+            "export_credit": float(row["Received"]) * electric_rate,
+            "net_cost": (float(row["Delivered"]) - float(row["Received"])) * electric_rate,
         }
         for row in interval_file.get("daily_rows", [])
     ]
@@ -511,6 +522,7 @@ def nyseg_usage_file():
         interval_file=interval_file,
         grouped=grouped,
         chart_rows=chart_rows,
+        electric_rate=electric_rate,
     )
 
 @main_blueprint.route("/nyseg-reconciliation")
