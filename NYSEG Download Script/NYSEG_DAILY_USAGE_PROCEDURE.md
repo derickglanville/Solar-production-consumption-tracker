@@ -25,7 +25,7 @@ python '.\NYSEG Download Script\nyseg_download.py' --headed --start 2026-07-01
 Remove-Item Env:NYSEG_USER, Env:NYSEG_PASS
 ```
 
-The script opens **Download My Energy Use Data** and selects:
+After sign-in, the script waits up to 60 seconds for NYSEG Insights to finish loading **Download My Energy Use Data** and then selects:
 
 - Usage
 - Custom date range: July 1, 2026 through today

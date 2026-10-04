@@ -18,6 +18,7 @@ import os
 import re
 import shutil
 import sys
+import time
 from datetime import date, datetime
 from pathlib import Path
 from typing import Iterable
@@ -127,13 +128,25 @@ def ensure_signed_in(page: Page, username: str | None, password: str | None, hea
 
 def open_download_dialog(page: Page) -> Locator:
     page.goto(INSIGHTS_URL, wait_until="domcontentloaded")
-    trigger = first_visible((
-        page.get_by_text(re.compile("download my energy use data", re.I)),
-        page.get_by_role("button", name=re.compile("download.*energy", re.I)),
-        page.get_by_role("link", name=re.compile("download.*energy", re.I)),
-    ))
+    # Insights is a single-page app. DOMContentLoaded only means its empty
+    # shell is visible; NYSEG's cards and download control can take time to
+    # render after sign-in.
+    print("Waiting for NYSEG Insights to finish loading the download control…", flush=True)
+    deadline = time.monotonic() + 60
+    trigger = None
+    while time.monotonic() < deadline:
+        trigger = first_visible((
+            page.get_by_role("button", name=re.compile(r"download.*(my|your).*energy.*use.*data", re.I)),
+            page.get_by_role("link", name=re.compile(r"download.*(my|your).*energy.*use.*data", re.I)),
+            page.get_by_role("button", name=re.compile(r"download.*energy", re.I)),
+            page.get_by_role("link", name=re.compile(r"download.*energy", re.I)),
+            page.get_by_text(re.compile(r"download.*(my|your).*energy.*use.*data", re.I)),
+        ))
+        if trigger:
+            break
+        page.wait_for_timeout(1_000)
     if not trigger:
-        raise RuntimeError("Could not find NYSEG's 'Download My Energy Use Data' control. Run with --headed and inspect the portal.")
+        raise RuntimeError("NYSEG Insights did not finish rendering a Download My/your Energy Use Data control within 60 seconds.")
     trigger.click()
     dialog = page.get_by_role("dialog")
     try:
