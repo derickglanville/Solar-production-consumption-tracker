@@ -57,7 +57,13 @@ def load_nyseg_interval_file_rows(path: Path | None = None) -> dict[str, Any]:
         summary["Weather"] = sum(summary["Weather"]) / len(summary["Weather"]) if summary["Weather"] else 0.0
         summary["m02_m01_diff"] = summary["Received"] - summary["Delivered"]
         daily_rows.append(summary)
-    return {"available": True, "source_name": source_path.name, "fields": fields, "rows": rows, "daily_rows": daily_rows}
+    return {
+        "available": True,
+        "source_name": source_path.name,
+        "fields": fields,
+        "rows": sorted(rows, key=lambda row: (row["Date"], row["Start Time"]), reverse=True),
+        "daily_rows": sorted(daily_rows, key=lambda row: row["Date"], reverse=True),
+    }
 
 def build_nyseg_interval_usage_report(path: Path | None = None) -> dict[str, Any]:
     """Summarize Delivered (grid import) and Received (grid export) hourly readings."""
