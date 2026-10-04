@@ -33,8 +33,29 @@ def load_nyseg_interval_file_rows(path: Path | None = None) -> dict[str, Any]:
         return {"available": False, "source_name": DEFAULT_INTERVAL_USAGE_PATH.name, "rows": []}
     fields = ["Date", "Start Time", "End Time", "Net", "Units", "Costs", "Weather", "Delivered", "Received"]
     with source_path.open("r", encoding="utf-8-sig", newline="") as handle:
-        rows = [{field: row.get(field, "") for field in fields} for row in csv.DictReader(handle)]
-    return {"available": True, "source_name": source_path.name, "fields": fields, "rows": rows}
+        rows = []
+        for row in csv.DictReader(handle):
+            start_raw, end_raw = row.get("Start Time", ""), row.get("End Time", "")
+            try:
+                start_label = datetime.fromisoformat(start_raw).strftime("%b %#d, %Y · %#I:%M %p")
+                end_label = datetime.fromisoformat(end_raw).strftime("%#I:%M %p")
+            except ValueError:
+                start_label, end_label = start_raw, end_raw
+            rows.append({**{field: row.get(field, "") for field in fields}, "start_label": start_label, "end_label": end_label})
+    daily: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        summary = daily.setdefault(row["Date"], {"Date": row["Date"], "start_label": row["start_label"], "end_label": row["end_label"], "Net": 0.0, "Costs": 0.0, "Weather": [], "Delivered": 0.0, "Received": 0.0, "interval_count": 0, "Units": row["Units"] or "kWh"})
+        summary["end_label"] = row["end_label"]
+        for field in ("Net", "Costs", "Delivered", "Received"):
+            summary[field] += _number(row[field])
+        summary["Weather"].append(_number(row["Weather"]))
+        summary["interval_count"] += 1
+    daily_rows = []
+    for summary in daily.values():
+        summary["Weather"] = sum(summary["Weather"]) / len(summary["Weather"]) if summary["Weather"] else 0.0
+        daily_rows.append(summary)
+    return {"available": True, "source_name": source_path.name, "fields": fields, "rows": rows, "daily_rows": daily_rows}
+
 def build_nyseg_interval_usage_report(path: Path | None = None) -> dict[str, Any]:
     """Summarize Delivered (grid import) and Received (grid export) hourly readings."""
     source_path = path or DEFAULT_INTERVAL_USAGE_PATH

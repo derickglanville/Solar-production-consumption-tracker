@@ -490,7 +490,9 @@ def nyseg_usage():
 
 @main_blueprint.route("/nyseg-usage-file")
 def nyseg_usage_file():
-    return render_template("nyseg_usage_file.html", page_name="nyseg-usage-file", local_snapshot_mode=False, bootstrap_data=build_bootstrap_data(), interval_file=load_nyseg_interval_file_rows())
+    interval_file = load_nyseg_interval_file_rows()
+    grouped = request.args.get("group") == "day"
+    return render_template("nyseg_usage_file.html", page_name="nyseg-usage-file", local_snapshot_mode=False, bootstrap_data=build_bootstrap_data(), interval_file=interval_file, grouped=grouped)
 
 @main_blueprint.route("/nyseg-reconciliation")
 def nyseg_reconciliation():

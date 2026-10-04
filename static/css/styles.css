@@ -3677,3 +3677,6 @@ body[data-page="dashboard"].dashboard-compact-mode .btn-contract {
 .nyseg-usage-callout span { color: #6d8291; display: block; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; }
 .nyseg-usage-callout strong { color: #1d566e; display: block; margin-top: 0.13rem; }
 .nyseg-usage-callout small { color: #6a7f8f; display: block; font-size: 0.78rem; margin-top: 0.12rem; }
+.nyseg-file-table-wrap { max-height: 70vh; overflow: auto; }
+.nyseg-file-table thead th { background: #f4f8fa; box-shadow: 0 1px 0 rgba(63, 94, 112, 0.2); position: sticky; top: 0; z-index: 2; white-space: nowrap; }
+.nyseg-file-table th[title] { cursor: help; }
