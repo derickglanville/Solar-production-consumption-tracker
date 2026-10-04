@@ -2,7 +2,12 @@
 
 {% block content %}
 <div class="entries-status-row"><span id="entries-firebase-status" class="entries-firebase-status entries-firebase-status-connecting" role="status">Firebase: Connecting…</span></div><div id="entries-status"></div>
-<div class="card tracker-card meter-photo-quick-card mb-4">
+<div class="card tracker-card nyseg-meter-import-card mb-4" id="entry-nyseg-meter-import">
+  <div class="card-body d-flex flex-wrap justify-content-between align-items-center gap-3">
+    <div><p class="eyebrow mb-1">NYSEG utility intervals</p><h2 class="h5 mb-1">Populate estimated M01 and M02 readings</h2><p class="text-muted small mb-0">Review the utility-derived daily readings first. Confirmed manual readings stay protected.</p></div>
+    <button type="button" class="btn btn-contract" id="entry-nyseg-meter-preview">Review NYSEG meter import</button>
+  </div>
+</div><div class="card tracker-card meter-photo-quick-card mb-4">
   <div class="card-body">
     <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
       <div><p class="eyebrow mb-1">Current calibration checkpoint</p><h2 class="h5 mb-1">Update meters from photos</h2><p class="text-muted small mb-0">1. Capture M01. 2. Capture M02. 3. Verify the values shown. 4. Save the checkpoint.</p></div>
@@ -653,6 +658,7 @@
   .calibration-v2-compare th:first-child, .calibration-v2-compare td:first-child { text-align: left; }
   .calibration-v2-compare tbody tr:last-child td { border-bottom: 0; }
   @media (max-width: 767px) { .calibration-v2-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } .calibration-v2-popout-shell { padding: 0.55rem; } .calibration-v2-popout-dialog { max-height: calc(100vh - 1.1rem); padding: 0.85rem; } .calibration-v2-popout-grid { grid-template-columns: 1fr; } }
+  .nyseg-meter-import-card { border-color: rgba(36, 102, 123, 0.28); background: linear-gradient(105deg, #f6fbfc, #eff8f3); }
   .meter-photo-review { border-top: 1px solid rgba(92, 124, 146, 0.2); padding-top: 0.75rem; }
   .meter-photo-review > strong { display: block; color: #24495d; font-size: 0.9rem; }
   .meter-photo-review > span { color: #667b8c; display: block; font-size: 0.78rem; margin: 0.15rem 0 0.55rem; }

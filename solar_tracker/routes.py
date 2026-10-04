@@ -691,6 +691,19 @@ def circuit_breakers_save_api():
     return jsonify(save_circuit_breakers(payload))
 
 
+@main_blueprint.route("/api/nyseg-meter-intervals")
+def nyseg_meter_intervals_api():
+    report = build_nyseg_interval_usage_report()
+    return jsonify({
+        "available": report["available"],
+        "source_start": report.get("source_start"),
+        "source_end": report.get("source_end"),
+        "daily": [
+            {"date": row["date"], "import_kwh": row["import_kwh"], "export_kwh": row["export_kwh"]}
+            for row in reversed(report.get("daily", []))
+        ],
+    })
+
 @main_blueprint.route("/api/sunrun-production")
 def sunrun_production_api():
     return jsonify(load_sunrun_daily_production())
