@@ -5654,7 +5654,18 @@ function buildNysegMeterImportPreview(entries, dailyIntervals) {
     }
     if (!anchor) continue;
     anchor = { m01: anchor.m01 + Number(interval.import_kwh || 0), m02: anchor.m02 + Number(interval.export_kwh || 0), date: interval.date };
-    if (entry) updates.push({ entry, date: interval.date, m01: Number(anchor.m01.toFixed(1)), m02: Number(anchor.m02.toFixed(1)), importKwh: Number(interval.import_kwh || 0), exportKwh: Number(interval.export_kwh || 0) });
+    // NYSEG may cover days that Data Entry has not created yet. Include those
+    // days in the review so the utility file can fill the gap from the latest
+    // confirmed cumulative reading.
+    updates.push({
+      entry: entry || null,
+      isNew: !entry,
+      date: interval.date,
+      m01: Number(anchor.m01.toFixed(1)),
+      m02: Number(anchor.m02.toFixed(1)),
+      importKwh: Number(interval.import_kwh || 0),
+      exportKwh: Number(interval.export_kwh || 0)
+    });
   }
   return updates;
 }
@@ -5663,8 +5674,9 @@ function openNysegMeterImportPreview(db, updates, sourceStart, sourceEnd, { befo
   document.querySelector(".nyseg-meter-import-popout")?.remove();
   const shell = document.createElement("div");
   shell.className = "calibration-v2-popout-shell nyseg-meter-import-popout";
-  const rows = updates.map((item) => `<tr><td>${item.date}</td><td>${item.entry.meter_01_import_reading.toFixed(1)} → <strong>${item.m01.toFixed(1)}</strong></td><td>${item.entry.meter_02_export_reading.toFixed(1)} → <strong>${item.m02.toFixed(1)}</strong></td><td>+${item.importKwh.toFixed(1)} / +${item.exportKwh.toFixed(1)} kWh</td></tr>`).join("");
-  shell.innerHTML = `<div class="calibration-v2-popout-backdrop" data-nyseg-import-close></div><section class="calibration-v2-popout-dialog" role="dialog" aria-modal="true"><div class="calibration-v2-heading mb-3"><div><p class="eyebrow mb-1">Review utility meter import</p><h3>NYSEG-derived M01/M02 updates</h3><p>Utility intervals from ${escapeHtml(sourceStart)} through ${escapeHtml(sourceEnd)} are converted to cumulative meter readings from the most recent confirmed reading. Confirmed manual rows are not included.</p></div><button type="button" class="btn btn-contract btn-sm" data-nyseg-import-close>Close</button></div><p class="calibration-v2-note mt-0"><strong>${updates.length} estimated row${updates.length === 1 ? "" : "s"} will be updated.</strong> M01 uses NYSEG Delivered energy; M02 uses NYSEG Received energy. Review these values before applying.</p><div class="table-responsive"><table class="table table-sm align-middle"><thead><tr><th>Date</th><th>M01 current → utility</th><th>M02 current → utility</th><th>Daily intervals</th></tr></thead><tbody>${rows || '<tr><td colspan="4" class="text-muted">No estimated rows can be safely updated from the available anchors.</td></tr>'}</tbody></table></div><div class="d-flex justify-content-end gap-2 mt-3"><button type="button" class="btn btn-contract" data-nyseg-import-close>Cancel</button><button type="button" class="btn btn-sun" data-nyseg-import-apply ${updates.length ? "" : "disabled"}>Apply utility readings</button></div></section>`;
+  const createdCount = updates.filter((item) => item.isNew).length;
+  const rows = updates.map((item) => `<tr><td>${item.date}</td><td>${item.isNew ? "New" : `${item.entry.meter_01_import_reading.toFixed(1)} →`} <strong>${item.m01.toFixed(1)}</strong></td><td>${item.isNew ? "New" : `${item.entry.meter_02_export_reading.toFixed(1)} →`} <strong>${item.m02.toFixed(1)}</strong></td><td>+${item.importKwh.toFixed(1)} / +${item.exportKwh.toFixed(1)} kWh</td></tr>`).join("");
+  shell.innerHTML = `<div class="calibration-v2-popout-backdrop" data-nyseg-import-close></div><section class="calibration-v2-popout-dialog" role="dialog" aria-modal="true"><div class="calibration-v2-heading mb-3"><div><p class="eyebrow mb-1">Review utility meter import</p><h3>NYSEG-derived M01/M02 updates</h3><p>Utility intervals from ${escapeHtml(sourceStart)} through ${escapeHtml(sourceEnd)} are converted to cumulative meter readings from the most recent confirmed reading. Confirmed manual rows are not changed.</p></div><button type="button" class="btn btn-contract btn-sm" data-nyseg-import-close>Close</button></div><p class="calibration-v2-note mt-0"><strong>${updates.length} daily record${updates.length === 1 ? "" : "s"} will be applied${createdCount ? `; ${createdCount} missing row${createdCount === 1 ? "" : "s"} will be created` : ""}.</strong> M01 uses NYSEG Delivered energy; M02 uses NYSEG Received energy. Review these values before applying.</p><div class="table-responsive"><table class="table table-sm align-middle"><thead><tr><th>Date</th><th>M01 current → utility</th><th>M02 current → utility</th><th>Daily intervals</th></tr></thead><tbody>${rows || '<tr><td colspan="4" class="text-muted">No days can be derived because the file has no confirmed reading anchor.</td></tr>'}</tbody></table></div><div class="d-flex justify-content-end gap-2 mt-3"><button type="button" class="btn btn-contract" data-nyseg-import-close>Cancel</button><button type="button" class="btn btn-sun" data-nyseg-import-apply ${updates.length ? "" : "disabled"}>Apply utility readings</button></div></section>`;
   const close = () => shell.remove();
   shell.querySelectorAll("[data-nyseg-import-close]").forEach((button) => button.addEventListener("click", close));
   shell.querySelector("[data-nyseg-import-apply]")?.addEventListener("click", async () => {
@@ -5674,14 +5686,15 @@ function openNysegMeterImportPreview(db, updates, sourceStart, sourceEnd, { befo
       if (beforeApply) await beforeApply(updates);
       for (const item of updates) {
         await setDoc(doc(db, entryCollectionName, item.date), {
+          entry_date: item.date,
           meter_01_import_reading: item.m01, meter_02_export_reading: item.m02,
           meter_values_confirmed: true, meter_values_estimated: false,
-          lookup_source: "nyseg-hourly-intervals", updated_at: new Date().toISOString(),
-          notes: `${item.entry.notes || ""}${item.entry.notes ? "\n" : ""}M01/M02 updated from NYSEG hourly Delivered/Received intervals after review.`
+          estimated: false, lookup_source: "nyseg-hourly-intervals", updated_at: new Date().toISOString(),
+          notes: `${item.entry?.notes || ""}${item.entry?.notes ? "\n" : ""}M01/M02 ${item.isNew ? "created" : "updated"} from NYSEG hourly Delivered/Received intervals after review.`
         }, { merge: true });
       }
       close();
-      renderStatusAlert("entries-status", `NYSEG utility readings updated for ${updates.length} estimated day${updates.length === 1 ? "" : "s"}.`, "success");
+      renderStatusAlert("entries-status", `NYSEG utility readings applied for ${updates.length} day${updates.length === 1 ? "" : "s"}.`, "success");
       window.setTimeout(() => window.location.reload(), 700);
     } catch (error) { applyButton.disabled = false; applyButton.textContent = "Apply utility readings"; renderStatusAlert("entries-status", `Could not apply the utility readings: ${error.message || error}`, "danger"); }
   });
@@ -5773,10 +5786,10 @@ async function setupNysegUsageFileActions(db) {
       if (!response.ok || !payload.available) throw new Error("The local NYSEG interval file is unavailable.");
       const updates = buildNysegMeterImportPreview(state.entries, payload.daily);
       openNysegMeterImportPreview(db, updates, payload.source_start, payload.source_end, {
-        beforeApply: async (selectedUpdates) => {
+        beforeApply: async () => {
           const fresh = await loadFirestoreState(db);
-          const saved = await saveNysegMeterBackup(db, fresh.entries, selectedUpdates);
-          show(`Backup saved for ${saved.count} reading${saved.count === 1 ? "" : "s"}; applying reviewed utility values.`, "success");
+          const saved = await saveNysegMeterBackup(db, fresh.entries);
+          show(`Backup saved for ${saved.count} existing reading${saved.count === 1 ? "" : "s"}; applying reviewed utility values.`, "success");
         }
       });
     } catch (error) { show(`Could not prepare the NYSEG import: ${error.message || error}`, "danger"); }
