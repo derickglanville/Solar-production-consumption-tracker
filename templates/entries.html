@@ -8,7 +8,7 @@
     <button type="button" class="btn btn-contract" id="entry-nyseg-meter-preview">Review NYSEG meter import</button>
     <a class="btn btn-contract" href="{{ url_for('main.nyseg_usage_file') }}">View NYSEG file</a>
   </div>
-</div><div class="card tracker-card meter-photo-quick-card mb-4">
+</div><details class="card tracker-card meter-photo-quick-card meter-photo-quick-collapsed mb-4"><summary><span><span class="eyebrow">Current calibration checkpoint</span><strong>Update meters from photos</strong></span><span class="meter-photo-quick-summary-action">Show</span></summary>
   <div class="card-body">
     <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
       <div><p class="eyebrow mb-1">Current calibration checkpoint</p><h2 class="h5 mb-1">Update meters from photos</h2><p class="text-muted small mb-0">1. Capture M01. 2. Capture M02. 3. Verify the values shown. 4. Save the checkpoint.</p></div>
@@ -26,7 +26,7 @@
     </div>
     <p class="form-text mb-0">After each capture, use <strong>Save photo to Pictures</strong> and choose <strong>Save Image</strong> in the iPhone share sheet. The app then reads the number and saves the confirmed M01/M02 values to today’s Calibration Checkpoint.</p>
   </div>
-</div><div class="row g-4">
+</div></details><div class="row g-4">
   <div class="col-lg-4 col-xl-3">
     <div class="card tracker-card">
       <div class="card-body">
@@ -669,6 +669,14 @@
   .meter-photo-review-card div { padding: 0.45rem 0.55rem; color: #365367; font-size: 0.78rem; }
   .meter-photo-review-card strong { color: #123a53; font-size: 0.95rem; }
   .meter-photo-quick-card { border-color: rgba(46, 115, 145, 0.28); background: linear-gradient(105deg, #f8fcff, #edf8f2); }
+  .meter-photo-quick-collapsed > summary { align-items: center; cursor: pointer; display: flex; justify-content: space-between; list-style: none; min-height: 2.7rem; padding: 0.45rem 0.75rem; }
+  .meter-photo-quick-collapsed > summary::-webkit-details-marker { display: none; }
+  .meter-photo-quick-collapsed > summary .eyebrow { display: inline; font-size: 0.67rem; margin: 0 0.35rem 0 0; }
+  .meter-photo-quick-collapsed > summary strong { color: #294b5f; font-size: 0.82rem; }
+  .meter-photo-quick-summary-action { color: #2d6684; font-size: 0.75rem; font-weight: 700; }
+  .meter-photo-quick-collapsed[open] > summary { border-bottom: 1px solid rgba(46, 115, 145, 0.2); }
+  .meter-photo-quick-collapsed[open] > summary .meter-photo-quick-summary-action { font-size: 0; }
+  .meter-photo-quick-collapsed[open] > summary .meter-photo-quick-summary-action::after { content: "Hide"; font-size: 0.75rem; }
   .meter-photo-quick-actions, .meter-photo-save-actions { display: flex; flex-wrap: wrap; gap: 0.55rem; align-items: center; }
   .meter-photo-quick-step { color: #2d5f77; font-size: 0.82rem; font-weight: 700; }
   .meter-photo-save-actions:empty { display: none; }
