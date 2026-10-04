@@ -3680,5 +3680,6 @@ body[data-page="dashboard"].dashboard-compact-mode .btn-contract {
 .nyseg-file-table-wrap { max-height: 70vh; overflow: auto; }
 .nyseg-file-table thead th { background: #f4f8fa; box-shadow: 0 1px 0 rgba(63, 94, 112, 0.2); position: sticky; top: 0; z-index: 2; white-space: nowrap; }
 .nyseg-file-table th[title] { cursor: help; }
+.nyseg-file-table .nyseg-interval-count { min-width: 3.8rem; padding-left: 0.35rem; padding-right: 0.35rem; width: 3.8rem; }
 .nyseg-file-chart-card { border-color: #c7dce2; }
 .nyseg-file-comparison-chart { min-height: 290px; width: 100%; }
