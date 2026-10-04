@@ -8,7 +8,8 @@ from pathlib import Path
 from typing import Any
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-DEFAULT_INTERVAL_USAGE_PATH = PROJECT_ROOT / "NYSEG Bill" / "Data" / "nyseg_electric_60_Minute_07-01-2026_10-03-2026.csv"
+DEFAULT_INTERVAL_USAGE_PATH = PROJECT_ROOT / "SunRun Data" / "NYSEG_Daily_Usage_Data.csv"
+FALLBACK_INTERVAL_USAGE_PATH = PROJECT_ROOT / "NYSEG Bill" / "Data" / "nyseg_electric_60_Minute_07-01-2026_10-03-2026.csv"
 
 
 def _number(value: Any) -> float:
@@ -25,6 +26,8 @@ def _empty_report() -> dict[str, Any]:
 def build_nyseg_interval_usage_report(path: Path | None = None) -> dict[str, Any]:
     """Summarize Delivered (grid import) and Received (grid export) hourly readings."""
     source_path = path or DEFAULT_INTERVAL_USAGE_PATH
+    if not source_path.is_file() and path is None:
+        source_path = FALLBACK_INTERVAL_USAGE_PATH
     if not source_path.is_file():
         return _empty_report()
 
