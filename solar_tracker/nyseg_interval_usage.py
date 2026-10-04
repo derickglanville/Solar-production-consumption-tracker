@@ -41,7 +41,9 @@ def load_nyseg_interval_file_rows(path: Path | None = None) -> dict[str, Any]:
                 end_label = datetime.fromisoformat(end_raw).strftime("%#I:%M %p")
             except ValueError:
                 start_label, end_label = start_raw, end_raw
-            rows.append({**{field: row.get(field, "") for field in fields}, "start_label": start_label, "end_label": end_label})
+            values = {field: row.get(field, "") for field in fields}
+            values["m02_m01_diff"] = _number(values["Received"]) - _number(values["Delivered"])
+            rows.append({**values, "start_label": start_label, "end_label": end_label})
     daily: dict[str, dict[str, Any]] = {}
     for row in rows:
         summary = daily.setdefault(row["Date"], {"Date": row["Date"], "start_label": row["start_label"], "end_label": row["end_label"], "Net": 0.0, "Costs": 0.0, "Weather": [], "Delivered": 0.0, "Received": 0.0, "interval_count": 0, "Units": row["Units"] or "kWh"})
@@ -53,6 +55,7 @@ def load_nyseg_interval_file_rows(path: Path | None = None) -> dict[str, Any]:
     daily_rows = []
     for summary in daily.values():
         summary["Weather"] = sum(summary["Weather"]) / len(summary["Weather"]) if summary["Weather"] else 0.0
+        summary["m02_m01_diff"] = summary["Received"] - summary["Delivered"]
         daily_rows.append(summary)
     return {"available": True, "source_name": source_path.name, "fields": fields, "rows": rows, "daily_rows": daily_rows}
 
