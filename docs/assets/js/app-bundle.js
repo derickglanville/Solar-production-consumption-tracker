@@ -28601,7 +28601,7 @@ This is a reconciliation, not an independent measurement, because EDC includes S
     }
     return updates;
   }
-  function openNysegMeterImportPreview(db, updates, sourceStart, sourceEnd) {
+  function openNysegMeterImportPreview(db, updates, sourceStart, sourceEnd, { beforeApply = null } = {}) {
     document.querySelector(".nyseg-meter-import-popout")?.remove();
     const shell = document.createElement("div");
     shell.className = "calibration-v2-popout-shell nyseg-meter-import-popout";
@@ -28614,6 +28614,7 @@ This is a reconciliation, not an independent measurement, because EDC includes S
       applyButton.disabled = true;
       applyButton.textContent = "Applying\u2026";
       try {
+        if (beforeApply) await beforeApply(updates);
         for (const item of updates) {
           await setDoc2(doc(db, entryCollectionName, item.date), {
             meter_01_import_reading: item.m01,
@@ -28635,6 +28636,112 @@ This is a reconciliation, not an independent measurement, because EDC includes S
       }
     });
     document.body.appendChild(shell);
+  }
+  function nysegMeterBackup(entries, updates = null) {
+    const dates = updates ? new Set(updates.map((item) => item.date)) : null;
+    return (entries || []).filter((entry) => !dates || dates.has(entry.entry_date)).map((entry) => ({
+      entry_date: entry.entry_date,
+      meter_01_import_reading: Number(entry.meter_01_import_reading || 0),
+      meter_02_export_reading: Number(entry.meter_02_export_reading || 0),
+      meter_values_confirmed: Boolean(entry.meter_values_confirmed),
+      meter_values_estimated: Boolean(entry.meter_values_estimated),
+      meter_values_calibrated: Boolean(entry.meter_values_calibrated),
+      estimated: Boolean(entry.estimated),
+      lookup_source: entry.lookup_source || "",
+      notes: entry.notes || "",
+      notes_manual: Boolean(entry.notes_manual)
+    }));
+  }
+  async function saveNysegMeterBackup(db, entries, updates = null) {
+    const rows = nysegMeterBackup(entries, updates);
+    if (!rows.length) throw new Error("There are no M01/M02 readings available to back up.");
+    const recordedAt = (/* @__PURE__ */ new Date()).toISOString();
+    await setDoc2(doc(db, configCollectionName, configDocumentId), {
+      nyseg_meter_import_backup: { recorded_at: recordedAt, rows }
+    }, { merge: true });
+    return { recordedAt, count: rows.length };
+  }
+  async function setupNysegUsageFileActions(db) {
+    const importButton = document.getElementById("nyseg-file-import");
+    const backupButton = document.getElementById("nyseg-file-backup");
+    const restoreButton = document.getElementById("nyseg-file-restore");
+    const status = document.getElementById("nyseg-file-action-status");
+    if (!importButton && !backupButton && !restoreButton) return;
+    const show = (message, kind = "info") => {
+      if (!status) return;
+      status.className = `small mt-2 mb-0 text-${kind === "danger" ? "danger" : kind === "success" ? "success" : "muted"}`;
+      status.textContent = message;
+    };
+    if (isStaticSite()) {
+      [importButton, backupButton, restoreButton].filter(Boolean).forEach((button) => {
+        button.disabled = true;
+        button.title = "These actions require the private NYSEG CSV in the local tracker.";
+      });
+      show("M01/M02 import and restore are available in the local tracker, where the private NYSEG CSV is stored.");
+      return;
+    }
+    let state;
+    try {
+      state = await loadFirestoreState(db);
+    } catch (error) {
+      show("Firebase could not load the current M01/M02 readings. Refresh and try again.", "danger");
+      return;
+    }
+    const backup = state.config?.nyseg_meter_import_backup;
+    if (backup?.recorded_at) show(`Latest backup: ${backup.rows?.length || 0} readings saved ${new Date(backup.recorded_at).toLocaleString()}.`);
+    if (backupButton) backupButton.addEventListener("click", async () => {
+      backupButton.disabled = true;
+      try {
+        const saved = await saveNysegMeterBackup(db, state.entries);
+        show(`Backup saved: ${saved.count} M01/M02 readings at ${new Date(saved.recordedAt).toLocaleString()}.`, "success");
+      } catch (error) {
+        show(`Could not save backup: ${error.message || error}`, "danger");
+      } finally {
+        backupButton.disabled = false;
+      }
+    });
+    if (restoreButton) restoreButton.addEventListener("click", async () => {
+      const current = await loadFirestoreState(db);
+      const savedBackup = current.config?.nyseg_meter_import_backup;
+      const rows = savedBackup?.rows || [];
+      if (!rows.length) {
+        show("No M01/M02 backup has been saved yet.", "danger");
+        return;
+      }
+      if (!window.confirm(`Restore ${rows.length} backed-up M01/M02 readings saved ${new Date(savedBackup.recorded_at).toLocaleString()}?`)) return;
+      restoreButton.disabled = true;
+      try {
+        for (const row of rows) await setDoc2(doc(db, entryCollectionName, row.entry_date), { ...row, updated_at: (/* @__PURE__ */ new Date()).toISOString() }, { merge: true });
+        show(`Restored ${rows.length} M01/M02 readings from the saved backup.`, "success");
+      } catch (error) {
+        show(`Could not restore backup: ${error.message || error}`, "danger");
+      } finally {
+        restoreButton.disabled = false;
+      }
+    });
+    if (importButton) importButton.addEventListener("click", async () => {
+      importButton.disabled = true;
+      const original = importButton.textContent;
+      importButton.textContent = "Preparing review\u2026";
+      try {
+        const response = await fetch("/api/nyseg-meter-intervals");
+        const payload = await response.json();
+        if (!response.ok || !payload.available) throw new Error("The local NYSEG interval file is unavailable.");
+        const updates = buildNysegMeterImportPreview(state.entries, payload.daily);
+        openNysegMeterImportPreview(db, updates, payload.source_start, payload.source_end, {
+          beforeApply: async (selectedUpdates) => {
+            const fresh = await loadFirestoreState(db);
+            const saved = await saveNysegMeterBackup(db, fresh.entries, selectedUpdates);
+            show(`Backup saved for ${saved.count} reading${saved.count === 1 ? "" : "s"}; applying reviewed utility values.`, "success");
+          }
+        });
+      } catch (error) {
+        show(`Could not prepare the NYSEG import: ${error.message || error}`, "danger");
+      } finally {
+        importButton.disabled = false;
+        importButton.textContent = original;
+      }
+    });
   }
   function setupNysegMeterImport(db) {
     const button = document.getElementById("entry-nyseg-meter-preview");
@@ -28794,6 +28901,10 @@ This is a reconciliation, not an independent measurement, because EDC includes S
     }
     if (getPageName() === "entries") {
       await bootEntries(context.db);
+      return;
+    }
+    if (getPageName() === "nyseg-usage-file") {
+      await setupNysegUsageFileActions(context.db);
       return;
     }
     if (getPageName() === "settings") {

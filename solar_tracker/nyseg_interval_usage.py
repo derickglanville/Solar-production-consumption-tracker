@@ -30,7 +30,12 @@ def load_nyseg_interval_file_rows(path: Path | None = None) -> dict[str, Any]:
     if not source_path.is_file() and path is None:
         source_path = FALLBACK_INTERVAL_USAGE_PATH
     if not source_path.is_file():
-        return {"available": False, "source_name": DEFAULT_INTERVAL_USAGE_PATH.name, "rows": []}
+        return {
+            "available": False,
+            "source_name": DEFAULT_INTERVAL_USAGE_PATH.name,
+            "source_path": str(DEFAULT_INTERVAL_USAGE_PATH),
+            "rows": [],
+        }
     fields = ["Date", "Start Time", "End Time", "Net", "Units", "Costs", "Weather", "Delivered", "Received"]
     with source_path.open("r", encoding="utf-8-sig", newline="") as handle:
         rows = []
@@ -60,6 +65,7 @@ def load_nyseg_interval_file_rows(path: Path | None = None) -> dict[str, Any]:
     return {
         "available": True,
         "source_name": source_path.name,
+        "source_path": str(source_path),
         "fields": fields,
         "rows": sorted(rows, key=lambda row: (row["Date"], row["Start Time"]), reverse=True),
         "daily_rows": sorted(daily_rows, key=lambda row: row["Date"], reverse=True),
