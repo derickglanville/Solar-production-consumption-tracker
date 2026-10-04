@@ -514,6 +514,23 @@ def nyseg_usage_file():
         }
         for row in interval_file.get("daily_rows", [])
     ]
+    monthly_costs: dict[str, dict] = {}
+    for row in chart_rows:
+        month_key = row["date"][:7]
+        summary = monthly_costs.setdefault(month_key, {"m01_kwh": 0.0, "m02_kwh": 0.0})
+        summary["m01_kwh"] += row["delivered_kwh"]
+        summary["m02_kwh"] += row["received_kwh"]
+    monthly_net_charges = [
+        {
+            "month": date.fromisoformat(f"{month_key}-01").strftime("%B %Y"),
+            "m01_kwh": values["m01_kwh"],
+            "m02_kwh": values["m02_kwh"],
+            "import_cost": values["m01_kwh"] * electric_rate,
+            "export_value": values["m02_kwh"] * electric_rate,
+            "net_cost": (values["m01_kwh"] - values["m02_kwh"]) * electric_rate,
+        }
+        for month_key, values in sorted(monthly_costs.items(), reverse=True)
+    ]
     return render_template(
         "nyseg_usage_file.html",
         page_name="nyseg-usage-file",
@@ -523,6 +540,7 @@ def nyseg_usage_file():
         grouped=grouped,
         chart_rows=chart_rows,
         electric_rate=electric_rate,
+        monthly_net_charges=monthly_net_charges,
     )
 
 @main_blueprint.route("/nyseg-reconciliation")
