@@ -22,3 +22,15 @@ test('utility import creates missing daily rows after its latest confirmed ancho
     { entry: null, isNew: true, date: '2026-09-17', m01: 1121, m02: 2905.7, importKwh: 13.5, exportKwh: 16.8 }
   ]);
 });
+test('utility import falls back to existing cumulative rows when a stale payload lacks confirmation flags', () => {
+  const updates = context.buildNysegMeterImportPreview([
+    { entry_date: '2026-09-15', meter_01_import_reading: 1095, meter_02_export_reading: 2847.8 }
+  ], [
+    { date: '2026-09-15', import_kwh: 10, export_kwh: 50 },
+    { date: '2026-09-16', import_kwh: 12.5, export_kwh: 41.1 }
+  ]);
+  assert.equal(updates.length, 1);
+  assert.equal(updates[0].date, '2026-09-16');
+  assert.equal(updates[0].m01, 1107.5);
+  assert.equal(updates[0].m02, 2888.9);
+});

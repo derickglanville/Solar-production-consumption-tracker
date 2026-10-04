@@ -3706,3 +3706,14 @@ body[data-page="dashboard"].dashboard-compact-mode .btn-contract {
 .chart-popout-body [data-chart-popout-content] { flex: 1 1 auto; max-width: none; overflow-y: auto; }
 
 .chart-popout-body [data-chart-popout-content] .nyseg-monthly-net-list { max-height: none; overflow-y: visible; }
+
+/* Shared modal frame used by Calibration V2 and the NYSEG utility-import review. */
+.calibration-v2-popout-shell { align-items: center; display: flex; inset: 0; justify-content: center; padding: 1rem; position: fixed; z-index: 2500; }
+.calibration-v2-popout-backdrop { background: rgba(20, 45, 58, 0.52); inset: 0; position: absolute; }
+.calibration-v2-popout-dialog { background: #f8fcfd; border: 1px solid #bcd6e0; border-radius: 1rem; box-shadow: 0 1.5rem 4rem rgba(14, 45, 58, 0.35); max-height: min(85vh, 54rem); max-width: 72rem; overflow: auto; padding: 1.25rem; position: relative; width: min(100%, 72rem); }
+.calibration-v2-heading { align-items: flex-start; display: flex; gap: 1rem; justify-content: space-between; }
+.calibration-v2-heading h3 { color: #173f53; font-size: 1.35rem; margin: 0 0 0.35rem; }
+.calibration-v2-heading p { margin-bottom: 0; }
+.calibration-v2-popout-dialog .table-responsive { max-height: min(52vh, 35rem); }
+.calibration-v2-popout-dialog thead th { background: #edf6f8; position: sticky; top: 0; }
+@media (max-width: 600px) { .calibration-v2-popout-shell { align-items: end; padding: 0.5rem; } .calibration-v2-popout-dialog { border-radius: 0.8rem; max-height: 92vh; padding: 1rem; } .calibration-v2-heading { align-items: stretch; flex-direction: column; } }

@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/styles.css?v=20261004-nyseg-gap-import">
+  <link rel="stylesheet" href="assets/css/styles.css?v=20261004-nyseg-modal-anchor">
   <script src="https://cdn.plot.ly/plotly-3.4.0.min.js"></script>
 </head>
 <body data-page="electricity-usage" data-local-snapshot-mode="false">
@@ -87,12 +87,12 @@
     </div>
   </main>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/js/bootstrap.bundle.min.js"></script>
-  <script src="assets/js/site-bootstrap.js?v=20261004-nyseg-gap-import"></script>
-  <script src="assets/js/firebase-config.js?v=20261004-nyseg-gap-import"></script>
-  <script defer src="assets/js/app-bundle.js?v=20261004-nyseg-gap-import"></script>
+  <script src="assets/js/site-bootstrap.js?v=20261004-nyseg-modal-anchor"></script>
+  <script src="assets/js/firebase-config.js?v=20261004-nyseg-modal-anchor"></script>
+  <script defer src="assets/js/app-bundle.js?v=20261004-nyseg-modal-anchor"></script>
 
 <script>window.REFERENCE_EDITOR_BOOTSTRAP = {"center_estimate": "35-40 kWh/day with moderate air-conditioning use", "intro": "This is a realistic 24-hour household electricity budget for the current setup. Treat it as a working model rather than a measurement, but it should help identify the largest loads.", "loads": [{"assumed_daily_use": "Several hours cycling", "estimated_kwh_day": "8-18", "load": "Central/portable AC"}, {"assumed_daily_use": "24 hr cycling", "estimated_kwh_day": "2-4", "load": "Refrigerator + freezer(s)"}, {"assumed_daily_use": "8-12 hr cycling", "estimated_kwh_day": "3-6", "load": "Dehumidifier"}, {"assumed_daily_use": "About 1 load", "estimated_kwh_day": "3-5", "load": "Electric dryer"}, {"assumed_daily_use": "Normal cooking", "estimated_kwh_day": "2-4", "load": "Electric stove/oven"}, {"assumed_daily_use": "About 1 cycle", "estimated_kwh_day": "1-2", "load": "Dishwasher"}, {"assumed_daily_use": "About 1 load", "estimated_kwh_day": "0.3-0.7", "load": "Washing machine"}, {"assumed_daily_use": "Varies greatly", "estimated_kwh_day": "1-4", "load": "Pumps"}, {"assumed_daily_use": "Several hours", "estimated_kwh_day": "1.5-4", "load": "TVs + computers"}, {"assumed_daily_use": "15-30 min total", "estimated_kwh_day": "0.3-0.7", "load": "Microwave"}, {"assumed_daily_use": "Mostly hot-water duty", "estimated_kwh_day": "0.5-1.5", "load": "Oil boiler controls/circulators"}, {"assumed_daily_use": "Normal evening use", "estimated_kwh_day": "1-2", "load": "70 LED/CFL bulbs"}, {"assumed_daily_use": "24 hr", "estimated_kwh_day": "0.4-0.7", "load": "Router + modem"}, {"assumed_daily_use": "24 hr standby + use", "estimated_kwh_day": "0.1-0.3", "load": "Chromecast/streaming devices"}, {"assumed_daily_use": "Normal charging", "estimated_kwh_day": "0.1-0.4", "load": "Phones/iPads/Watches/chargers"}, {"assumed_daily_use": "Clocks, appliances, electronics", "estimated_kwh_day": "1-3", "load": "Misc. standby loads"}], "sections": [{"body": "AC 12; refrigerators/freezers 3; dehumidifier 4; dryer 4; cooking 3; dishwasher/washer 2; pumps 2; TVs/computers 3; boiler 1; lighting 1.5; networking, chargers, standby, and everything else 2.5 kWh. Roughly half can go to AC, dehumidification, and drying clothes.", "title": "Example 38 kWh day"}, {"body": "A 1,500 W heater uses about 6 kWh in 4 hours, 12 kWh in 8 hours, 18 kWh in 12 hours, or 36 kWh in 24 hours. One electrically heated room could move the home from a 30-40 kWh/day baseline to 45-60+ kWh/day. Built-in electric baseboard heat could be larger.", "title": "Winter changes everything"}, {"body": "Focus on air conditioning, the electric-heated room, dehumidifier, dryer, refrigerators/freezers, and pumps. These six categories can plausibly explain most electricity use.", "title": "Loads to investigate first"}, {"body": "Seventy efficient bulbs are unlikely to be the main issue. At about 10 W each, all 70 on together draw about 700 W. Normal use may consume only 1-2 kWh per day, while one 1,500 W heater can consume that much in about an hour.", "title": "Lighting context"}, {"body": "The Sunrun annual production guarantee is 11,141 kWh, or about 30.5 kWh/day over a year. If the home averages 40-45 kWh/day, solar supplying roughly two-thirds of annual electricity is consistent with the original expectation.", "title": "Solar context"}, {"body": "Use actual NYSEG M01 readings to calculate overnight base load while solar production is zero. This isolates continuous household demand before air conditioning, cooking, and dryer use are considered.", "title": "Recommended next measurement"}], "source_file": "Electricity Usage.docx", "title": "Household Electricity Usage Guide", "typical_daily_range": "26-55 kWh/day"};</script>
-<script defer src="assets/js/reference-editors.js?v=20261004-nyseg-gap-import"></script>
+<script defer src="assets/js/reference-editors.js?v=20261004-nyseg-modal-anchor"></script>
 
 </body>
 </html>

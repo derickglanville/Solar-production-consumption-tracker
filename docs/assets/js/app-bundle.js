@@ -28588,10 +28588,11 @@ This is a reconciliation, not an independent measurement, because EDC includes S
   function buildNysegMeterImportPreview(entries, dailyIntervals) {
     const entryByDate = new Map((entries || []).map((entry) => [entry.entry_date, entry]));
     const updates = [];
+    const hasConfirmedAnchor = (entries || []).some((entry) => entry.meter_values_confirmed === true);
     let anchor = null;
     for (const interval of dailyIntervals || []) {
       const entry = entryByDate.get(interval.date);
-      if (entry?.meter_values_confirmed === true) {
+      if (entry?.meter_values_confirmed === true || !hasConfirmedAnchor && entry) {
         anchor = { m01: Number(entry.meter_01_import_reading), m02: Number(entry.meter_02_export_reading), date: interval.date };
         continue;
       }
