@@ -26856,6 +26856,40 @@ This typically indicates that your device does not have a healthy Internet conne
     const v2Mae = (average("v2Import") + average("v2Export")) / 2;
     return { sampleCount: results.length, v1Mae, v2Mae, improvementPct: v1Mae ? (v1Mae - v2Mae) / v1Mae * 100 : 0, improved: results.length >= 8 && v2Mae < v1Mae };
   }
+  function openCalibrationV2Popout({ simulation, calibrationV2, v2Backtest, v2DifferenceImport, v2DifferenceExport, currentTime }) {
+    document.querySelector(".calibration-v2-popout-shell")?.remove();
+    const backtestAvailable = v2Backtest.sampleCount >= 8;
+    const result = !backtestAvailable ? "Not enough independent prior checkpoints are available yet to judge V2." : v2Backtest.improved ? `V2's average absolute error was ${Math.abs(v2Backtest.improvementPct).toFixed(1)}% lower than V1's.` : `V2's average absolute error was ${Math.abs(v2Backtest.improvementPct).toFixed(1)}% higher than V1's, so it remains an observer.`;
+    const signed = (value) => `${value >= 0 ? "+" : ""}${value.toFixed(1)}`;
+    const shell = document.createElement("div");
+    shell.className = "calibration-v2-popout-shell";
+    shell.innerHTML = `
+    <div class="calibration-v2-popout-backdrop" data-calibration-v2-close></div>
+    <section class="calibration-v2-popout-dialog" role="dialog" aria-modal="true" aria-labelledby="calibration-v2-popout-title">
+      <div class="calibration-v2-heading mb-3">
+        <div><p class="eyebrow mb-1">Calibration review</p><h3 id="calibration-v2-popout-title">Calibration Engine V2 \xB7 Shadow Mode</h3><p>Current evaluation at ${escapeHtml(currentTime)}. V1 continues to save the working M01/M02 values.</p></div>
+        <button type="button" class="btn btn-contract btn-sm" data-calibration-v2-close>Close</button>
+      </div>
+      <div class="calibration-v2-popout-grid">
+        <section class="calibration-v2-popout-section"><h4>Current prediction</h4><table class="calibration-v2-compare"><thead><tr><th>Meter</th><th>V1 active</th><th>V2 observer</th><th>V2 likely range</th><th>V2 \u2212 V1</th></tr></thead><tbody><tr><td>M01 import</td><td>${simulation.currentImport.toFixed(1)}</td><td>${calibrationV2.currentImport.toFixed(1)}</td><td>${calibrationV2.confidence.importLow.toFixed(1)}\u2013${calibrationV2.confidence.importHigh.toFixed(1)}</td><td>${signed(v2DifferenceImport)}</td></tr><tr><td>M02 export</td><td>${simulation.currentExport.toFixed(1)}</td><td>${calibrationV2.currentExport.toFixed(1)}</td><td>${calibrationV2.confidence.exportLow.toFixed(1)}\u2013${calibrationV2.confidence.exportHigh.toFixed(1)}</td><td>${signed(v2DifferenceExport)}</td></tr></tbody></table></section>
+        <section class="calibration-v2-popout-section"><h4>End-of-day view</h4><p>Using the readings and conditions currently known, V2 expects M01 to finish near <strong>${calibrationV2.eodImport.toFixed(1)}</strong> and M02 near <strong>${calibrationV2.eodExport.toFixed(1)}</strong>. A new actual meter checkpoint updates this forecast immediately.</p></section>
+        <section class="calibration-v2-popout-section"><h4>Backtest against recorded history</h4><p><strong>${backtestAvailable ? `${v2Backtest.sampleCount} independent checkpoints tested` : "Backtest pending"}</strong></p><table class="calibration-v2-compare"><thead><tr><th>Estimator</th><th>Mean absolute error</th></tr></thead><tbody><tr><td>V1 active</td><td>${v2Backtest.v1Mae.toFixed(1)} meter units</td></tr><tr><td>V2 shadow</td><td>${v2Backtest.v2Mae.toFixed(1)} meter units</td></tr></tbody></table><p class="mt-2">${result}</p></section>
+        <section class="calibration-v2-popout-section"><h4>How V2 learns</h4><ul><li>Uses prior actual-versus-predicted checkpoint errors.</li><li>Gives more weight to days with similar weather, irradiance, cloud cover, time, and recent conditions.</li><li>Scales corrections for the actual interval between readings, rather than assuming 24 hours.</li><li>Uses the spread of comparable errors to show a likely range.</li></ul></section>
+      </div>
+      <p class="calibration-v2-note"><strong>Decision rule:</strong> V2 will stay in Shadow Mode for the two-week comparison period. It cannot replace V1 until its backtest and live checkpoint results consistently show lower error.</p>
+    </section>`;
+    const closeOnEscape = (event) => {
+      if (event.key === "Escape") close();
+    };
+    const close = () => {
+      shell.remove();
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+    shell.querySelectorAll("[data-calibration-v2-close]").forEach((button) => button.addEventListener("click", close));
+    document.addEventListener("keydown", closeOnEscape);
+    document.body.appendChild(shell);
+    shell.querySelector("button")?.focus();
+  }
   function renderMeterSimulation(entryDate = entriesPageState.selectedDate, { autoApply = false } = {}) {
     const summary = document.getElementById("entry-meter-sim-summary");
     const body = document.getElementById("entry-meter-sim-body");
@@ -26866,7 +26900,31 @@ This typically indicates that your device does not have a healthy Internet conne
     const calibrationV2 = buildCalibrationEngineV2(entryDate, entriesPageState.entries, { v1: simulation });
     const v2Backtest = backtestCalibrationEngineV2(entriesPageState.entries);
     const v2Panel = document.getElementById("entry-calibration-v2-panel");
-    if (v2Panel) v2Panel.innerHTML = `<strong>Calibration Engine V2 \xB7 Shadow mode</strong> \u2014 V1 remains active. V2 M01 <strong>${calibrationV2.currentImport.toFixed(1)}</strong> (${calibrationV2.confidence.importLow.toFixed(1)}\u2013${calibrationV2.confidence.importHigh.toFixed(1)}), M02 <strong>${calibrationV2.currentExport.toFixed(1)}</strong> (${calibrationV2.confidence.exportLow.toFixed(1)}\u2013${calibrationV2.confidence.exportHigh.toFixed(1)}). EOD M01 ${calibrationV2.eodImport.toFixed(1)}, M02 ${calibrationV2.eodExport.toFixed(1)}. ${calibrationV2.basis}. Backtest: ${v2Backtest.sampleCount} checkpoints; V1 MAE ${v2Backtest.v1Mae.toFixed(1)}, V2 MAE ${v2Backtest.v2Mae.toFixed(1)} (${v2Backtest.improvementPct >= 0 ? "+" : ""}${v2Backtest.improvementPct.toFixed(1)}%).`;
+    if (v2Panel) {
+      const v2DifferenceImport = calibrationV2.currentImport - simulation.currentImport;
+      const v2DifferenceExport = calibrationV2.currentExport - simulation.currentExport;
+      const backtestAvailable = v2Backtest.sampleCount >= 8;
+      const backtestMessage = !backtestAvailable ? "V2 is still gathering enough history for a reliable backtest." : v2Backtest.improved ? `V2 reduced average checkpoint error by ${Math.abs(v2Backtest.improvementPct).toFixed(1)}% in the backtest.` : `V2 is currently ${Math.abs(v2Backtest.improvementPct).toFixed(1)}% less accurate than V1 in the backtest, so V1 remains in control.`;
+      const v2Status = backtestAvailable && !v2Backtest.improved ? "is-watch" : "";
+      const currentTime = formatMeterSimulationRunLabel(getClockMinutes());
+      v2Panel.innerHTML = `
+      <div class="calibration-v2-heading">
+        <div>
+          <h3>Calibration Engine V2 <span class="calibration-v2-status ${v2Status}">Shadow mode</span></h3>
+          <p>V2 is observing today\u2019s conditions and checkpoints. It does not write meter readings; V1 remains the active estimator while the two are compared.</p>
+        </div>
+        <button type="button" class="btn btn-contract btn-sm" id="entry-calibration-v2-popout" aria-haspopup="dialog">View details</button>
+      </div>
+      <div class="calibration-v2-metrics">
+        <div class="calibration-v2-metric"><span>V2 M01 now</span><strong>${calibrationV2.currentImport.toFixed(1)}</strong><small>Likely range ${calibrationV2.confidence.importLow.toFixed(1)}\u2013${calibrationV2.confidence.importHigh.toFixed(1)} \xB7 V1 ${simulation.currentImport.toFixed(1)}</small></div>
+        <div class="calibration-v2-metric"><span>V2 M02 now</span><strong>${calibrationV2.currentExport.toFixed(1)}</strong><small>Likely range ${calibrationV2.confidence.exportLow.toFixed(1)}\u2013${calibrationV2.confidence.exportHigh.toFixed(1)} \xB7 V1 ${simulation.currentExport.toFixed(1)}</small></div>
+        <div class="calibration-v2-metric"><span>End-of-day forecast</span><strong>M01 ${calibrationV2.eodImport.toFixed(1)}</strong><small>M02 ${calibrationV2.eodExport.toFixed(1)} \xB7 recalculates after each actual checkpoint</small></div>
+        <div class="calibration-v2-metric"><span>V2 accuracy vs V1</span><strong>${backtestAvailable ? `${v2Backtest.improvementPct >= 0 ? "+" : ""}${v2Backtest.improvementPct.toFixed(1)}%` : "Pending"}</strong><small>${v2Backtest.sampleCount} comparable checkpoints \xB7 V1 MAE ${v2Backtest.v1Mae.toFixed(1)}, V2 ${v2Backtest.v2Mae.toFixed(1)}</small></div>
+      </div>
+      <p class="calibration-v2-note"><strong>What this means:</strong> ${escapeHtml(calibrationV2.basis)} ${escapeHtml(backtestMessage)}</p>`;
+      const popoutButton = document.getElementById("entry-calibration-v2-popout");
+      popoutButton?.addEventListener("click", () => openCalibrationV2Popout({ simulation, calibrationV2, v2Backtest, v2DifferenceImport, v2DifferenceExport, currentTime }));
+    }
     const basisDescription = simulation.basis === "weather-matched" ? `${escapeHtml(simulation.weatherBucket)} historical median (${simulation.sampleCount} comparable days)` : `overall historical median (${simulation.sampleCount} usable days; limited ${escapeHtml(simulation.weatherBucket)} history)`;
     summary.innerHTML = `
     Prior cumulative readings: <strong>M01 ${simulation.baseImport.toFixed(1)}</strong> and
