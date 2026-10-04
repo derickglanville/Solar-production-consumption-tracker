@@ -2788,7 +2788,7 @@ function openChartPopout(frame) {
     closeChartPopout();
   }
 
-  const chartNode = frame.querySelector(".dashboard-chart, [data-chart-popout-content]");
+  const chartNode = frame.querySelector(".dashboard-chart, .nyseg-file-comparison-chart, [data-chart-popout-content]");
   if (!chartNode) return;
 
   const label = frame.getAttribute("data-chart-popout-label") || "Chart";

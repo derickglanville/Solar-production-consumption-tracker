@@ -26207,7 +26207,7 @@ This typically indicates that your device does not have a healthy Internet conne
     if (activeChartPopout) {
       closeChartPopout();
     }
-    const chartNode = frame.querySelector(".dashboard-chart, [data-chart-popout-content]");
+    const chartNode = frame.querySelector(".dashboard-chart, .nyseg-file-comparison-chart, [data-chart-popout-content]");
     if (!chartNode) return;
     const label = frame.getAttribute("data-chart-popout-label") || "Chart";
     const placeholder = document.createElement("div");

@@ -1015,6 +1015,7 @@ body.chart-popout-active {
 .chart-popout-body .dashboard-chart {
   flex: 1 1 auto;
 }
+.chart-popout-body .nyseg-file-comparison-chart { flex: 1 1 auto; height: 100% !important; min-height: 0; width: 100% !important; }
 
 .chart-popout-body .dashboard-chart.dashboard-chart-embedded > div {
   width: 100% !important;

@@ -512,7 +512,7 @@ def nyseg_usage_file():
             "export_credit": float(row["Received"]) * electric_rate,
             "net_cost": (float(row["Delivered"]) - float(row["Received"])) * electric_rate,
         }
-        for row in interval_file.get("daily_rows", [])
+        for row in sorted(interval_file.get("daily_rows", []), key=lambda row: row["Date"], reverse=True)
     ]
     monthly_costs: dict[str, dict] = {}
     for row in chart_rows:
