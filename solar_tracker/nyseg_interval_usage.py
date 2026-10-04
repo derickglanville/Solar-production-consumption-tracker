@@ -23,6 +23,18 @@ def _empty_report() -> dict[str, Any]:
     return {"available": False, "source_name": DEFAULT_INTERVAL_USAGE_PATH.name, "monthly": [], "daily": [], "hourly": [], "summary": {}}
 
 
+
+def load_nyseg_interval_file_rows(path: Path | None = None) -> dict[str, Any]:
+    """Return the locally downloaded interval file for an on-screen review table."""
+    source_path = path or DEFAULT_INTERVAL_USAGE_PATH
+    if not source_path.is_file() and path is None:
+        source_path = FALLBACK_INTERVAL_USAGE_PATH
+    if not source_path.is_file():
+        return {"available": False, "source_name": DEFAULT_INTERVAL_USAGE_PATH.name, "rows": []}
+    fields = ["Date", "Start Time", "End Time", "Net", "Units", "Costs", "Weather", "Delivered", "Received"]
+    with source_path.open("r", encoding="utf-8-sig", newline="") as handle:
+        rows = [{field: row.get(field, "") for field in fields} for row in csv.DictReader(handle)]
+    return {"available": True, "source_name": source_path.name, "fields": fields, "rows": rows}
 def build_nyseg_interval_usage_report(path: Path | None = None) -> dict[str, Any]:
     """Summarize Delivered (grid import) and Received (grid export) hourly readings."""
     source_path = path or DEFAULT_INTERVAL_USAGE_PATH
