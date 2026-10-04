@@ -3693,3 +3693,6 @@ body[data-page="dashboard"].dashboard-compact-mode .btn-contract {
 .nyseg-monthly-net-row span { color: #617b8d; font-size: 0.7rem; grid-column: 1; }
 .nyseg-monthly-net-row b { font-size: 0.77rem; grid-column: 2; grid-row: 1 / span 2; white-space: nowrap; }
 @media (max-width: 767px) { .nyseg-file-header { grid-template-columns: 1fr; } }
+
+.nyseg-monthly-net-popout { width: 100%; }
+.chart-popout-body [data-chart-popout-content] { flex: 1 1 auto; max-width: none; overflow-y: auto; }

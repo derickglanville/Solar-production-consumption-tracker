@@ -26207,7 +26207,7 @@ This typically indicates that your device does not have a healthy Internet conne
     if (activeChartPopout) {
       closeChartPopout();
     }
-    const chartNode = frame.querySelector(".dashboard-chart");
+    const chartNode = frame.querySelector(".dashboard-chart, [data-chart-popout-content]");
     if (!chartNode) return;
     const label = frame.getAttribute("data-chart-popout-label") || "Chart";
     const placeholder = document.createElement("div");
@@ -28727,6 +28727,7 @@ This is a reconciliation, not an independent measurement, because EDC includes S
   }
   async function bootPage() {
     setupValidatedLocalDashboardLinks(document);
+    setupChartPopouts(document);
     if (getPageName() === "dashboard" && isLocalSnapshotMode()) {
       setupDashboardViewToggle();
       setupAiAssistant();

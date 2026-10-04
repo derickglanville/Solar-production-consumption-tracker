@@ -2788,7 +2788,7 @@ function openChartPopout(frame) {
     closeChartPopout();
   }
 
-  const chartNode = frame.querySelector(".dashboard-chart");
+  const chartNode = frame.querySelector(".dashboard-chart, [data-chart-popout-content]");
   if (!chartNode) return;
 
   const label = frame.getAttribute("data-chart-popout-label") || "Chart";
@@ -5769,6 +5769,7 @@ async function bootSettings(db) {
 
 async function bootPage() {
   setupValidatedLocalDashboardLinks(document);
+  setupChartPopouts(document);
 
   if (getPageName() === "dashboard" && isLocalSnapshotMode()) {
     setupDashboardViewToggle();
