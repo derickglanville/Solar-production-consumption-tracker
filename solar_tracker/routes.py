@@ -23,6 +23,7 @@ from .energy_references import (
 from .firestore import AppConfig, DailySolarEntry
 from .historical_usage import historical_usage_to_dict, load_historical_usage_summary
 from .monthly_bill import build_net_metering_reconciliation, build_net_metering_report, load_monthly_bill_summary, monthly_bill_to_dict
+from .nyseg_interval_usage import build_nyseg_interval_usage_report
 from .seed import build_sample_entries
 from .sunrun_production import (
     SUNRUN_CSV_PATH,
@@ -469,6 +470,23 @@ def nyseg_net_metering():
         data_as_of=data_as_of,
     )
 
+
+@main_blueprint.route("/nyseg-usage")
+def nyseg_usage():
+    net_metering_report = build_net_metering_report()
+    latest_credit_bill = max(
+        net_metering_report["rows"],
+        key=lambda row: row["statement_date"],
+        default={},
+    )
+    return render_template(
+        "nyseg_usage.html",
+        page_name="nyseg-usage",
+        local_snapshot_mode=False,
+        bootstrap_data=build_bootstrap_data(),
+        usage_report=build_nyseg_interval_usage_report(),
+        latest_credit_bill=latest_credit_bill,
+    )
 
 @main_blueprint.route("/nyseg-reconciliation")
 def nyseg_reconciliation():

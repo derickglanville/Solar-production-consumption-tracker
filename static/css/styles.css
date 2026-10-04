@@ -3670,3 +3670,10 @@ body[data-page="dashboard"].dashboard-compact-mode .btn-contract {
   background: #fff1ef;
   color: #a33d2e;
 }
+.nyseg-credit-applied { background: #e6f5eb; border: 1px solid #a9d7b8; border-radius: 999px; color: #17663d; font-size: 0.78rem; font-weight: 700; padding: 0.35rem 0.62rem; white-space: nowrap; }
+.nyseg-usage-explanation { border-top: 1px solid rgba(87, 119, 139, 0.18); color: #466277; font-size: 0.92rem; line-height: 1.55; margin-top: 0.9rem; padding-top: 0.85rem; }
+.nyseg-usage-callout { border-bottom: 1px solid rgba(87, 119, 139, 0.16); padding: 0.68rem 0; }
+.nyseg-usage-callout:last-child { border-bottom: 0; }
+.nyseg-usage-callout span { color: #6d8291; display: block; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; }
+.nyseg-usage-callout strong { color: #1d566e; display: block; margin-top: 0.13rem; }
+.nyseg-usage-callout small { color: #6a7f8f; display: block; font-size: 0.78rem; margin-top: 0.12rem; }
