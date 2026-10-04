@@ -20,3 +20,6 @@ NYSEG Bill/NYSEG_Login.txt
 NYSEG Bill/SunRun_Login.txt
 NYSEG Bill/Bills/
 NYSEG Bill/Data/
+# NYSEG credentials, authenticated browser profile, and automated-download diagnostics
+NYSEG Download Script/.nyseg-profile/
+NYSEG Download Script/nyseg_error.png
