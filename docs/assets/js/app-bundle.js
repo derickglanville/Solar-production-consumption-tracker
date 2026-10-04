@@ -28739,7 +28739,11 @@ This is a reconciliation, not an independent measurement, because EDC includes S
         const response = await fetch("/api/nyseg-meter-intervals");
         const payload = await response.json();
         if (!response.ok || !payload.available) throw new Error("The local NYSEG interval file is unavailable.");
-        const updates = buildNysegMeterImportPreview(state.entries, payload.daily);
+        const previewEntries = payload.anchor ? [
+          ...state.entries.filter((entry) => entry.entry_date !== payload.anchor.entry_date),
+          payload.anchor
+        ] : state.entries;
+        const updates = buildNysegMeterImportPreview(previewEntries, payload.daily);
         openNysegMeterImportPreview(db, updates, payload.source_start, payload.source_end, {
           beforeApply: async () => {
             const fresh = await loadFirestoreState(db);

@@ -20,7 +20,7 @@ from .energy_references import (
     save_electricity_usage,
     save_light_bulbs,
 )
-from .firestore import AppConfig, DailySolarEntry
+from .firestore import AppConfig, DailySolarEntry, FirestoreRepository
 from .historical_usage import historical_usage_to_dict, load_historical_usage_summary
 from .monthly_bill import build_net_metering_reconciliation, build_net_metering_report, load_monthly_bill_summary, monthly_bill_to_dict
 from .nyseg_interval_usage import build_nyseg_interval_usage_report, load_nyseg_interval_file_rows
@@ -763,6 +763,29 @@ def circuit_breakers_save_api():
 @main_blueprint.route("/api/nyseg-meter-intervals")
 def nyseg_meter_intervals_api():
     report = build_nyseg_interval_usage_report()
+    anchor = None
+    if report["available"]:
+        try:
+            source_start = date.fromisoformat(report["source_start"])
+            source_end = date.fromisoformat(report["source_end"])
+            candidates = [
+                entry for entry in FirestoreRepository().list_entries()
+                if source_start <= entry.entry_date <= source_end
+                and entry.meter_01_import_reading >= 0
+                and entry.meter_02_export_reading >= 0
+            ]
+            if candidates:
+                entry = max(candidates, key=lambda item: item.entry_date)
+                anchor = {
+                    "entry_date": entry.entry_date.isoformat(),
+                    "meter_01_import_reading": entry.meter_01_import_reading,
+                    "meter_02_export_reading": entry.meter_02_export_reading,
+                    "meter_values_confirmed": True,
+                }
+        except Exception:
+            # The browser can still use its live Firebase data when a local
+            # server-side read is unavailable.
+            anchor = None
     return jsonify({
         "available": report["available"],
         "source_start": report.get("source_start"),
@@ -771,6 +794,7 @@ def nyseg_meter_intervals_api():
             {"date": row["date"], "import_kwh": row["import_kwh"], "export_kwh": row["export_kwh"]}
             for row in reversed(report.get("daily", []))
         ],
+        "anchor": anchor,
     })
 
 @main_blueprint.route("/api/sunrun-production")

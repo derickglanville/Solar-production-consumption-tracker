@@ -5788,7 +5788,15 @@ async function setupNysegUsageFileActions(db) {
       const response = await fetch("/api/nyseg-meter-intervals");
       const payload = await response.json();
       if (!response.ok || !payload.available) throw new Error("The local NYSEG interval file is unavailable.");
-      const updates = buildNysegMeterImportPreview(state.entries, payload.daily);
+      // The local server verifies the last cumulative meter row in Firebase.
+      // Prefer that anchor when a browser payload is stale or incomplete.
+      const previewEntries = payload.anchor
+        ? [
+          ...state.entries.filter((entry) => entry.entry_date !== payload.anchor.entry_date),
+          payload.anchor
+        ]
+        : state.entries;
+      const updates = buildNysegMeterImportPreview(previewEntries, payload.daily);
       openNysegMeterImportPreview(db, updates, payload.source_start, payload.source_end, {
         beforeApply: async () => {
           const fresh = await loadFirestoreState(db);
