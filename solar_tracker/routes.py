@@ -488,10 +488,7 @@ def nyseg_usage():
         latest_credit_bill=latest_credit_bill,
     )
 
-@main_blueprint.route("/nyseg-usage-file")
-def nyseg_usage_file():
-    interval_file = load_nyseg_interval_file_rows()
-    grouped = request.args.get("group") == "day"
+@main_blueprint.route("/nyseg-usage-file")`n@main_blueprint.route("/nyseg-usage-file/daily")`ndef nyseg_usage_file():`n    interval_file = load_nyseg_interval_file_rows()`n    grouped = request.path.endswith("/daily")
     return render_template("nyseg_usage_file.html", page_name="nyseg-usage-file", local_snapshot_mode=False, bootstrap_data=build_bootstrap_data(), interval_file=interval_file, grouped=grouped)
 
 @main_blueprint.route("/nyseg-reconciliation")
