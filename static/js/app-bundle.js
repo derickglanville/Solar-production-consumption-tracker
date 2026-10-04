@@ -23896,9 +23896,19 @@ This typically indicates that your device does not have a healthy Internet conne
     return runTransaction(activeFirestoreDb, async (transaction) => {
       const current = await transaction.get(reference);
       const existing = current.exists() ? current.data() : {};
+      const preserveConfirmedMeters = existing.meter_values_confirmed === true && values.meter_values_confirmed === false;
+      const protectedValues = preserveConfirmedMeters ? {
+        ...values,
+        meter_01_import_reading: existing.meter_01_import_reading,
+        meter_02_export_reading: existing.meter_02_export_reading,
+        meter_values_confirmed: true,
+        meter_values_estimated: false,
+        meter_values_calibrated: existing.meter_values_calibrated === true,
+        estimated: existing.estimated === true
+      } : values;
       const revisions = Array.isArray(existing.entry_revisions) ? existing.entry_revisions : [];
       const nextRevisions = current.exists() ? [{ saved_at: (/* @__PURE__ */ new Date()).toISOString(), reason: "Before update", snapshot: revisionSnapshot(existing) }, ...revisions].slice(0, 50) : revisions;
-      transaction.set(reference, { ...values, entry_revisions: nextRevisions }, options || {});
+      transaction.set(reference, { ...protectedValues, entry_revisions: nextRevisions }, options || {});
     });
   }
   function revisionSnapshot(entry) {
