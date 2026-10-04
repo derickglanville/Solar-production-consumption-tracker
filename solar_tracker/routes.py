@@ -531,6 +531,18 @@ def nyseg_usage_file():
         }
         for month_key, values in sorted(monthly_costs.items(), reverse=True)
     ]
+    monthly_meter_totals = [
+        {
+            **month,
+            "combined_kwh": month["m01_kwh"] + month["m02_kwh"],
+        }
+        for month in monthly_net_charges
+    ]
+    meter_totals = {
+        "m01_kwh": sum(month["m01_kwh"] for month in monthly_meter_totals),
+        "m02_kwh": sum(month["m02_kwh"] for month in monthly_meter_totals),
+    }
+    meter_totals["combined_kwh"] = meter_totals["m01_kwh"] + meter_totals["m02_kwh"]
     return render_template(
         "nyseg_usage_file.html",
         page_name="nyseg-usage-file",
@@ -541,6 +553,8 @@ def nyseg_usage_file():
         chart_rows=chart_rows,
         electric_rate=electric_rate,
         monthly_net_charges=monthly_net_charges,
+        monthly_meter_totals=monthly_meter_totals,
+        meter_totals=meter_totals,
     )
 
 @main_blueprint.route("/nyseg-reconciliation")
