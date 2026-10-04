@@ -48,7 +48,9 @@
 {% if interval_file.available and chart_rows %}<script>
 (() => {
   const chart = document.getElementById("nyseg-file-comparison-chart");
-  const rows = {{ chart_rows|tojson }};
+  // The table stays newest-first, while charts read naturally from the
+  // oldest day on the left to the newest day on the right.
+  const rows = {{ chart_rows|tojson }}.slice().reverse();
   if (!chart || typeof Plotly === "undefined") return;
   const trace = (name, field, color) => ({
     x: rows.map((row) => row.date),
@@ -71,7 +73,7 @@
     height: 290,
     hovermode: "x unified",
     legend: { orientation: "h", y: 1.13, x: 0 },
-    xaxis: { title: "Date", type: "date", tickformat: "%b %-d", showgrid: false, autorange: "reversed" },
+    xaxis: { title: "Date", type: "date", tickformat: "%b %-d", showgrid: false },
     yaxis: { title: "kWh", rangemode: "tozero", gridcolor: "#dce8ee" },
     paper_bgcolor: "rgba(0,0,0,0)",
     plot_bgcolor: "rgba(0,0,0,0)",
@@ -98,7 +100,7 @@
     height: 290,
     hovermode: "x unified",
     legend: { orientation: "h", y: 1.13, x: 0 },
-    xaxis: { title: "Date", type: "date", tickformat: "%b %-d", showgrid: false, autorange: "reversed" },
+    xaxis: { title: "Date", type: "date", tickformat: "%b %-d", showgrid: false },
     yaxis: { title: "Dollars", tickprefix: "$", gridcolor: "#dce8ee", zeroline: true },
     paper_bgcolor: "rgba(0,0,0,0)",
     plot_bgcolor: "rgba(0,0,0,0)",
