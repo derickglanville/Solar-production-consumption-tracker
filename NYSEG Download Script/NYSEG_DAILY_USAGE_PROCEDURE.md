@@ -32,7 +32,7 @@ After sign-in, the script waits up to 60 seconds for NYSEG Insights to finish lo
 - CSV
 - Download file
 
-It verifies that `Date`, `Delivered`, and `Received` are present, archives the previous CSV in `SunRun Data\archive`, and replaces the current source file only after validation succeeds.
+It verifies that `Date`, `Delivered`, and `Received` are present, archives the previous CSV in `SunRun Data\archive`, and replaces the current source file only after validation succeeds. A `Downloaded … intervals to:` message means the file is complete and ready for the app, even if Edge subsequently reports that its browser target closed during cleanup.
 
 ## Daily download
 

@@ -222,9 +222,11 @@ def main() -> int:
         )
         page = context.pages[0] if context.pages else context.new_page()
         page.set_default_timeout(20_000)
+        download_completed = False
         try:
             ensure_signed_in(page, os.getenv("NYSEG_USER"), os.getenv("NYSEG_PASS"), args.headed)
             destination, rows = download_usage(page, args.start, args.end)
+            download_completed = True
             print(f"Downloaded {rows:,} NYSEG intervals to: {destination}")
             return 0
         except Exception as error:
@@ -239,7 +241,17 @@ def main() -> int:
                 print(f"Diagnostic screenshot: {screenshot}", file=sys.stderr)
             return 1
         finally:
-            context.close()
+            # Edge can close its target immediately after handing Playwright a
+            # completed download. The CSV has already been saved and validated
+            # at that point, so a second close request must not turn success
+            # into a Python traceback.
+            try:
+                context.close()
+            except Exception as close_error:
+                if download_completed:
+                    print(f"Download completed; Edge had already closed during cleanup ({close_error}).")
+                else:
+                    print(f"Browser cleanup warning: {close_error}", file=sys.stderr)
 
 
 if __name__ == "__main__":
