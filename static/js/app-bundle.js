@@ -28628,7 +28628,15 @@ This is a reconciliation, not an independent measurement, because EDC includes S
     if (!button || button.dataset.ready === "true") return;
     button.dataset.ready = "true";
     if (isStaticSite()) {
-      button.hidden = true;
+      button.textContent = "Use local NYSEG import";
+      button.title = "Download and apply NYSEG interval readings from the private local tracker.";
+      button.addEventListener("click", () => {
+        renderStatusAlert(
+          "entries-status",
+          "The mobile site includes the NYSEG file review, but applying new utility readings requires the private downloaded CSV in the local tracker. Download the file and use Review NYSEG meter import at http://127.0.0.1:5000/entries; the resulting M01/M02 readings then sync to Firebase for every device.",
+          "info"
+        );
+      });
       return;
     }
     button.addEventListener("click", async () => {
