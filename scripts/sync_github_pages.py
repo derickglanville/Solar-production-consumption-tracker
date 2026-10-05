@@ -17,7 +17,7 @@ from solar_tracker.routes import build_bootstrap_data
 
 
 DOCS = ROOT / "docs"
-ASSET_VERSION = "20261005-hourly-popout-controls"
+ASSET_VERSION = "20261005-hourly-range-navigation"
 
 ROUTE_REPLACEMENTS = {
     'href="/"': 'href="index.html"',
