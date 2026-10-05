@@ -573,6 +573,18 @@ def nyseg_usage_file():
         }
         for row in sorted(interval_file.get("daily_rows", []), key=lambda row: row["Date"], reverse=True)
     ]
+    hourly_chart_rows = []
+    for row in interval_file.get("rows", []):
+        try:
+            hour = datetime.fromisoformat(str(row["Start Time"])).hour
+        except (KeyError, TypeError, ValueError):
+            continue
+        hourly_chart_rows.append({
+            "date": row["Date"],
+            "hour": hour,
+            "import_kwh": float(row["Delivered"]),
+            "export_kwh": float(row["Received"]),
+        })
     monthly_costs: dict[str, dict] = {}
     for row in chart_rows:
         month_key = row["date"][:7]
@@ -621,6 +633,7 @@ def nyseg_usage_file():
         interval_file=interval_file,
         grouped=grouped,
         chart_rows=chart_rows,
+        hourly_chart_rows=hourly_chart_rows,
         electric_rate=electric_rate,
         monthly_net_charges=monthly_net_charges,
         monthly_meter_totals=monthly_meter_totals,

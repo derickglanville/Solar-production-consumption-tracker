@@ -3891,6 +3891,13 @@ body[data-page="dashboard"].dashboard-compact-mode .btn-contract {
 .nyseg-run-summary .sunrun-run-summary-metrics span { background: #d9f4e3; color: #177547; }
 .sunrun-run-row { border-top-color: #cfe3eb; padding-top: .42rem; }
 .nyseg-file-chart-card { border-radius: 1rem; box-shadow: 0 .55rem 1.35rem rgba(31, 83, 106, .09); overflow: hidden; }
+.nyseg-analytics-grid { display: grid; gap: 1rem; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.nyseg-analytics-grid .nyseg-file-chart-card { min-width: 0; }.nyseg-analytics-grid .card-body { padding: 1rem; }
+.nyseg-hourly-chart-card { background: linear-gradient(145deg, #f7fffb, #edf8f2); border-color: #b8dcc7; }
+.nyseg-hourly-date-controls { align-items: center; background: rgba(255,255,255,.72); border: 1px solid #cae5d4; border-radius: .6rem; display: flex; flex-wrap: wrap; gap: .35rem .55rem; margin: 0 0 .55rem; padding: .38rem .48rem; }
+.nyseg-hourly-date-controls label { align-items: center; color: #356b52; display: flex; font-size: .7rem; font-weight: 700; gap: .25rem; }.nyseg-hourly-date-controls input { border: 1px solid #b7d7c3; border-radius: .35rem; color: #1d5940; font: inherit; padding: .2rem .28rem; }.nyseg-hourly-date-controls span { color: #277a52; font-size: .7rem; font-weight: 700; margin-left: auto; }
+@media (max-width: 1300px) { .nyseg-analytics-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }.nyseg-hourly-chart-card { grid-column: 1 / -1; } }
+@media (max-width: 760px) { .nyseg-analytics-grid { grid-template-columns: 1fr; }.nyseg-hourly-chart-card { grid-column: auto; }.nyseg-hourly-date-controls span { margin-left: 0; } }
 .nyseg-file-table-wrap { border: 1px solid #c8dfe8; border-radius: .8rem; box-shadow: inset 0 1px 0 rgba(255,255,255,.7); }
 .nyseg-file-table thead th { background: linear-gradient(180deg, #e9f7fb, #dceef4); color: #1b5b76; }
 @media (max-width: 1180px) { .nyseg-file-header { grid-template-columns: 1fr; } }

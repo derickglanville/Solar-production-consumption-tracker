@@ -17,7 +17,7 @@ from solar_tracker.routes import build_bootstrap_data
 
 
 DOCS = ROOT / "docs"
-ASSET_VERSION = "20261005-bill-credit-reconciliation"
+ASSET_VERSION = "20261005-hourly-nyseg-profile"
 
 ROUTE_REPLACEMENTS = {
     'href="/"': 'href="index.html"',
