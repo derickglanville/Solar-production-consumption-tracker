@@ -594,7 +594,9 @@ def nyseg_daily_sync_status_api():
 @main_blueprint.route("/api/nyseg-daily-sync-log")
 def nyseg_daily_sync_log_api():
     try:
-        lines = NYSEG_DAILY_SYNC_LOG_PATH.read_text(encoding="utf-8", errors="replace").splitlines()[-80:]
+        raw = NYSEG_DAILY_SYNC_LOG_PATH.read_bytes()
+        encoding = "utf-16" if raw.startswith((b"\xff\xfe", b"\xfe\xff")) else "utf-8-sig"
+        lines = raw.decode(encoding, errors="replace").splitlines()[-80:]
     except OSError:
         lines = ["No NYSEG sync activity has been recorded yet."]
     response = jsonify({"lines": lines})

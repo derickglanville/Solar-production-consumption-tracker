@@ -7,6 +7,7 @@ no username or password is stored in this script or task.
 from __future__ import annotations
 
 import json
+import argparse
 import os
 import smtplib
 import subprocess
@@ -27,6 +28,19 @@ EMAIL_ENABLED_MARKER = STATUS_FILE.with_name("nyseg-daily-sync-email-enabled")
 def write_status(payload: dict) -> None:
     STATUS_FILE.parent.mkdir(parents=True, exist_ok=True)
     STATUS_FILE.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+
+
+def progress_writer(log_path: Path | None):
+    def write(message: str) -> None:
+        text = message.rstrip()
+        if not text:
+            return
+        print(text, flush=True)
+        if log_path:
+            log_path.parent.mkdir(parents=True, exist_ok=True)
+            with log_path.open("a", encoding="utf-8", newline="\n") as handle:
+                handle.write(text + "\n")
+    return write
 
 
 def read_email_settings() -> dict[str, str]:
@@ -95,32 +109,39 @@ def add_email_result(status: dict) -> dict:
     return status
 
 
-def main(test_email: bool = False) -> int:
+def main(test_email: bool = False, log_path: Path | None = None) -> int:
+    progress = progress_writer(log_path)
     if test_email:
         status = {"status": "success", "completed_at": datetime.now().astimezone().isoformat(timespec="seconds"), "saved_records": 0}
         send_status_email(status, test=True)
-        print("NYSEG daily-sync email test sent.")
+        progress("NYSEG daily-sync email test sent.")
         return 0
 
     try:
         lock_handle = os.open(LOCK_FILE, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
     except FileExistsError:
-        print("NYSEG daily sync is already running.")
+        progress("NYSEG daily sync is already running.")
         return 0
     started_at = datetime.now().astimezone().isoformat(timespec="seconds")
     try:
-        print("Starting NYSEG browser download…", flush=True)
+        progress("Starting NYSEG browser download…")
         # Let the downloader write directly to Task Scheduler's log stream so
         # a person can follow sign-in, portal loading, download, and import
         # progress while the run is still active.
-        download = subprocess.run([sys.executable, str(DOWNLOADER)], cwd=PROJECT_ROOT, check=False)
-        if download.returncode:
-            raise RuntimeError(f"NYSEG download failed with exit code {download.returncode}.")
+        download = subprocess.Popen(
+            [sys.executable, str(DOWNLOADER)], cwd=PROJECT_ROOT,
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1,
+        )
+        assert download.stdout is not None
+        for line in download.stdout:
+            progress(line)
+        if download.wait() != 0:
+            raise RuntimeError("NYSEG download failed. Review the activity log for the portal error and diagnostic screenshot.")
 
         # Run the same server-verified import used by the Review / Apply button.
         from app import create_app
 
-        print("Saving new NYSEG M01/M02 readings to Firebase…", flush=True)
+        progress("Saving new NYSEG M01/M02 readings to Firebase…")
         response = create_app().test_client().post("/api/nyseg-meter-intervals/apply")
         result = response.get_json() or {}
         if response.status_code >= 400:
@@ -135,7 +156,7 @@ def main(test_email: bool = False) -> int:
             "download_output": "Completed; see nyseg-daily-sync.log for step-by-step output.",
         }
         add_email_result(status)
-        print(f"NYSEG daily sync completed: {status['saved_records']} Firebase records saved.")
+        progress(f"NYSEG daily sync completed: {status['saved_records']} Firebase records saved.")
         return 0
     except Exception as error:
         status = {
@@ -145,7 +166,7 @@ def main(test_email: bool = False) -> int:
             "error": str(error),
         }
         add_email_result(status)
-        print(f"NYSEG daily sync failed: {error}", file=sys.stderr)
+        progress(f"NYSEG daily sync failed: {error}")
         return 1
     finally:
         os.close(lock_handle)
@@ -156,4 +177,8 @@ def main(test_email: bool = False) -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main("--test-email" in sys.argv))
+    parser = argparse.ArgumentParser(description="Run the NYSEG daily download and Firebase sync.")
+    parser.add_argument("--test-email", action="store_true")
+    parser.add_argument("--log-path", type=Path)
+    args = parser.parse_args()
+    raise SystemExit(main(args.test_email, args.log_path))
