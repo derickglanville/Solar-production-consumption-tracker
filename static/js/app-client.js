@@ -125,7 +125,7 @@ async function renderDashboardUnified(entries, config, firebaseStatus) {
     return;
   }
 
-  const displayEntries = getDisplayEntries(entries);
+  const displayEntries = buildFileBackedDashboardEntries(entries);
   const metricsEntries = buildComputedEntries(displayEntries, config);
 
   try {
@@ -270,6 +270,7 @@ const aiBootstrapStatus = bootstrap.ai_status || {};
 const historicalUsageBootstrap = bootstrap.historical_usage || {};
 const monthlyBillBootstrap = bootstrap.monthly_bill || {};
 const sunrunProductionBootstrap = bootstrap.sunrun_production || { available: false, by_date: {} };
+const nysegIntervalBootstrap = bootstrap.nyseg_interval || { available: false, daily: [] };
 const dashboardCompactModeStorageKey = "solar-dashboard-compact-mode";
 const localSnapshotSyncStorageKey = "solar-local-json-last-sync-hour";
 const entriesSnapshotStorageKey = "solar-data-entry-snapshot-v1";
@@ -747,6 +748,36 @@ function normalizeEntry(entry) {
 
 function getSunrunProductionRecord(entryDate) {
   return sunrunProductionBootstrap?.by_date?.[String(entryDate)] || null;
+}
+
+function getNysegIntervalRecord(entryDate) {
+  return (nysegIntervalBootstrap?.daily || []).find((record) => String(record.date) === String(entryDate)) || null;
+}
+
+function getDashboardFileThroughDate() {
+  const twoDaysAgo = shiftIsoDate(getTodayIsoDate(), -2);
+  const sunrunDate = String(sunrunProductionBootstrap?.latest_available_date || "");
+  const nysegDate = String(nysegIntervalBootstrap?.source_end || "");
+  const candidates = [twoDaysAgo, sunrunDate, nysegDate]
+    .filter((value) => /^\d{4}-\d{2}-\d{2}$/.test(value));
+  return candidates.length === 3 ? candidates.sort()[0] : "";
+}
+
+function buildFileBackedDashboardEntries(entries) {
+  const fileThroughDate = getDashboardFileThroughDate();
+  if (!fileThroughDate) return [];
+  return sortEntries(entries)
+    .filter((entry) => {
+      const entryDate = String(entry.entry_date || "");
+      const sunrun = getSunrunProductionRecord(entryDate);
+      return entryDate <= fileThroughDate && Boolean(sunrun?.available) && Boolean(getNysegIntervalRecord(entryDate));
+    })
+    .map((entry) => normalizeEntry({
+      ...entry,
+      production_kwh: Number(getSunrunProductionRecord(entry.entry_date)?.production_kwh || 0),
+      estimated: false,
+      lookup_source: "source-files"
+    }));
 }
 
 function applySunrunProductionToEntry(entry) {
@@ -1387,59 +1418,30 @@ async function backfillStarterEntriesIfNeeded(db, entries) {
 
 function buildComputedEntries(entries, config = defaultConfig) {
   if (!entries.length) return [];
-  const annualHomeUsage = Number(config.annual_home_usage_kwh || 17967);
-  const baselineHomeUse = annualHomeUsage / 365;
-  const todayIsoDate = getTodayIsoDate();
-
   const sortedEntries = sortEntries(entries);
-  const entryByDate = new Map(sortedEntries.map((entry) => [String(entry.entry_date), entry]));
-  const pendingOverrideDates = new Map([
-    [todayIsoDate, shiftIsoDate(todayIsoDate, -3)],
-    [shiftIsoDate(todayIsoDate, -1), shiftIsoDate(todayIsoDate, -4)]
-  ]);
 
   return sortedEntries.map((entry, index, list) => {
-    let effectiveEntry = entry;
-    const analogDate = pendingOverrideDates.get(String(entry.entry_date));
-    const analogEntry = analogDate ? entryByDate.get(String(analogDate)) : null;
-    const sunrunRecord = getSunrunProductionRecord(entry.entry_date);
-    const isPendingSunrunDate = pendingOverrideDates.has(String(entry.entry_date));
-    if (analogEntry && isPendingSunrunDate && !sunrunRecord?.available) {
-      effectiveEntry = {
-        ...entry,
-        estimated: true,
-        production_kwh: Number(analogEntry.production_kwh || entry.production_kwh || 0),
-        irradiance_peak_wm2: Number(entry.irradiance_peak_wm2 || analogEntry.irradiance_peak_wm2 || 0),
-        notes: `Pending data from SunRun. Temporary dashboard estimate aligned to ${analogEntry.entry_date} until actual production is published.`
-      };
-    }
-
-    const previous = index > 0 ? list[index - 1] : null;
-    const currentDate = new Date(`${effectiveEntry.entry_date}T00:00:00`);
-    const month = currentDate.getMonth();
-    const seasonalFactor = [11, 0, 1, 5, 6, 7].includes(month) ? 1.08 : 1;
-    const weatherFactor = WEATHER_FACTORS[effectiveEntry.weather] ?? 0.8;
-    const estimatedDaytimeHouseUsage = Number((baselineHomeUse * seasonalFactor * weatherFactor).toFixed(2));
-    const dailyImport = previous
-      ? Math.max(0, Number(effectiveEntry.meter_01_import_reading || 0) - Number(previous.meter_01_import_reading || 0))
-      : 0;
-    const dailyExport = previous
-      ? Math.max(0, Number(effectiveEntry.meter_02_export_reading || 0) - Number(previous.meter_02_export_reading || 0))
-      : 0;
-    const estimatedSelfConsumption = Math.min(Number(effectiveEntry.production_kwh || 0), estimatedDaytimeHouseUsage);
-    const totalHomeConsumption = estimatedSelfConsumption + dailyImport;
+    const currentDate = new Date(`${entry.entry_date}T00:00:00`);
+    const nysegInterval = getNysegIntervalRecord(entry.entry_date);
+    const dailyImport = Number(nysegInterval?.import_kwh || 0);
+    const dailyExport = Number(nysegInterval?.export_kwh || 0);
+    const production = Number(entry.production_kwh || 0);
+    // Energy delivered to the home follows the physical balance from the two
+    // downloaded source files: solar production + grid import - grid export.
+    const totalHomeConsumption = Math.max(0, production + dailyImport - dailyExport);
+    const fileBackedSelfConsumption = Math.max(0, production - dailyExport);
     const rollingWindow = list.slice(Math.max(0, index - 6), index + 1);
 
     return {
-      ...effectiveEntry,
+      ...entry,
       currentDate,
-      estimated: Boolean(effectiveEntry.estimated),
+      estimated: false,
       daily_import_kwh: dailyImport,
       daily_export_kwh: dailyExport,
-      estimated_daytime_house_usage_kwh: estimatedDaytimeHouseUsage,
-      estimated_self_consumption_kwh: estimatedSelfConsumption,
+      estimated_daytime_house_usage_kwh: totalHomeConsumption,
+      estimated_self_consumption_kwh: fileBackedSelfConsumption,
       estimated_total_home_consumption_kwh: totalHomeConsumption,
-      solar_offset_pct: totalHomeConsumption > 0 ? (estimatedSelfConsumption / totalHomeConsumption) * 100 : 0,
+      solar_offset_pct: totalHomeConsumption > 0 ? (fileBackedSelfConsumption / totalHomeConsumption) * 100 : 0,
       rolling_7_day_prod: mean(rollingWindow.map((item) => Number(item.production_kwh || 0)))
     };
   });
@@ -1630,9 +1632,9 @@ function buildOperationalSnapshotHtml(metrics) {
             <div>
               <p class="eyebrow mb-2">Operational Snapshot</p>
               <h2 class="h5 mb-1">Current production and smart meter summary</h2>
-              <p class="text-muted mb-0">Calculated from the current Firebase dataset. Production uses confirmed SunRun days, while Import (01) and Export (02) use the smart meter history.</p>
+              <p class="text-muted mb-0">Calculated only from matching downloaded SunRun and NYSEG file days, with the shared two-day reporting delay applied.</p>
             </div>
-            <span class="operational-snapshot-date">Latest confirmed SunRun day: ${metrics.latest_confirmed_production_date_label}</span>
+            <span class="operational-snapshot-date">Latest matched file day: ${metrics.latest_confirmed_production_date_label}</span>
           </div>
           <div class="info-grid operational-snapshot-grid mb-3">
             <div><span>Final Production Through ${metrics.latest_confirmed_production_date_label}</span><strong>${formatNumber(metrics.confirmed_production_total, 1, 1)} kWh</strong></div>
@@ -1644,7 +1646,7 @@ function buildOperationalSnapshotHtml(metrics) {
             <div><span>Net Export Since ${metrics.smart_meter_start_label}</span><strong>${formatNumber(metrics.net_export_since_install, 1, 1)} kWh</strong></div>
           </div>
           <div class="tracker-modal-note operational-snapshot-note">
-            Production is measured by SunRun. Import and export are measured by NYSEG. Estimated home usage = production - export + import. Projected annual production remains in the Annual Projection card above to avoid duplication.
+            Production is measured by SunRun. Import and export are measured by NYSEG. Home energy delivered = production - export + import. Projected annual production remains in the Annual Projection card above to avoid duplication.
           </div>
           <div class="row g-3 mt-1">
             <div class="col-xl-6">
@@ -5574,34 +5576,17 @@ async function handleSettingsForm(db) {
 
 async function bootDashboard(db) {
   try {
-    let state = await loadFirestoreState(db);
-    const sunrunSync = await syncSunrunProductionIntoEntries(db, state.entries);
-    if (sunrunSync.updated) {
-      state = { ...state, entries: sunrunSync.entries };
-    }
-    const backfillResult = await backfillStarterEntriesIfNeeded(db, state.entries);
-    if (backfillResult.backfilled) {
-      state = { ...state, entries: backfillResult.entries };
-    }
-    const recentBackfillResult = await backfillRecentHistoricalEntriesIfMissing(db, state.entries);
-    if (recentBackfillResult.backfilled) {
-      state = { ...state, entries: recentBackfillResult.entries };
-    }
-    const temperatureBackfill = await backfillMissingTemperatureRanges(db, state.entries);
-    if (temperatureBackfill.updated) {
-      state = { ...state, entries: temperatureBackfill.entries };
-    }
-    const irradianceRevalidation = await revalidateSuspiciousIrradiancePeaks(db, state.entries);
-    if (irradianceRevalidation.updated) {
-      state = { ...state, entries: irradianceRevalidation.entries };
-    }
+    const state = await loadFirestoreState(db);
+    const fileThroughDate = getDashboardFileThroughDate();
     await renderDashboardUnified(
-      state.entries.length ? state.entries : sampleEntries,
+      state.entries,
       state.config,
       buildStatus(
-        "Live Firebase data is connected. Solar production data comes from the SunRun CSV file. Import (01) and Export (02) are from the Smart Meter.",
-        "success",
-        false
+        fileThroughDate
+          ? `Dashboard calculations use matching SunRun and NYSEG downloaded-file data through ${fileThroughDate}. The two most recent reporting days are excluded until both files publish final data.`
+          : "Dashboard is waiting for matching SunRun and NYSEG downloaded-file data before calculating metrics.",
+        fileThroughDate ? "success" : "warning",
+        !fileThroughDate
       )
     );
   } catch (error) {

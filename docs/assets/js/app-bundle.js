@@ -23992,7 +23992,7 @@ This typically indicates that your device does not have a healthy Internet conne
     if (!target) {
       return;
     }
-    const displayEntries = getDisplayEntries(entries);
+    const displayEntries = buildFileBackedDashboardEntries(entries);
     const metricsEntries = buildComputedEntries(displayEntries, config);
     try {
       const metrics = calculateDashboardMetricsClient(metricsEntries, config);
@@ -24035,17 +24035,6 @@ This typically indicates that your device does not have a healthy Internet conne
     label: "Yorktown Heights, NY",
     timezone: "America/New_York"
   };
-  var WEATHER_FACTORS = {
-    Sunny: 1.05,
-    Cloudy: 0.82,
-    Smoke: 0.72,
-    Rain: 0.58,
-    Snow: 0.45,
-    Overcast: 0.64,
-    "Extreme Heat": 0.92,
-    Wind: 0.95,
-    Unknown: 0.8
-  };
   var entryLookupOverrides = {
     "2026-07-21": {
       irradiance_peak_wm2: 460,
@@ -24074,55 +24063,6 @@ This typically indicates that your device does not have a healthy Internet conne
       notes: "Estimated placeholder based on recent weather and meter progression. Replace with actual Sunrun and NYSEG values when available."
     }
   };
-  var recentHistoricalBackfillEntries = [
-    {
-      entry_date: "2026-07-21",
-      irradiance_peak_wm2: 460,
-      production_kwh: 36.5,
-      meter_01_import_reading: 107,
-      meter_02_export_reading: 250,
-      weather: "Overcast",
-      temperature_f: 70.5,
-      temperature_high_f: 76,
-      temperature_low_f: 65,
-      humidity_pct: 72,
-      cloud_cover_pct: 85,
-      wind_mph: 12,
-      estimated: true,
-      lookup_source: "override",
-      notes: "Estimated from Yorktown Heights forecast: overcast conditions with late thunderstorms expected. Update with actual production and meter readings when available."
-    },
-    {
-      entry_date: "2026-07-22",
-      irradiance_peak_wm2: 922,
-      production_kwh: 29.2,
-      meter_01_import_reading: 126,
-      meter_02_export_reading: 305,
-      weather: "Sunny",
-      temperature_f: 72.5,
-      temperature_high_f: 79,
-      temperature_low_f: 66,
-      humidity_pct: 57,
-      cloud_cover_pct: 22,
-      wind_mph: 9,
-      estimated: true,
-      lookup_source: "override",
-      notes: "Estimated placeholder based on recent weather and meter progression. Replace with actual Sunrun and NYSEG values when available."
-    },
-    {
-      entry_date: "2026-07-23",
-      irradiance_peak_wm2: 367,
-      production_kwh: 5,
-      meter_01_import_reading: 137.3,
-      meter_02_export_reading: 343.4,
-      weather: "Sunny",
-      temperature_high_f: 83,
-      temperature_low_f: 68,
-      estimated: true,
-      lookup_source: "intraday-placeholder",
-      notes: "Live intraday placeholder for Thursday, July 23, 2026. Replace with actual end-of-day production and meter readings."
-    }
-  ];
   var bootstrap = window.SOLAR_BOOTSTRAP || {};
   var trackerTodayBootstrap = /^\d{4}-\d{2}-\d{2}$/.test(String(bootstrap.tracker_today || "")) ? String(bootstrap.tracker_today) : "";
   var sampleEntries = Array.isArray(bootstrap.sample_entries) ? bootstrap.sample_entries : [];
@@ -24131,6 +24071,7 @@ This typically indicates that your device does not have a healthy Internet conne
   var historicalUsageBootstrap = bootstrap.historical_usage || {};
   var monthlyBillBootstrap = bootstrap.monthly_bill || {};
   var sunrunProductionBootstrap = bootstrap.sunrun_production || { available: false, by_date: {} };
+  var nysegIntervalBootstrap = bootstrap.nyseg_interval || { available: false, daily: [] };
   var dashboardCompactModeStorageKey = "solar-dashboard-compact-mode";
   var localSnapshotSyncStorageKey = "solar-local-json-last-sync-hour";
   var entriesSnapshotStorageKey = "solar-data-entry-snapshot-v1";
@@ -24527,6 +24468,30 @@ This typically indicates that your device does not have a healthy Internet conne
   function getSunrunProductionRecord(entryDate) {
     return sunrunProductionBootstrap?.by_date?.[String(entryDate)] || null;
   }
+  function getNysegIntervalRecord(entryDate) {
+    return (nysegIntervalBootstrap?.daily || []).find((record) => String(record.date) === String(entryDate)) || null;
+  }
+  function getDashboardFileThroughDate() {
+    const twoDaysAgo = shiftIsoDate(getTodayIsoDate(), -2);
+    const sunrunDate = String(sunrunProductionBootstrap?.latest_available_date || "");
+    const nysegDate = String(nysegIntervalBootstrap?.source_end || "");
+    const candidates = [twoDaysAgo, sunrunDate, nysegDate].filter((value) => /^\d{4}-\d{2}-\d{2}$/.test(value));
+    return candidates.length === 3 ? candidates.sort()[0] : "";
+  }
+  function buildFileBackedDashboardEntries(entries) {
+    const fileThroughDate = getDashboardFileThroughDate();
+    if (!fileThroughDate) return [];
+    return sortEntries(entries).filter((entry) => {
+      const entryDate = String(entry.entry_date || "");
+      const sunrun = getSunrunProductionRecord(entryDate);
+      return entryDate <= fileThroughDate && Boolean(sunrun?.available) && Boolean(getNysegIntervalRecord(entryDate));
+    }).map((entry) => normalizeEntry({
+      ...entry,
+      production_kwh: Number(getSunrunProductionRecord(entry.entry_date)?.production_kwh || 0),
+      estimated: false,
+      lookup_source: "source-files"
+    }));
+  }
   function applySunrunProductionToEntry(entry) {
     const normalized = normalizeEntry(entry);
     const sunrunRecord = getSunrunProductionRecord(normalized.entry_date);
@@ -24659,9 +24624,6 @@ This typically indicates that your device does not have a healthy Internet conne
       timeoutId = window.setTimeout(() => reject(new Error(message)), timeoutMs);
     });
     return Promise.race([promise, timeout]).finally(() => window.clearTimeout(timeoutId));
-  }
-  function entryNeedsTemperatureBackfill(entry) {
-    return parseOptionalNumber(entry?.temperature_high_f) === null || parseOptionalNumber(entry?.temperature_low_f) === null;
   }
   function hasFirestoreRestValue(value, key) {
     return Object.prototype.hasOwnProperty.call(value, key);
@@ -24915,170 +24877,28 @@ This typically indicates that your device does not have a healthy Internet conne
     const refreshedState = await loadFirestoreState(db);
     return { entries: refreshedState.entries, updated: true, count: updates.length };
   }
-  async function backfillMissingTemperatureRanges(db, entries) {
-    const candidates = sortEntries(entries).filter((entry) => entryNeedsTemperatureBackfill(entry));
-    if (!candidates.length) {
-      return { entries, updated: false, count: 0 };
-    }
-    const updatedEntries = new Map(entries.map((entry) => [entry.entry_date, normalizeEntry(entry)]));
-    let changedCount = 0;
-    for (const entry of candidates) {
-      try {
-        const lookupValues = await buildEstimatedLookupValues(entry.entry_date, [...updatedEntries.values()]);
-        const high = parseOptionalNumber(lookupValues.temperature_high_f);
-        const low = parseOptionalNumber(lookupValues.temperature_low_f);
-        const avg = parseOptionalNumber(lookupValues.temperature_f);
-        if (high === null && low === null && avg === null) {
-          continue;
-        }
-        const mergedEntry = normalizeEntry({
-          ...entry,
-          temperature_f: avg ?? entry.temperature_f ?? null,
-          temperature_high_f: high ?? entry.temperature_high_f ?? entry.temperature_f ?? null,
-          temperature_low_f: low ?? entry.temperature_low_f ?? entry.temperature_f ?? null,
-          humidity_pct: lookupValues.humidity_pct ?? entry.humidity_pct ?? null,
-          cloud_cover_pct: lookupValues.cloud_cover_pct ?? entry.cloud_cover_pct ?? null,
-          wind_mph: lookupValues.wind_mph ?? entry.wind_mph ?? null,
-          lookup_source: lookupValues.lookup_source || entry.lookup_source || "manual",
-          updated_at: (/* @__PURE__ */ new Date()).toISOString()
-        });
-        await setDoc2(doc(db, entryCollectionName, entry.entry_date), mergedEntry, { merge: true });
-        updatedEntries.set(entry.entry_date, mergedEntry);
-        changedCount += 1;
-      } catch (error) {
-      }
-    }
-    if (!changedCount) {
-      return { entries, updated: false, count: 0 };
-    }
-    return {
-      entries: sortEntries([...updatedEntries.values()]),
-      updated: true,
-      count: changedCount
-    };
-  }
-  function entryNeedsIrradianceRevalidation(entry) {
-    if (String(entry.entry_date) > String(getTodayIsoDate())) return false;
-    if (entry.irradiance_method === "open-meteo-hourly-instant-ghi-v3" && Array.isArray(entry.irradiance_hourly_profile) && entry.irradiance_hourly_profile.length >= 20) return false;
-    if (String(entry.entry_date) === String(getTodayIsoDate())) return true;
-    const irradiance = Number(entry.irradiance_peak_wm2 || 0);
-    const source = String(entry.lookup_source || "").toLowerCase();
-    return irradiance < 450 || source.startsWith("fallback");
-  }
-  async function revalidateSuspiciousIrradiancePeaks(db, entries) {
-    const candidates = sortEntries(entries).filter((entry) => entryNeedsIrradianceRevalidation(entry)).slice(-14);
-    if (!candidates.length) {
-      return { entries, updated: false, count: 0 };
-    }
-    const updatedEntries = new Map(entries.map((entry) => [entry.entry_date, normalizeEntry(entry)]));
-    let changedCount = 0;
-    for (const entry of candidates) {
-      try {
-        const lookupValues = await fetchOpenMeteoLookupValues(entry.entry_date);
-        const correctedPeak = Number(lookupValues.irradiance_peak_wm2 || 0);
-        if (correctedPeak <= 0 || Math.abs(correctedPeak - Number(entry.irradiance_peak_wm2 || 0)) < 1) {
-          continue;
-        }
-        const existingNotes = String(entry.notes || "");
-        const canReplaceNotes = !entry.notes_manual && String(entry.lookup_source || "").toLowerCase() !== "manual" && (!existingNotes || /auto-filled|fallback|placeholder/i.test(existingNotes));
-        const mergedEntry = normalizeEntry({
-          ...entry,
-          irradiance_peak_wm2: correctedPeak,
-          weather: lookupValues.weather || entry.weather || "Unknown",
-          temperature_f: lookupValues.temperature_f ?? entry.temperature_f ?? null,
-          temperature_high_f: lookupValues.temperature_high_f ?? entry.temperature_high_f ?? null,
-          temperature_low_f: lookupValues.temperature_low_f ?? entry.temperature_low_f ?? null,
-          humidity_pct: lookupValues.humidity_pct ?? entry.humidity_pct ?? null,
-          cloud_cover_pct: lookupValues.cloud_cover_pct ?? entry.cloud_cover_pct ?? null,
-          wind_mph: lookupValues.wind_mph ?? entry.wind_mph ?? null,
-          sunrise_time: lookupValues.sunrise_time || entry.sunrise_time || "",
-          sunset_time: lookupValues.sunset_time || entry.sunset_time || "",
-          lookup_source: lookupValues.lookup_source || entry.lookup_source || "manual",
-          irradiance_method: "open-meteo-hourly-instant-ghi-v3",
-          irradiance_verified_at: (/* @__PURE__ */ new Date()).toISOString(),
-          irradiance_hourly_profile: lookupValues.irradiance_hourly_profile || entry.irradiance_hourly_profile || [],
-          notes: canReplaceNotes ? lookupValues.notes : existingNotes,
-          updated_at: (/* @__PURE__ */ new Date()).toISOString()
-        });
-        await setDoc2(doc(db, entryCollectionName, entry.entry_date), mergedEntry, { merge: true });
-        updatedEntries.set(entry.entry_date, mergedEntry);
-        changedCount += 1;
-      } catch (error) {
-      }
-    }
-    return {
-      entries: sortEntries([...updatedEntries.values()]),
-      updated: changedCount > 0,
-      count: changedCount
-    };
-  }
-  async function backfillStarterEntriesIfNeeded(db, entries) {
-    if (!sampleEntries.length) {
-      return { entries, backfilled: false };
-    }
-    const existingDates = new Set(entries.map((entry) => entry.entry_date));
-    const missingStarterEntries = sampleEntries.map((entry) => normalizeEntry(entry)).filter((entry) => !existingDates.has(entry.entry_date));
-    if (!missingStarterEntries.length) {
-      return { entries, backfilled: false };
-    }
-    for (const entry of missingStarterEntries) {
-      await setDoc2(doc(db, entryCollectionName, entry.entry_date), {
-        ...entry,
-        notes: entry.notes || "Starter history restored from the built-in sample data.",
-        created_at: entry.created_at || (/* @__PURE__ */ new Date()).toISOString(),
-        updated_at: (/* @__PURE__ */ new Date()).toISOString()
-      }, { merge: true });
-    }
-    const refreshedState = await loadFirestoreState(db);
-    return { entries: refreshedState.entries, backfilled: true };
-  }
   function buildComputedEntries(entries, config = defaultConfig) {
     if (!entries.length) return [];
-    const annualHomeUsage = Number(config.annual_home_usage_kwh || 17967);
-    const baselineHomeUse = annualHomeUsage / 365;
-    const todayIsoDate = getTodayIsoDate();
     const sortedEntries = sortEntries(entries);
-    const entryByDate = new Map(sortedEntries.map((entry) => [String(entry.entry_date), entry]));
-    const pendingOverrideDates = /* @__PURE__ */ new Map([
-      [todayIsoDate, shiftIsoDate(todayIsoDate, -3)],
-      [shiftIsoDate(todayIsoDate, -1), shiftIsoDate(todayIsoDate, -4)]
-    ]);
     return sortedEntries.map((entry, index, list) => {
-      let effectiveEntry = entry;
-      const analogDate = pendingOverrideDates.get(String(entry.entry_date));
-      const analogEntry = analogDate ? entryByDate.get(String(analogDate)) : null;
-      const sunrunRecord = getSunrunProductionRecord(entry.entry_date);
-      const isPendingSunrunDate = pendingOverrideDates.has(String(entry.entry_date));
-      if (analogEntry && isPendingSunrunDate && !sunrunRecord?.available) {
-        effectiveEntry = {
-          ...entry,
-          estimated: true,
-          production_kwh: Number(analogEntry.production_kwh || entry.production_kwh || 0),
-          irradiance_peak_wm2: Number(entry.irradiance_peak_wm2 || analogEntry.irradiance_peak_wm2 || 0),
-          notes: `Pending data from SunRun. Temporary dashboard estimate aligned to ${analogEntry.entry_date} until actual production is published.`
-        };
-      }
-      const previous = index > 0 ? list[index - 1] : null;
-      const currentDate = /* @__PURE__ */ new Date(`${effectiveEntry.entry_date}T00:00:00`);
-      const month = currentDate.getMonth();
-      const seasonalFactor = [11, 0, 1, 5, 6, 7].includes(month) ? 1.08 : 1;
-      const weatherFactor = WEATHER_FACTORS[effectiveEntry.weather] ?? 0.8;
-      const estimatedDaytimeHouseUsage = Number((baselineHomeUse * seasonalFactor * weatherFactor).toFixed(2));
-      const dailyImport = previous ? Math.max(0, Number(effectiveEntry.meter_01_import_reading || 0) - Number(previous.meter_01_import_reading || 0)) : 0;
-      const dailyExport = previous ? Math.max(0, Number(effectiveEntry.meter_02_export_reading || 0) - Number(previous.meter_02_export_reading || 0)) : 0;
-      const estimatedSelfConsumption = Math.min(Number(effectiveEntry.production_kwh || 0), estimatedDaytimeHouseUsage);
-      const totalHomeConsumption = estimatedSelfConsumption + dailyImport;
+      const currentDate = /* @__PURE__ */ new Date(`${entry.entry_date}T00:00:00`);
+      const nysegInterval = getNysegIntervalRecord(entry.entry_date);
+      const dailyImport = Number(nysegInterval?.import_kwh || 0);
+      const dailyExport = Number(nysegInterval?.export_kwh || 0);
+      const production = Number(entry.production_kwh || 0);
+      const totalHomeConsumption = Math.max(0, production + dailyImport - dailyExport);
+      const fileBackedSelfConsumption = Math.max(0, production - dailyExport);
       const rollingWindow = list.slice(Math.max(0, index - 6), index + 1);
       return {
-        ...effectiveEntry,
+        ...entry,
         currentDate,
-        estimated: Boolean(effectiveEntry.estimated),
+        estimated: false,
         daily_import_kwh: dailyImport,
         daily_export_kwh: dailyExport,
-        estimated_daytime_house_usage_kwh: estimatedDaytimeHouseUsage,
-        estimated_self_consumption_kwh: estimatedSelfConsumption,
+        estimated_daytime_house_usage_kwh: totalHomeConsumption,
+        estimated_self_consumption_kwh: fileBackedSelfConsumption,
         estimated_total_home_consumption_kwh: totalHomeConsumption,
-        solar_offset_pct: totalHomeConsumption > 0 ? estimatedSelfConsumption / totalHomeConsumption * 100 : 0,
+        solar_offset_pct: totalHomeConsumption > 0 ? fileBackedSelfConsumption / totalHomeConsumption * 100 : 0,
         rolling_7_day_prod: mean(rollingWindow.map((item) => Number(item.production_kwh || 0)))
       };
     });
@@ -25258,9 +25078,9 @@ This typically indicates that your device does not have a healthy Internet conne
             <div>
               <p class="eyebrow mb-2">Operational Snapshot</p>
               <h2 class="h5 mb-1">Current production and smart meter summary</h2>
-              <p class="text-muted mb-0">Calculated from the current Firebase dataset. Production uses confirmed SunRun days, while Import (01) and Export (02) use the smart meter history.</p>
+              <p class="text-muted mb-0">Calculated only from matching downloaded SunRun and NYSEG file days, with the shared two-day reporting delay applied.</p>
             </div>
-            <span class="operational-snapshot-date">Latest confirmed SunRun day: ${metrics.latest_confirmed_production_date_label}</span>
+            <span class="operational-snapshot-date">Latest matched file day: ${metrics.latest_confirmed_production_date_label}</span>
           </div>
           <div class="info-grid operational-snapshot-grid mb-3">
             <div><span>Final Production Through ${metrics.latest_confirmed_production_date_label}</span><strong>${formatNumber(metrics.confirmed_production_total, 1, 1)} kWh</strong></div>
@@ -25272,7 +25092,7 @@ This typically indicates that your device does not have a healthy Internet conne
             <div><span>Net Export Since ${metrics.smart_meter_start_label}</span><strong>${formatNumber(metrics.net_export_since_install, 1, 1)} kWh</strong></div>
           </div>
           <div class="tracker-modal-note operational-snapshot-note">
-            Production is measured by SunRun. Import and export are measured by NYSEG. Estimated home usage = production - export + import. Projected annual production remains in the Annual Projection card above to avoid duplication.
+            Production is measured by SunRun. Import and export are measured by NYSEG. Home energy delivered = production - export + import. Projected annual production remains in the Annual Projection card above to avoid duplication.
           </div>
           <div class="row g-3 mt-1">
             <div class="col-xl-6">
@@ -27296,22 +27116,6 @@ This typically indicates that your device does not have a healthy Internet conne
     }
     return { entry: placeholderEntry, created: true };
   }
-  async function backfillRecentHistoricalEntriesIfMissing(db, entries) {
-    const existingDates = new Set(entries.map((entry) => entry.entry_date));
-    const missingEntries = recentHistoricalBackfillEntries.map((entry) => normalizeEntry(entry)).filter((entry) => !existingDates.has(entry.entry_date));
-    if (!missingEntries.length) {
-      return { entries, backfilled: false };
-    }
-    for (const entry of missingEntries) {
-      await setDoc2(doc(db, entryCollectionName, entry.entry_date), {
-        ...entry,
-        created_at: entry.created_at || (/* @__PURE__ */ new Date()).toISOString(),
-        updated_at: (/* @__PURE__ */ new Date()).toISOString()
-      }, { merge: true });
-    }
-    const refreshedState = await loadFirestoreState(db);
-    return { entries: refreshedState.entries, backfilled: true };
-  }
   function setEntryFormMode(modeText, saveLabel = "Save Entry") {
     const modeTarget = document.getElementById("entry-form-mode");
     const saveButton = document.getElementById("entry-save-button");
@@ -28422,34 +28226,15 @@ This is a reconciliation, not an independent measurement, because EDC includes S
   }
   async function bootDashboard(db) {
     try {
-      let state = await loadFirestoreState(db);
-      const sunrunSync = await syncSunrunProductionIntoEntries(db, state.entries);
-      if (sunrunSync.updated) {
-        state = { ...state, entries: sunrunSync.entries };
-      }
-      const backfillResult = await backfillStarterEntriesIfNeeded(db, state.entries);
-      if (backfillResult.backfilled) {
-        state = { ...state, entries: backfillResult.entries };
-      }
-      const recentBackfillResult = await backfillRecentHistoricalEntriesIfMissing(db, state.entries);
-      if (recentBackfillResult.backfilled) {
-        state = { ...state, entries: recentBackfillResult.entries };
-      }
-      const temperatureBackfill = await backfillMissingTemperatureRanges(db, state.entries);
-      if (temperatureBackfill.updated) {
-        state = { ...state, entries: temperatureBackfill.entries };
-      }
-      const irradianceRevalidation = await revalidateSuspiciousIrradiancePeaks(db, state.entries);
-      if (irradianceRevalidation.updated) {
-        state = { ...state, entries: irradianceRevalidation.entries };
-      }
+      const state = await loadFirestoreState(db);
+      const fileThroughDate = getDashboardFileThroughDate();
       await renderDashboardUnified(
-        state.entries.length ? state.entries : sampleEntries,
+        state.entries,
         state.config,
         buildStatus(
-          "Live Firebase data is connected. Solar production data comes from the SunRun CSV file. Import (01) and Export (02) are from the Smart Meter.",
-          "success",
-          false
+          fileThroughDate ? `Dashboard calculations use matching SunRun and NYSEG downloaded-file data through ${fileThroughDate}. The two most recent reporting days are excluded until both files publish final data.` : "Dashboard is waiting for matching SunRun and NYSEG downloaded-file data before calculating metrics.",
+          fileThroughDate ? "success" : "warning",
+          !fileThroughDate
         )
       );
     } catch (error) {

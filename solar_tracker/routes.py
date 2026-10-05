@@ -146,6 +146,7 @@ def build_bootstrap_data():
     )
     monthly_bill = load_monthly_bill_summary()
     sunrun_production = load_sunrun_daily_production()
+    nyseg_interval = build_nyseg_interval_usage_report()
     return {
         "tracker_today": tracker_today().isoformat(),
         "sample_entries": [entry_to_dict(entry) for entry in sample_entries],
@@ -155,6 +156,7 @@ def build_bootstrap_data():
         "historical_usage": historical_usage_to_dict(historical_usage),
         "monthly_bill": monthly_bill_to_dict(monthly_bill),
         "sunrun_production": sunrun_production,
+        "nyseg_interval": nyseg_interval,
     }
 
 

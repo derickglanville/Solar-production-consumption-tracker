@@ -399,9 +399,9 @@
             <div>
               <p class="eyebrow mb-2">Operational Snapshot</p>
               <h2 class="h5 mb-1">Current production and smart meter summary</h2>
-              <p class="text-muted mb-0">Calculated from the current dashboard dataset. Production uses confirmed SunRun days, while Import (01) and Export (02) use the smart meter history.</p>
+              <p class="text-muted mb-0">Calculated only from matching downloaded SunRun and NYSEG file days, with the shared two-day reporting delay applied.</p>
             </div>
-            <span class="operational-snapshot-date">Latest confirmed SunRun day: {{ metrics.latest_confirmed_production_date_label }}</span>
+            <span class="operational-snapshot-date">Latest matched file day: {{ metrics.latest_confirmed_production_date_label }}</span>
           </div>
           <div class="info-grid operational-snapshot-grid mb-3">
             <div><span>Final Production Through {{ metrics.latest_confirmed_production_date_label }}</span><strong>{{ "{:,.1f}".format(metrics.confirmed_production_total) }} kWh</strong></div>
@@ -413,7 +413,7 @@
             <div><span>Net Export Since {{ metrics.smart_meter_start_label }}</span><strong>{{ "{:,.1f}".format(metrics.net_export_since_install) }} kWh</strong></div>
           </div>
           <div class="tracker-modal-note operational-snapshot-note">
-            Production is measured by SunRun. Import and export are measured by NYSEG. Estimated home usage = production - export + import. Projected annual production remains in the Annual Projection card above to avoid duplication.
+            Production is measured by SunRun. Import and export are measured by NYSEG. Home energy delivered = production - export + import. Projected annual production remains in the Annual Projection card above to avoid duplication.
           </div>
           <div class="row g-3 mt-1">
             <div class="col-xl-6">
