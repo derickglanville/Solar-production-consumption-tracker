@@ -182,7 +182,17 @@ def open_download_dialog(page: Page) -> Locator:
         page.wait_for_timeout(1_000)
     if not trigger:
         raise RuntimeError("NYSEG Insights did not finish rendering a Download My/your Energy Use Data control within 60 seconds.")
+    # NYSEG currently exposes this as a link beneath the usage chart.  Its
+    # implementation has alternated between an ARIA dialog, an unlabelled
+    # in-page panel, and a separate browser tab, so do not assume one markup.
+    known_pages = set(page.context.pages)
     trigger.click()
+    page.wait_for_timeout(1_000)
+    popup_pages = [candidate for candidate in page.context.pages if candidate not in known_pages]
+    if popup_pages:
+        page = popup_pages[-1]
+        page.set_default_timeout(20_000)
+
     dialog = page.get_by_role("dialog")
     try:
         dialog.last.wait_for(state="visible", timeout=15_000)
@@ -191,6 +201,15 @@ def open_download_dialog(page: Page) -> Locator:
         fallback = page.locator('[role="dialog"], .modal:visible').last
         if fallback.count() and fallback.is_visible():
             return fallback
+        # The portal's newer download panel has no dialog role.  Once its
+        # form labels are visible, the page body is a safe search scope for
+        # the radio buttons, dates, and final Download file button below.
+        data_type = page.get_by_text(re.compile(r"select\s+data\s+type", re.I))
+        try:
+            data_type.last.wait_for(state="visible", timeout=5_000)
+            return page.locator("body")
+        except PlaywrightTimeoutError:
+            pass
         raise RuntimeError("NYSEG did not open the energy-use download dialog.")
 
 
