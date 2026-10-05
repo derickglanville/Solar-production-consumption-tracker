@@ -34,6 +34,7 @@ LOCAL_APP_DATA = Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData" / "
 PROFILE_DIRECTORY = LOCAL_APP_DATA / "SolarEnergyTracker" / "nyseg-playwright-profile"
 DIAGNOSTIC_DIRECTORY = LOCAL_APP_DATA / "SolarEnergyTracker" / "nyseg-download-diagnostics"
 REQUIRED_COLUMNS = {"Date", "Delivered", "Received"}
+HTTP2_ERROR_TEXT = "ERR_HTTP2_PROTOCOL_ERROR"
 
 
 def first_visible(locators: Iterable[Locator]) -> Locator | None:
@@ -44,6 +45,36 @@ def first_visible(locators: Iterable[Locator]) -> Locator | None:
         except PlaywrightTimeoutError:
             continue
     return None
+
+
+def page_has_http2_error(page: Page) -> bool:
+    """Detect Edge's SSO error page before waiting for a control that cannot render."""
+    try:
+        return HTTP2_ERROR_TEXT in page.locator("body").inner_text(timeout=2_000)
+    except PlaywrightTimeoutError:
+        return False
+
+
+def go_to_insights(page: Page) -> None:
+    """Open NYSEG Insights with short retries for transient SSO HTTP/2 failures."""
+    last_error = None
+    for attempt in range(1, 4):
+        try:
+            page.goto(INSIGHTS_URL, wait_until="domcontentloaded", timeout=45_000)
+            page.wait_for_timeout(1_500)
+            if not page_has_http2_error(page):
+                return
+            last_error = RuntimeError("NYSEG SSO returned an HTTP/2 protocol error.")
+        except PlaywrightTimeoutError as error:
+            last_error = error
+        if attempt < 3:
+            print(f"NYSEG SSO did not load (attempt {attempt}/3); retrying…", flush=True)
+            page.goto("about:blank")
+            page.wait_for_timeout(3_000)
+    raise RuntimeError(
+        "NYSEG's sign-in service could not be reached after three attempts "
+        f"({HTTP2_ERROR_TEXT}). Try Run NYSEG sync now again later, or renew the session with --headed."
+    ) from last_error
 
 
 def click_choice(dialog: Locator, label: str) -> None:
@@ -86,8 +117,7 @@ def fill_date(dialog: Locator, kind: str, value: date) -> None:
 
 
 def ensure_signed_in(page: Page, username: str | None, password: str | None, headed: bool) -> None:
-    page.goto(INSIGHTS_URL, wait_until="domcontentloaded")
-    page.wait_for_timeout(1_000)
+    go_to_insights(page)
     password_field = first_visible((
         page.locator('input[type="password"]'),
         page.get_by_label(re.compile("password", re.I)),
@@ -98,7 +128,7 @@ def ensure_signed_in(page: Page, username: str | None, password: str | None, hea
         if headed:
             print("NYSEG sign-in is required. Complete sign-in, MFA, or CAPTCHA in the browser window.")
             page.wait_for_timeout(90_000)
-            page.goto(INSIGHTS_URL, wait_until="domcontentloaded")
+            go_to_insights(page)
             return
         raise RuntimeError("NYSEG login expired. Run once with --headed and NYSEG_USER/NYSEG_PASS to renew the saved browser session.")
     username_field = first_visible((
@@ -123,11 +153,11 @@ def ensure_signed_in(page: Page, username: str | None, password: str | None, hea
             raise RuntimeError("NYSEG requires additional sign-in verification. Run with --headed to complete it.")
         print("Complete NYSEG MFA or CAPTCHA in the browser window, then wait for Insights to load.")
         page.wait_for_timeout(90_000)
-    page.goto(INSIGHTS_URL, wait_until="domcontentloaded")
+    go_to_insights(page)
 
 
 def open_download_dialog(page: Page) -> Locator:
-    page.goto(INSIGHTS_URL, wait_until="domcontentloaded")
+    go_to_insights(page)
     # Insights is a single-page app. DOMContentLoaded only means its empty
     # shell is visible; NYSEG's cards and download control can take time to
     # render after sign-in.
@@ -219,6 +249,9 @@ def main() -> int:
         context = playwright.chromium.launch_persistent_context(
             str(PROFILE_DIRECTORY), headless=not args.headed, accept_downloads=True,
             channel="msedge" if args.browser == "edge" else None,
+            # NYSEG's SSO sometimes fails in Edge with ERR_HTTP2_PROTOCOL_ERROR.
+            # Use HTTP/1.1 for this automation profile while preserving its saved session.
+            args=["--disable-http2"],
         )
         page = context.pages[0] if context.pages else context.new_page()
         page.set_default_timeout(20_000)
