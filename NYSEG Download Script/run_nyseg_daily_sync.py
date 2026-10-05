@@ -20,6 +20,7 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DOWNLOADER = Path(__file__).resolve().parent / "nyseg_download.py"
 STATUS_FILE = PROJECT_ROOT / "SunRun Data" / "nyseg-daily-sync-status.json"
+HISTORY_FILE = PROJECT_ROOT / "JSON" / "Daily_NYSEG_Load_History.json"
 EMAIL_SETTINGS_FILE = PROJECT_ROOT / "SunRun Data" / "Script" / "Email_Info.txt"
 LOCK_FILE = STATUS_FILE.with_suffix(".lock")
 PROCESS_FILE = STATUS_FILE.with_name("nyseg-daily-sync-process.json")
@@ -29,6 +30,28 @@ EMAIL_ENABLED_MARKER = STATUS_FILE.with_name("nyseg-daily-sync-email-enabled")
 def write_status(payload: dict) -> None:
     STATUS_FILE.parent.mkdir(parents=True, exist_ok=True)
     STATUS_FILE.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+
+
+def save_daily_load_history(status: dict) -> None:
+    """Keep one concise NYSEG automation outcome per calendar day."""
+    HISTORY_FILE.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        payload = json.loads(HISTORY_FILE.read_text(encoding="utf-8"))
+        records = payload.get("records", [])
+    except (OSError, ValueError, AttributeError):
+        records = []
+    completed = status.get("completed_at") or datetime.now().astimezone().isoformat(timespec="seconds")
+    record = {
+        "date": completed[:10],
+        "completed_at": completed,
+        "status": "Success" if status.get("status") == "success" else "Failed",
+        "saved_records": int(status.get("saved_records", 0)),
+        "email_sent": bool(status.get("email_sent")),
+        "message": status.get("error") or "NYSEG CSV download and Firebase import completed.",
+    }
+    records = [item for item in records if item.get("date") != record["date"]]
+    records.append(record)
+    HISTORY_FILE.write_text(json.dumps({"records": records}, indent=2), encoding="utf-8")
 
 
 def progress_writer(log_path: Path | None):
@@ -142,6 +165,12 @@ def main(test_email: bool = False, log_path: Path | None = None) -> int:
             raise RuntimeError("NYSEG download failed. Review the activity log for the portal error and diagnostic screenshot.")
 
         # Run the same server-verified import used by the Review / Apply button.
+        # Python starts with this script's folder on sys.path, even when the
+        # working directory is the project root.  Add the project explicitly
+        # so the background Task Scheduler process can import app.py.
+        project_root_text = str(PROJECT_ROOT)
+        if project_root_text not in sys.path:
+            sys.path.insert(0, project_root_text)
         from app import create_app
 
         progress("Saving new NYSEG M01/M02 readings to Firebase…")
@@ -159,6 +188,7 @@ def main(test_email: bool = False, log_path: Path | None = None) -> int:
             "download_output": "Completed; see nyseg-daily-sync.log for step-by-step output.",
         }
         add_email_result(status)
+        save_daily_load_history(status)
         progress(f"NYSEG daily sync completed: {status['saved_records']} Firebase records saved.")
         return 0
     except Exception as error:
@@ -169,6 +199,7 @@ def main(test_email: bool = False, log_path: Path | None = None) -> int:
             "error": str(error),
         }
         add_email_result(status)
+        save_daily_load_history(status)
         progress(f"NYSEG daily sync failed: {error}")
         return 1
     finally:

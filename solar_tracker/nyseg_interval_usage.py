@@ -58,9 +58,16 @@ def load_nyseg_interval_file_rows(path: Path | None = None) -> dict[str, Any]:
         summary["Weather"].append(_number(row["Weather"]))
         summary["interval_count"] += 1
     daily_rows = []
-    for summary in daily.values():
+    running_m01_kwh = 0.0
+    running_m02_kwh = 0.0
+    for day_key in sorted(daily):
+        summary = daily[day_key]
         summary["Weather"] = sum(summary["Weather"]) / len(summary["Weather"]) if summary["Weather"] else 0.0
         summary["m02_m01_diff"] = summary["Received"] - summary["Delivered"]
+        running_m01_kwh += summary["Delivered"]
+        running_m02_kwh += summary["Received"]
+        summary["running_m01_kwh"] = running_m01_kwh
+        summary["running_m02_kwh"] = running_m02_kwh
         daily_rows.append(summary)
     return {
         "available": True,
@@ -113,14 +120,20 @@ def build_nyseg_interval_usage_report(path: Path | None = None) -> dict[str, Any
         return _empty_report()
 
     daily_rows = []
+    running_m01_kwh = 0.0
+    running_m02_kwh = 0.0
     monthly: dict[str, dict[str, float]] = defaultdict(lambda: {"import_kwh": 0.0, "export_kwh": 0.0, "net_kwh": 0.0, "days": 0.0})
     for day_key, values in sorted(daily.items()):
         month_key = day_key[:7]
         net_export = values["export_kwh"] - values["import_kwh"]
+        running_m01_kwh += values["import_kwh"]
+        running_m02_kwh += values["export_kwh"]
         daily_rows.append({
             "date": day_key,
             "import_kwh": values["import_kwh"],
             "export_kwh": values["export_kwh"],
+            "running_m01_kwh": running_m01_kwh,
+            "running_m02_kwh": running_m02_kwh,
             "net_export_kwh": net_export,
             "average_temperature_f": values["temperature_total"] / values["intervals"] if values["intervals"] else 0.0,
         })

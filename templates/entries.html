@@ -4,29 +4,10 @@
 <div class="entries-status-row"><span id="entries-firebase-status" class="entries-firebase-status entries-firebase-status-connecting" role="status">Firebase: Connecting…</span></div><div id="entries-status"></div>
 <div class="card tracker-card nyseg-meter-import-card mb-4" id="entry-nyseg-meter-import">
   <div class="card-body d-flex flex-wrap justify-content-between align-items-center gap-3">
-    <div><p class="eyebrow mb-1">NYSEG utility intervals</p><h2 class="h5 mb-1">Populate estimated M01 and M02 readings</h2><p class="text-muted small mb-0">Review the utility-derived daily readings first. Confirmed manual readings stay protected.</p></div>
-    <button type="button" class="btn btn-contract" id="entry-nyseg-meter-preview">Review NYSEG meter import</button>
-    <a class="btn btn-contract" href="{{ url_for('main.nyseg_usage_file') }}">View NYSEG file</a>
+    <div><p class="eyebrow mb-1">Validated NYSEG meter readings</p><h2 class="h5 mb-1">M01 and M02 come from the NYSEG file process</h2><p class="text-muted small mb-0">Reviewed NYSEG intervals supply cumulative M01/M02 readings. They are intentionally left blank until the validated file arrives, which normally runs about two days behind.</p></div>
+    <a class="btn btn-contract" href="{{ url_for('main.nyseg_usage_file') }}">View NYSEG and Sunrun Files</a>
   </div>
-</div><details class="card tracker-card meter-photo-quick-card meter-photo-quick-collapsed mb-4"><summary><span><span class="eyebrow">Current calibration checkpoint</span><strong>Update meters from photos</strong></span><span class="meter-photo-quick-summary-action">Show</span></summary>
-  <div class="card-body">
-    <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
-      <div><p class="eyebrow mb-1">Current calibration checkpoint</p><h2 class="h5 mb-1">Update meters from photos</h2><p class="text-muted small mb-0">1. Capture M01. 2. Capture M02. 3. Verify the values shown. 4. Save the checkpoint.</p></div>
-      <span class="meter-photo-quick-step" id="entry-meter-photo-quick-status" role="status">Capture both meter photos.</span>
-    </div>
-    <div class="meter-photo-quick-actions mt-3">
-      <label class="btn btn-sun" for="entry-meter-photo-quick-m01">1 · Capture M01<input type="file" id="entry-meter-photo-quick-m01" accept="image/*" capture="environment" hidden></label>
-      <label class="btn btn-sun" for="entry-meter-photo-quick-m02">2 · Capture M02<input type="file" id="entry-meter-photo-quick-m02" accept="image/*" capture="environment" hidden></label>
-      <button type="button" class="btn btn-contract" id="entry-meter-photo-quick-save" disabled>3 · Update Calibration Checkpoint</button>
-    </div>
-    <div class="meter-photo-save-actions mt-2" id="entry-meter-photo-save-actions"></div>`r`n    <div class="meter-photo-review mt-3" id="entry-meter-photo-review" hidden>
-      <strong>Review before updating</strong>
-      <span>Confirm both display photos and readings match the meters, then update the checkpoint.</span>
-      <div class="meter-photo-review-grid" id="entry-meter-photo-review-grid"></div>
-    </div>
-    <p class="form-text mb-0">After each capture, use <strong>Save photo to Pictures</strong> and choose <strong>Save Image</strong> in the iPhone share sheet. The app then reads the number and saves the confirmed M01/M02 values to today’s Calibration Checkpoint.</p>
-  </div>
-</div></details><div class="row g-4">
+</div><div class="row g-4">
   <div class="col-lg-4 col-xl-3">
     <div class="card tracker-card">
       <div class="card-body">
@@ -34,7 +15,6 @@
           <div>
             <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
               <h1 class="h4 mb-0">Daily Entry</h1>
-              <span id="entry-estimated-badge" class="entry-estimated-pill d-none">Estimated</span>
               <span id="entry-source-badge" class="entry-source-pill d-none">Source: Manual</span>
             </div>
             <p class="text-muted mb-0" id="entry-form-mode">Create or update a daily solar record.</p>
@@ -59,12 +39,13 @@
           </div>
           <div class="col-md-4">
             <label class="form-label">Meter 01 Import Reading</label>
-            <input type="number" step="0.1" name="meter_01_import_reading" class="form-control" required>
+            <input type="number" step="0.1" name="meter_01_import_reading" class="form-control" readonly aria-describedby="entry-meter-source-note">
           </div>
           <div class="col-md-4">
             <label class="form-label">Meter 02 Export Reading</label>
-            <input type="number" step="0.1" name="meter_02_export_reading" class="form-control" required>
+            <input type="number" step="0.1" name="meter_02_export_reading" class="form-control" readonly aria-describedby="entry-meter-source-note">
           </div>
+          <div class="col-12"><div class="form-text" id="entry-meter-source-note">M01 and M02 are read-only here and are updated only by the reviewed NYSEG utility-file import.</div></div>
           <div class="col-md-4">
             <label class="form-label">Weather</label>
             <select name="weather" class="form-select">
@@ -105,96 +86,6 @@
           <div class="col-12 d-flex flex-wrap gap-2 entry-form-actions">
             <button class="btn btn-sun btn-sm" id="entry-save-button">Save Entry</button>
             <button type="button" class="btn btn-contract btn-sm" id="entry-clear-button">Clear Form</button>
-          </div>
-          <div class="col-12">
-            <div class="meter-simulation-last-run">
-              <span>Last Meter Simulation: <strong id="entry-meter-sim-timestamp">Not run yet</strong></span>
-              <button type="button" class="btn btn-contract btn-sm" id="entry-meter-sim-view-day">View Day Estimates</button>
-            </div>
-          </div>
-          <div class="col-12">
-            <details class="entry-meter-sim card tracker-card tracker-card-soft">
-              <summary class="entry-meter-sim-toggle">
-                <strong>Meter Simulation &amp; Training</strong>
-                <span>Expand to review simulated M01/M02 values or record a calibration checkpoint.</span>
-              </summary>
-              <div class="card-body">
-                <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
-                  <div>
-                    <h2 class="h6 mb-1">Meter Simulation</h2>
-                    <p class="text-muted small mb-0">
-                      Weather-adjusted M01/M02 monitoring once per hour, all day. M01 accumulates from sunset to sunrise; M02 accumulates from sunrise to sunset using the recorded solar window and gathered calibration data. Today's manual readings and calibration checkpoints anchor the model without freezing the row; completed prior dates remain locked.
-                    </p>
-                  </div>
-                  <div class="d-flex flex-wrap gap-2">
-                    <button type="button" id="entry-meter-sim-apply" class="btn btn-contract btn-sm">Apply &amp; Save Simulated Meters</button>
-                  </div>
-                </div>
-                <div class="calibration-v2-panel mb-3" id="entry-calibration-v2-panel" aria-live="polite"></div>
-                <div class="entry-meter-sim-summary mb-3" id="entry-meter-sim-summary">
-                  Select a date to build a simulated intraday meter estimate.
-                </div>
-                <div class="table-responsive">
-                  <table class="table table-sm align-middle entry-meter-sim-table mb-0">
-                    <thead>
-                      <tr>
-                        <th>Time</th>
-                        <th class="text-end">Import Share</th>
-                        <th class="text-end">Export Share</th>
-                        <th class="text-end">Sim M01</th>
-                        <th class="text-end">Sim M02</th>
-                      </tr>
-                    </thead>
-                    <tbody id="entry-meter-sim-body"></tbody>
-                  </table>
-                </div>
-                <div class="meter-checkpoint mt-3">
-                  <div class="meter-checkpoint-heading">
-                    <strong>Calibration Checkpoint</strong>
-                    <span>Record an actual reading to anchor today's hourly estimates and train future predictions for similar weather, irradiance, and time.</span>
-                  </div>
-                  <div class="meter-checkpoint-grid">
-                    <label>Time<input type="time" id="entry-meter-checkpoint-time" class="form-control form-control-sm"></label>
-                    <label>Sim M01<input type="number" step="0.1" id="entry-meter-checkpoint-predicted-m01" class="form-control form-control-sm"></label>
-                    <label>Sim M02<input type="number" step="0.1" id="entry-meter-checkpoint-predicted-m02" class="form-control form-control-sm"></label>
-                    <label>Actual M01<input type="number" step="0.1" id="entry-meter-checkpoint-actual-m01" class="form-control form-control-sm"></label>
-                    <label>Actual M02<input type="number" step="0.1" id="entry-meter-checkpoint-actual-m02" class="form-control form-control-sm"></label>
-                    <button type="button" id="entry-meter-checkpoint-save" class="btn btn-contract btn-sm">Train Model</button>
-                  </div>
-                  <div class="meter-calibration-history mt-3">
-                    <div class="meter-calibration-history-heading">
-                      <div>
-                        <strong>Prediction History</strong>
-                        <span>Historic simulated readings compared with the actual meter checkpoints.</span>
-                      </div>
-                      <div class="meter-calibration-history-actions">
-                        <span class="meter-calibration-count" id="entry-meter-calibration-count">0 records</span>
-                        <button type="button" class="btn btn-contract btn-sm" id="entry-meter-calibration-popout">Pop Out</button>
-                      </div>
-                    </div>
-                    <div class="table-responsive meter-calibration-history-window">
-                      <table class="table table-sm align-middle meter-calibration-history-table mb-0">
-                        <thead>
-                          <tr>
-                            <th>Date</th>
-                            <th>Time</th>
-                            <th>Weather</th>
-                            <th>Irrad.</th>
-                            <th>Sim M01</th>
-                            <th>Actual</th>
-                            <th>Error</th>
-                            <th>Sim M02</th>
-                            <th>Actual</th>
-                            <th>Error</th>
-                          </tr>
-                        </thead>
-                        <tbody id="entry-meter-calibration-history"></tbody>
-                      </table>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </details>
           </div>
         </form>
       </div>
@@ -237,7 +128,7 @@
             <button type="button" class="btn btn-sun btn-sm" id="entries-history-popout">Pop Out</button>
           </div>
         </div>
-        <div class="entries-history-meter-strip" aria-label="Meter differences, estimated consumption, and latest hourly update">
+        <div class="entries-history-meter-strip" aria-label="Validated NYSEG meter and energy totals">
           <div class="entries-history-meter-stat entries-history-diff-stat" title="Sum and average of the filtered daily M01 differences">
             <span>M01 Diff Total</span>
             <strong id="entries-m01-diff-total">0.0 kWh</strong>
@@ -258,10 +149,10 @@
             <strong id="entries-implied-production-total">0.0 kWh</strong>
             <small id="entries-sunrun-production-comparison">Sunrun CSV: 0.0 kWh · Diff: 0.0 kWh</small>
           </div>
-          <div class="entries-history-meter-stat entries-history-hourly-stat" title="Date and time of the most recently saved hourly meter-simulation run">
-            <span>Last Hourly Update</span>
-            <strong id="entries-last-hourly-update">Not run yet</strong>
-            <small id="entries-last-hourly-update-detail">Waiting for an hourly simulation</small>
+          <div class="entries-history-meter-stat entries-history-hourly-stat" title="Latest date included in the reviewed NYSEG interval file">
+            <span>NYSEG Validated Through</span>
+            <strong id="entries-nyseg-validated-through">Awaiting NYSEG</strong>
+            <small id="entries-nyseg-validated-detail">No verified interval endpoint available</small>
           </div>
         </div>
         <section class="entries-month-comparison" aria-labelledby="entries-month-comparison-heading">
@@ -360,7 +251,7 @@
                 <td>{% if entry.temperature_high_f is not none %}{{ "%.0f"|format(entry.temperature_high_f) }}°F{% else %}<span class="text-muted">-</span>{% endif %}</td>
                 <td>{% if entry.temperature_low_f is not none %}{{ "%.0f"|format(entry.temperature_low_f) }}°F{% else %}<span class="text-muted">-</span>{% endif %}</td>
                 <td><span class="entry-note-preview" title="{{ entry.notes }}">{{ entry.notes }}</span></td>
-                <td>{% if entry.estimated %}<span class="entry-estimated-pill">Estimated</span>{% else %}<span class="entry-confirmed-pill">Actual</span>{% endif %}</td>
+              <td>{% if entry.estimated %}<span class="entry-estimated-pill">Pending data</span>{% else %}<span class="entry-confirmed-pill">Actual</span>{% endif %}</td>
                 <td><button type="button" class="btn btn-contract btn-sm entry-edit-button" data-entry-date="{{ entry.entry_date.strftime('%Y-%m-%d') }}">Edit</button></td>
               </tr>
               {% endfor %}
@@ -378,51 +269,6 @@
     </div>
   </div>
 </div>
-<dialog class="meter-simulation-dialog" id="entry-meter-sim-dialog">
-  <div class="meter-simulation-dialog-header">
-    <div>
-      <div class="eyebrow">Meter Simulation</div>
-      <h2 id="entry-meter-sim-dialog-title">Daily estimates</h2>
-      <p id="entry-meter-sim-dialog-meta"></p>
-    </div>
-    <button type="button" class="btn btn-contract btn-sm" id="entry-meter-sim-dialog-close">Close</button>
-  </div>
-  <div class="table-responsive">
-    <table class="table align-middle meter-simulation-dialog-table">
-      <thead>
-        <tr>
-          <th>Time</th>
-          <th>Import Share</th>
-          <th>Export Share</th>
-          <th>Estimated M01</th>
-          <th>Estimated M02</th>
-        </tr>
-      </thead>
-      <tbody id="entry-meter-sim-dialog-body"></tbody>
-    </table>
-  </div>
-  <div class="meter-simulation-dialog-runs">
-    <h3>Recorded Monitoring Checks</h3>
-    <p>Hourly estimates saved with the weather conditions and model basis available at that time. Earlier 15-minute history remains available for reference.</p>
-    <div class="table-responsive">
-      <table class="table align-middle meter-simulation-dialog-table">
-        <thead>
-          <tr>
-            <th>Time</th>
-            <th>Type</th>
-            <th>M01</th>
-            <th>M02</th>
-            <th>Weather</th>
-            <th>Cloud</th>
-            <th>Recorded</th>
-          </tr>
-        </thead>
-        <tbody id="entry-meter-sim-run-dialog-body"></tbody>
-      </table>
-    </div>
-  </div>
-  <div class="meter-simulation-dialog-summary" id="entry-meter-sim-dialog-summary"></div>
-</dialog>
 <style>
   .entry-meter-sim {
     margin-top: 0.35rem;

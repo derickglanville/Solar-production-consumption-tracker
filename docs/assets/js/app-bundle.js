@@ -24021,6 +24021,7 @@ This typically indicates that your device does not have a healthy Internet conne
   var entryCollectionName = "solar_daily_entries";
   var configCollectionName = "solar_tracker_config";
   var configDocumentId = "primary";
+  var validatedNysegThrough = "";
   var meterSimulationMonitorStartMinute = 0;
   var meterSimulationMonitorEndMinute = 23 * 60 + 59;
   var meterSimulationMonitorIntervalMinutes = 5;
@@ -24136,7 +24137,6 @@ This typically indicates that your device does not have a healthy Internet conne
   var localSnapshotSyncStartHour = 9;
   var localSnapshotSyncEndHour = 20;
   var localSnapshotSyncTimer = null;
-  var meterSimulationSyncTimer = null;
   var dailyEntryAutoCreateTimer = null;
   var meterSimulationLastAttemptedRunKey = "";
   var meterSimulationCheckpoints = [];
@@ -24412,6 +24412,21 @@ This typically indicates that your device does not have a healthy Internet conne
       export_error: Number(checkpoint.export_error),
       recorded_at: String(checkpoint.recorded_at || "")
     })).filter((checkpoint) => checkpoint.entry_date && Number.isFinite(checkpoint.minute_of_day) && Number.isFinite(checkpoint.import_error) && Number.isFinite(checkpoint.export_error) && Math.abs(checkpoint.import_error) <= 75 && Math.abs(checkpoint.export_error) <= 150).slice(-200);
+  }
+  function hasValidatedNysegMeters(entryDate) {
+    return !validatedNysegThrough || String(entryDate || "") <= validatedNysegThrough;
+  }
+  async function loadValidatedNysegThrough() {
+    if (isStaticSite()) return "";
+    try {
+      const response = await fetch("/api/nyseg-meter-intervals");
+      const payload = await response.json();
+      validatedNysegThrough = response.ok && payload?.available && /^\d{4}-\d{2}-\d{2}$/.test(payload.source_end || "") ? payload.source_end : "";
+    } catch (error) {
+      console.warn("Could not determine the latest validated NYSEG date.", error);
+      validatedNysegThrough = "";
+    }
+    return validatedNysegThrough;
   }
   function parseOptionalNumber(value) {
     if (value === null || value === void 0) return null;
@@ -25919,6 +25934,7 @@ This typically indicates that your device does not have a healthy Internet conne
                 <button type="button" class="btn btn-contract btn-sm" data-dashboard-view-toggle aria-pressed="false">Field Mode</button>
                 <button type="button" class="btn btn-contract btn-sm" data-bs-toggle="modal" data-bs-target="#dashboardIntroModal">About</button>
                 <button type="button" class="btn btn-sun btn-sm" onclick="window.location.assign(window.location.pathname + '?refresh=' + Date.now())" title="Re-read the SunRun CSV and refresh live Firebase data">Force Load Data</button>
+                <a class="btn btn-sun btn-sm" href="${isStaticSite() ? "#" : "/nyseg-usage-file/daily"}"${isStaticSite() ? ' aria-disabled="true" title="The NYSEG file is available in the local app only"' : ""}>View NYSEG and Sunrun Files</a>
                 <a class="btn btn-contract btn-sm" href="${isStaticSite() ? "light-bulbs.html" : "/light-bulbs"}">Light Bulbs</a>
                 <a class="btn btn-contract btn-sm" href="${isStaticSite() ? "electricity-usage.html" : "/electricity-usage"}">Electricity Usage</a>
                 ${isStaticSite() ? '<span class="btn btn-contract btn-sm disabled" title="The private circuit directory is available in the local app only">Circuit Breakers (Local)</span>' : '<a class="btn btn-contract btn-sm" href="/circuit-breakers" target="_blank" rel="noopener noreferrer">Circuit Breakers</a>'}
@@ -26989,13 +27005,6 @@ This typically indicates that your device does not have a healthy Internet conne
       timeZoneName: "short"
     }).format(parsed);
   }
-  function updateMeterSimulationTimestamp(entry) {
-    const target = document.getElementById("entry-meter-sim-timestamp");
-    if (!target) return;
-    const timestamp = formatMeterSimulationTimestamp(entry?.meter_simulation_updated_at);
-    target.textContent = entry?.meter_simulation_run_label ? `${entry.meter_simulation_run_label} \xB7 ${timestamp}` : timestamp;
-    target.title = entry?.meter_simulation_updated_at || "No saved simulation timestamp";
-  }
   function renderMeterSimulationDialog(entryDate) {
     const dialog = document.getElementById("entry-meter-sim-dialog");
     const title = document.getElementById("entry-meter-sim-dialog-title");
@@ -27062,10 +27071,6 @@ This typically indicates that your device does not have a healthy Internet conne
     const hour = Math.floor(minuteOfDay / 60);
     const minute = minuteOfDay % 60;
     return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
-  }
-  function shouldAutoSimulateMeters(entry) {
-    if (!entry || String(entry.entry_date) !== String(getTodayIsoDate())) return false;
-    return true;
   }
   async function persistMeterSimulation(db, entryDate, simulation, entries, { force = false } = {}) {
     const existingEntry = entries.find((entry) => String(entry.entry_date) === String(entryDate));
@@ -27159,107 +27164,6 @@ This typically indicates that your device does not have a healthy Internet conne
       type: checkpoint ? "checkpoint" : "hourly",
       checkpoint
     };
-  }
-  async function syncTodaySimulatedMeters(db) {
-    const today = getTodayIsoDate();
-    const runMinuteOfDay = getClockMinutes();
-    const checkpoint = meterSimulationSchedule.find((point) => point.hour * 60 + point.minute === runMinuteOfDay);
-    const dueRun = {
-      minuteOfDay: runMinuteOfDay,
-      label: checkpoint?.label || formatMeterSimulationRunLabel(runMinuteOfDay),
-      type: checkpoint ? "checkpoint" : "five-minute",
-      checkpoint
-    };
-    const runHour = Math.floor(runMinuteOfDay / 60);
-    const runMinute = runMinuteOfDay % 60;
-    const runKey = `${today}T${String(runHour).padStart(2, "0")}:${String(runMinute).padStart(2, "0")}`;
-    if (meterSimulationLastAttemptedRunKey === runKey) return null;
-    let state = await loadFirestoreState(db);
-    let todayEntry = state.entries.find((entry2) => String(entry2.entry_date) === String(today));
-    if (!todayEntry) {
-      const creation = await ensureDailyPlaceholderRecord(db, state.entries, {
-        forceCreate: true,
-        entryDate: today,
-        sourceLabel: "hourly meter monitoring"
-      });
-      if (!creation.entry) return null;
-      state = await loadFirestoreState(db);
-      todayEntry = state.entries.find((entry2) => String(entry2.entry_date) === String(today));
-    }
-    if (!todayEntry) return null;
-    const latestTodayCheckpoint = normalizeMeterSimulationCheckpoints(meterSimulationCheckpoints).filter((checkpoint2) => checkpoint2.entry_date === String(today)).sort((left, right) => left.minute_of_day - right.minute_of_day).at(-1);
-    if (latestTodayCheckpoint?.minute_of_day > dueRun.minuteOfDay) {
-      meterSimulationLastAttemptedRunKey = runKey;
-      return { entry: todayEntry, simulation: null, updated: false };
-    }
-    try {
-      const refreshedEntry = await refreshEntryLookupFields(db, today);
-      todayEntry = refreshedEntry;
-      state = {
-        ...state,
-        entries: state.entries.map((entry2) => String(entry2.entry_date) === String(today) ? refreshedEntry : entry2)
-      };
-    } catch (error) {
-      console.warn("Hourly Open-Meteo refresh was unavailable; using the last saved solar curve.", error);
-    }
-    if (!shouldAutoSimulateMeters(todayEntry)) {
-      meterSimulationLastAttemptedRunKey = runKey;
-      return null;
-    }
-    const simulation = {
-      ...buildMeterSimulation(today, state.entries, { minuteOfDay: dueRun.minuteOfDay }),
-      runKey,
-      runLabel: `${dueRun.label} ${dueRun.type === "checkpoint" ? "checkpoint" : "meter check"}`,
-      runType: dueRun.type,
-      scheduleKey: dueRun.checkpoint ? runKey : "",
-      scheduleLabel: dueRun.checkpoint?.label || ""
-    };
-    simulation.modelSignature = [
-      simulation.weatherBucket,
-      simulation.basis,
-      simulation.importDelta.toFixed(2),
-      simulation.exportDelta.toFixed(2),
-      simulation.overnightImport.toFixed(2),
-      simulation.overnightBasis,
-      simulation.solarCycle?.sunriseMinute ?? "",
-      simulation.solarCycle?.sunsetMinute ?? "",
-      simulation.solarCycle?.basis || "",
-      simulation.currentIrradiance.toFixed(1),
-      simulation.irradianceEnergyProgress.toFixed(4),
-      simulation.solarProfileBasis,
-      simulation.calibration?.basis || "",
-      simulation.calibration?.importOffset?.toFixed(2) || "0.00",
-      simulation.calibration?.exportOffset?.toFixed(2) || "0.00"
-    ].join("|");
-    if (todayEntry.meter_simulation_run_key === runKey && todayEntry.meter_simulation_model_signature === simulation.modelSignature) {
-      meterSimulationLastAttemptedRunKey = runKey;
-      return { entry: todayEntry, simulation, updated: false };
-    }
-    const entry = await persistMeterSimulation(db, today, simulation, state.entries, { force: true });
-    meterSimulationLastAttemptedRunKey = runKey;
-    return { entry, simulation, updated: true };
-  }
-  function publishMeterSimulationResult(result) {
-    if (!result?.entry) return;
-    updateMeterSimulationTimestamp(result.entry);
-    window.dispatchEvent(new CustomEvent("solar-meter-simulation-saved", {
-      detail: {
-        entry: result.entry,
-        simulation: result.simulation,
-        updated: Boolean(result.updated)
-      }
-    }));
-  }
-  function startMeterSimulationScheduler(db) {
-    if (meterSimulationSyncTimer) return;
-    meterSimulationSyncTimer = window.setInterval(async () => {
-      try {
-        const result = await syncTodaySimulatedMeters(db);
-        publishMeterSimulationResult(result);
-      } catch (error) {
-        console.warn("Automatic meter simulation sync failed.", error);
-      }
-    }, 6e4);
   }
   function getIntradayProgressShares(entryDate = getTodayIsoDate(), minuteOfDay = getClockMinutes(), weather = "Unknown") {
     if (String(entryDate) !== String(getTodayIsoDate())) {
@@ -27433,11 +27337,8 @@ This typically indicates that your device does not have a healthy Internet conne
   function setEntrySourceBadge(entry = null) {
     const badge = document.getElementById("entry-source-badge");
     if (!badge) return;
-    const simulationManaged = Boolean(
-      entry?.meter_values_estimated && !entry?.meter_values_confirmed && String(entry?.entry_date || "") === String(getTodayIsoDate())
-    );
-    badge.textContent = simulationManaged ? entry?.meter_values_calibrated ? "Meters: Simulation + calibration" : "Meters: Hourly simulation" : formatLookupSourceLabel(entry?.lookup_source, Boolean(entry?.estimated));
-    badge.dataset.sourceKind = simulationManaged ? "meter-simulation-calibrated" : String(entry?.lookup_source || (entry?.estimated ? "estimated" : "manual"));
+    badge.textContent = formatLookupSourceLabel(entry?.lookup_source, Boolean(entry?.estimated));
+    badge.dataset.sourceKind = String(entry?.lookup_source || (entry?.estimated ? "estimated" : "manual"));
     badge.classList.remove("d-none");
   }
   function escapeHtml(value) {
@@ -27480,7 +27381,8 @@ This typically indicates that your device does not have a healthy Internet conne
     Object.entries(hydratedPayload).forEach(([key, value]) => {
       const field2 = form.elements.namedItem(key);
       if (field2) {
-        field2.value = formatFormFieldValue(key, value);
+        const isPendingMeter = (key === "meter_01_import_reading" || key === "meter_02_export_reading") && !hasValidatedNysegMeters(hydratedPayload.entry_date);
+        field2.value = isPendingMeter ? "" : formatFormFieldValue(key, value);
       }
     });
     if (hydratedPayload?.entry_date) {
@@ -27488,17 +27390,11 @@ This typically indicates that your device does not have a healthy Internet conne
       setEntryFormMode(`Editing record for ${hydratedPayload.entry_date}.`, "Update Entry");
       setEstimatedBadgeVisible(Boolean(hydratedPayload.estimated));
       setEntrySourceBadge(hydratedPayload);
-      renderMeterSimulation(hydratedPayload.entry_date, {
-        autoApply: Boolean(hydratedPayload.estimated) && String(hydratedPayload.entry_date) === String(getTodayIsoDate())
-      });
-      updateMeterSimulationTimestamp(hydratedPayload);
     } else {
       entriesPageState.selectedDate = "";
       setEntryFormMode("Create or update a daily solar record.", "Save Entry");
       setEstimatedBadgeVisible(false);
       setEntrySourceBadge({ lookup_source: "manual", estimated: false });
-      renderMeterSimulation(payload.entry_date);
-      updateMeterSimulationTimestamp(null);
     }
   }
   function selectHistoricalEntry(entryDate, { scrollForm = true } = {}) {
@@ -27605,8 +27501,9 @@ This typically indicates that your device does not have a healthy Internet conne
     chronologicalEntries.forEach((entry, index) => {
       const previousEntry = index > 0 ? chronologicalEntries[index - 1] : null;
       const previousCalculation = index > 0 ? meterDifferences.get(previousEntry.entry_date) : null;
-      const m01 = previousEntry ? Number(entry.meter_01_import_reading || 0) - Number(previousEntry.meter_01_import_reading || 0) : null;
-      const m02 = previousEntry ? Number(entry.meter_02_export_reading || 0) - Number(previousEntry.meter_02_export_reading || 0) : null;
+      const metersAreValidated = hasValidatedNysegMeters(entry.entry_date) && hasValidatedNysegMeters(previousEntry?.entry_date);
+      const m01 = metersAreValidated && previousEntry ? Number(entry.meter_01_import_reading || 0) - Number(previousEntry.meter_01_import_reading || 0) : null;
+      const m02 = metersAreValidated && previousEntry ? Number(entry.meter_02_export_reading || 0) - Number(previousEntry.meter_02_export_reading || 0) : null;
       const edc = Number.isFinite(m01) && Number.isFinite(m02) ? Number(entry.production_kwh || 0) + m01 - m02 : null;
       meterDifferences.set(entry.entry_date, {
         m01,
@@ -27634,6 +27531,7 @@ This typically indicates that your device does not have a healthy Internet conne
     };
     const populatedRows = visibleEntries.map((entry) => {
       const differences = meterDifferences.get(entry.entry_date) || {};
+      const metersAreValidated = hasValidatedNysegMeters(entry.entry_date);
       const entryDateLabel = formatIsoDateForDisplay(entry.entry_date);
       const edcTooltip = Number.isFinite(differences.edc) ? `Estimated home energy used on ${entryDateLabel}.
 ${Number(entry.production_kwh || 0).toFixed(1)} solar production + ${differences.m01.toFixed(1)} grid import - ${differences.m02.toFixed(1)} grid export = ${differences.edc.toFixed(1)} kWh EDC.
@@ -27658,9 +27556,9 @@ This is an analysis value only; the tracker does not add it to the official NYSE
       <td>${formatIsoWeekday(entry.entry_date)}</td>
       <td>${Number(entry.production_kwh || 0).toFixed(1)}</td>
       <td>${Number(entry.irradiance_peak_wm2 || 0).toFixed(0)}</td>
-      <td>${Number(entry.meter_01_import_reading || 0).toFixed(1)}</td>
+      <td title="${metersAreValidated ? "Validated NYSEG meter reading" : "Awaiting the next validated NYSEG file"}">${metersAreValidated ? Number(entry.meter_01_import_reading || 0).toFixed(1) : '<span class="text-muted">\u2014</span>'}</td>
       <td class="meter-diff-cell ${calculationSignClass(differences.m01)}" title="M01 change from the previous available date">${formatDifference(differences.m01)}</td>
-      <td>${Number(entry.meter_02_export_reading || 0).toFixed(1)}</td>
+      <td title="${metersAreValidated ? "Validated NYSEG meter reading" : "Awaiting the next validated NYSEG file"}">${metersAreValidated ? Number(entry.meter_02_export_reading || 0).toFixed(1) : '<span class="text-muted">\u2014</span>'}</td>
       <td class="meter-diff-cell ${calculationSignClass(differences.m02)}" title="M02 change from the previous available date">${formatDifference(differences.m02)}</td>
       <td class="estimated-consumption-cell ${calculationSignClass(differences.edc)}" title="${escapeHtml(edcTooltip)}">${formatDifference(differences.edc)}</td>
       <td class="estimated-consumption-diff-cell ${calculationSignClass(differences.edcDiff)}" title="${escapeHtml(edcDiffTooltip)}">${formatDifference(differences.edcDiff)}</td>
@@ -27669,7 +27567,7 @@ This is an analysis value only; the tracker does not add it to the official NYSE
       <td>${formatTemperatureCellValue(entry.temperature_high_f)}</td>
       <td>${formatTemperatureCellValue(entry.temperature_low_f)}</td>
       <td>${renderNotesCell(entry.notes)}</td>
-      <td>${entry.estimated ? '<span class="entry-estimated-pill">Estimated</span>' : '<span class="entry-confirmed-pill">Actual</span>'}</td>
+      <td>${metersAreValidated ? entry.estimated ? '<span class="entry-estimated-pill">Pending data</span>' : '<span class="entry-confirmed-pill">Actual</span>' : '<span class="entry-estimated-pill">Awaiting NYSEG</span>'}</td>
       <td><button type="button" class="btn btn-contract btn-sm entry-edit-button" data-entry-date="${entry.entry_date}">Edit</button> <button type="button" class="btn btn-contract btn-sm entry-revisions-button" data-entry-date="${entry.entry_date}">History</button></td>
     </tr>
   `;
@@ -27724,8 +27622,10 @@ This is an analysis value only; the tracker does not add it to the official NYSE
     const impliedProductionTarget = document.getElementById("entries-implied-production-total");
     const sunrunComparisonTarget = document.getElementById("entries-sunrun-production-comparison");
     const productionReconciliation = document.getElementById("entries-production-reconciliation");
-    const hourlyTarget = document.getElementById("entries-last-hourly-update");
-    const hourlyDetail = document.getElementById("entries-last-hourly-update-detail");
+    const validatedThroughTarget = document.getElementById("entries-nyseg-validated-through");
+    const validatedDetailTarget = document.getElementById("entries-nyseg-validated-detail");
+    if (validatedThroughTarget) validatedThroughTarget.textContent = validatedNysegThrough ? formatIsoDateForDisplay(validatedNysegThrough) : "Awaiting NYSEG";
+    if (validatedDetailTarget) validatedDetailTarget.textContent = validatedNysegThrough ? "Only validated NYSEG dates are included" : "No verified interval endpoint available";
     const displayedDifferences = entries.map((entry) => meterDifferences.get(entry.entry_date) || {});
     const totals = displayedDifferences.reduce((result, differences) => {
       if (Number.isFinite(differences.m01)) {
@@ -27908,18 +27808,6 @@ This is a reconciliation, not an independent measurement, because EDC includes S
         const legendMarkup = series.map((item) => `<span><i style="background:${item.color}"></i>${item.label}</span>`).join("");
         trendChart.innerHTML = `<div class="entries-month-trend-legend">${legendMarkup}</div><svg class="entries-month-line-chart" viewBox="0 0 ${chartWidth} 140" role="img" aria-label="All-month comparison of Power, M01 import, M02 export, and EDC in kilowatt-hours"><path d="M36 24H${chartWidth - 36}M36 68H${chartWidth - 36}M36 112H${chartWidth - 36}" class="entries-month-line-grid"></path>${seriesMarkup}${dotsMarkup}${labels.map((label, index) => `<text x="${xCoordinates[index]}" y="134" text-anchor="middle">${label}</text>`).join("")}</svg>`;
       }
-    }
-    const savedRuns = allEntries.flatMap((entry) => Array.isArray(entry.meter_simulation_runs) ? entry.meter_simulation_runs.filter((run) => ["hourly", "checkpoint"].includes(String(run.run_type || "")) && run.recorded_at).map((run) => ({ ...run, entry_date: entry.entry_date })) : []).sort((left, right) => new Date(right.recorded_at).getTime() - new Date(left.recorded_at).getTime());
-    const latestRun = savedRuns[0] || null;
-    const precedingRun = latestRun ? savedRuns.find((run) => run.entry_date === latestRun.entry_date && new Date(run.recorded_at).getTime() < new Date(latestRun.recorded_at).getTime()) || null : null;
-    const previousM01 = latestRun?.previous_meter_01_import_reading ?? precedingRun?.meter_01_import_reading ?? null;
-    const previousM02 = latestRun?.previous_meter_02_export_reading ?? precedingRun?.meter_02_export_reading ?? null;
-    if (hourlyTarget) {
-      hourlyTarget.textContent = latestRun ? formatMeterSimulationTimestamp(latestRun.recorded_at) : "Not run yet";
-    }
-    if (hourlyDetail) {
-      const previousLabel = Number.isFinite(previousM01) && Number.isFinite(previousM02) ? `Previous M01 ${previousM01.toFixed(1)} \xB7 M02 ${previousM02.toFixed(1)}` : "Previous M01/M02 unavailable";
-      hourlyDetail.textContent = latestRun ? `${latestRun.run_label || "Hourly meter check"} \xB7 ${latestRun.entry_date} \xB7 ${previousLabel}` : "Waiting for an hourly simulation";
     }
   }
   function updateEntriesNetMeterSummary(entries, config = defaultConfig) {
@@ -28208,7 +28096,6 @@ This is a reconciliation, not an independent measurement, because EDC includes S
         const message = autoCreateMessage || "Entry data refreshed from Firebase Firestore.";
         renderStatusAlert("entries-status", message, "success");
       }
-      refreshCheckpointPrediction();
     }
     window.addEventListener("solar-entry-restored", () => {
       refreshEntries({ showMessage: false });
@@ -28266,8 +28153,10 @@ This is a reconciliation, not an independent measurement, because EDC includes S
         entry_date: formData.get("entry_date"),
         irradiance_peak_wm2: Number(formData.get("irradiance_peak_wm2") || 0),
         production_kwh: Number(formData.get("production_kwh") || 0),
-        meter_01_import_reading: Number(formData.get("meter_01_import_reading") || 0),
-        meter_02_export_reading: Number(formData.get("meter_02_export_reading") || 0),
+        // Meter values are authored only by the reviewed NYSEG interval import.
+        // Keep any validated readings intact when the rest of a daily record is saved.
+        meter_01_import_reading: Number(existingEntry?.meter_01_import_reading || 0),
+        meter_02_export_reading: Number(existingEntry?.meter_02_export_reading || 0),
         weather: formData.get("weather") || "Unknown",
         temperature_f: formData.get("temperature_f") ? Number(formData.get("temperature_f")) : null,
         temperature_high_f: formData.get("temperature_high_f") ? Number(formData.get("temperature_high_f")) : null,
@@ -28285,18 +28174,8 @@ This is a reconciliation, not an independent measurement, because EDC includes S
         irradiance_verified_at: existingEntry?.irradiance_verified_at || "",
         irradiance_hourly_profile: existingEntry?.irradiance_hourly_profile || [],
         meter_values_estimated: false,
-        meter_values_confirmed: true,
+        meter_values_confirmed: Boolean(existingEntry?.meter_values_confirmed),
         meter_values_calibrated: false,
-        meter_simulation_weather: "",
-        meter_simulation_basis: "",
-        meter_simulation_updated_at: "",
-        meter_simulation_schedule_key: "",
-        meter_simulation_schedule_label: "",
-        meter_simulation_run_key: "",
-        meter_simulation_run_label: "",
-        meter_simulation_run_type: "",
-        meter_simulation_model_signature: "",
-        meter_simulation_runs: existingEntry?.meter_simulation_runs || [],
         created_at: existingEntry?.created_at || (/* @__PURE__ */ new Date()).toISOString(),
         updated_at: (/* @__PURE__ */ new Date()).toISOString()
       };
@@ -28310,7 +28189,7 @@ This is a reconciliation, not an independent measurement, because EDC includes S
       fillEntryForm(entry);
       renderStatusAlert(
         "entries-status",
-        String(entry.entry_date) === String(getTodayIsoDate()) ? `Saved current readings for ${entry.entry_date}. They now anchor today's model, and hourly M01/M02 updates remain active.` : `${existingEntry ? "Updated" : "Saved"} and locked completed meter readings for ${entry.entry_date}.`,
+        `${existingEntry ? "Updated" : "Saved"} ${entry.entry_date}. M01/M02 remain managed by the validated NYSEG file import.`,
         "success"
       );
     });
@@ -28870,6 +28749,7 @@ This is a reconciliation, not an independent measurement, because EDC includes S
     const readOnlyConnection = state.connection === "rest";
     const entries = state.entries;
     entriesPageState.config = mergeConfig(state.config);
+    await loadValidatedNysegThrough();
     populateEntriesTable(entries);
     fillEntryForm(entries.find((entry) => entry.entry_date === getTodayIsoDate()) || entries[entries.length - 1]);
     saveEntriesSnapshot(entries, entriesPageState.config);
@@ -28956,12 +28836,6 @@ This is a reconciliation, not an independent measurement, because EDC includes S
       return;
     }
     startLocalSnapshotScheduler(context.db);
-    try {
-      publishMeterSimulationResult(await syncTodaySimulatedMeters(context.db));
-    } catch (error) {
-      console.warn("Initial meter simulation sync failed.", error);
-    }
-    startMeterSimulationScheduler(context.db);
     if (getPageName() === "dashboard") {
       await bootDashboard(context.db);
       return;

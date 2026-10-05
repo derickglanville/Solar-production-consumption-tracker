@@ -236,6 +236,66 @@ def load_monthly_bill_summary(
     )
 
 
+def build_bill_summary_report() -> dict[str, Any]:
+    """Build a presentation-safe analysis from every recognized PDF in Bills.
+
+    NYSEG occasionally issues a corrected statement for the same billing period.
+    The complete file list remains available for navigation, while the newest
+    statement is the authoritative value used in the history totals.
+    """
+    all_records = sorted(load_monthly_bill_summary().billing_records, key=lambda row: row["statement_date"])
+    authoritative_by_period: dict[tuple[str, str], dict[str, Any]] = {}
+    for record in all_records:
+        key = (record["billing_start_date"], record["billing_end_date"])
+        if key not in authoritative_by_period or record["statement_date"] > authoritative_by_period[key]["statement_date"]:
+            authoritative_by_period[key] = record
+    records = sorted(authoritative_by_period.values(), key=lambda row: (row["billing_end_date"], row["statement_date"]))
+
+    revisions: list[dict[str, Any]] = []
+    for record in records:
+        matching = [item for item in all_records if item["billing_start_date"] == record["billing_start_date"] and item["billing_end_date"] == record["billing_end_date"]]
+        if len(matching) > 1:
+            original = min(matching, key=lambda item: item["statement_date"])
+            if record["statement_date"] != original["statement_date"]:
+                revisions.append({
+                    "period": f"{record['billing_start_date']} to {record['billing_end_date']}",
+                    "original_energy_charges": original["total_energy_charges"],
+                    "corrected_energy_charges": record["total_energy_charges"],
+                    "savings": original["total_energy_charges"] - record["total_energy_charges"],
+                })
+
+    latest = records[-1] if records else {}
+    credit_events = [record for record in records if record.get("credited_usage_kwh") or record.get("prior_excess_generation_kwh") is not None]
+    latest_credit = credit_events[-1] if credit_events else {}
+    latest_revision = revisions[-1] if revisions else {}
+    savings = float(latest_revision.get("savings", 0.0))
+    original_charge = float(latest_revision.get("original_energy_charges", 0.0))
+    return {
+        "available": bool(records),
+        "file_count": len(all_records),
+        "period_count": len(records),
+        "records": all_records,
+        "authoritative_records": records,
+        "latest": latest,
+        "credit_bank": {
+            "prior_kwh": float(latest_credit.get("prior_excess_generation_kwh", 0.0)),
+            "remaining_kwh": float(latest_credit.get("remaining_excess_generation_kwh", 0.0)),
+            "billed_use_offset_kwh": float(latest_credit.get("credited_usage_kwh", 0.0)),
+            "statement_date": latest_credit.get("statement_date"),
+            "note": latest_credit.get("meter_note", "NYSEG did not itemize a credit-bank balance on the available statements."),
+        },
+        "cost_change": {
+            **latest_revision,
+            "savings_percent": (savings / original_charge * 100) if original_charge else 0.0,
+        },
+        "totals": {
+            "energy_charges": sum(float(record["total_energy_charges"]) for record in records),
+            "imported_kwh": sum(float(record["imported_kwh"]) for record in records),
+            "exported_kwh": sum(float(record["exported_kwh"]) for record in records),
+        },
+    }
+
+
 def monthly_bill_to_dict(summary: MonthlyBillSummary) -> dict[str, Any]:
     public_billing_records = [
         {key: value for key, value in record.items() if key != "source_path"}

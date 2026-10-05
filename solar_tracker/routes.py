@@ -25,7 +25,7 @@ from .energy_references import (
 )
 from .firestore import AppConfig, DailySolarEntry, FirestoreRepository
 from .historical_usage import historical_usage_to_dict, load_historical_usage_summary
-from .monthly_bill import build_net_metering_reconciliation, build_net_metering_report, load_monthly_bill_summary, monthly_bill_to_dict
+from .monthly_bill import build_bill_summary_report, build_net_metering_reconciliation, build_net_metering_report, load_monthly_bill_summary, monthly_bill_to_dict
 from .nyseg_interval_usage import build_nyseg_interval_usage_report, load_nyseg_interval_file_rows
 from .seed import build_sample_entries
 from .sunrun_production import (
@@ -59,6 +59,8 @@ NYSEG_DAILY_SYNC_LOG_PATH = Path(os.environ.get("LOCALAPPDATA", "")) / "SolarEne
 NYSEG_DAILY_SYNC_LOCK_PATH = NYSEG_DAILY_SYNC_STATUS_PATH.with_suffix(".lock")
 NYSEG_DAILY_SYNC_PROCESS_PATH = NYSEG_DAILY_SYNC_STATUS_PATH.with_name("nyseg-daily-sync-process.json")
 NYSEG_DAILY_SYNC_SCRIPT_PATH = Path(__file__).resolve().parent.parent / "NYSEG Download Script" / "run_nyseg_daily_sync.ps1"
+SUNRUN_LOAD_HISTORY_PATH = Path(__file__).resolve().parent.parent / "JSON" / "Daily_Load_History.json"
+NYSEG_LOAD_HISTORY_PATH = Path(__file__).resolve().parent.parent / "JSON" / "Daily_NYSEG_Load_History.json"
 CIRCUIT_BREAKER_DIRECTORY_PATH = (
     Path(__file__).resolve().parent.parent
     / "Documents"
@@ -84,6 +86,36 @@ def load_nyseg_daily_sync_status() -> dict:
         return json.loads(NYSEG_DAILY_SYNC_STATUS_PATH.read_text(encoding="utf-8"))
     except (OSError, ValueError, TypeError):
         return {}
+
+
+def load_sunrun_recent_runs() -> dict:
+    """Read concise status rows written by the local 8:30 AM SunRun workflow."""
+    try:
+        rows = json.loads(SUNRUN_LOAD_HISTORY_PATH.read_text(encoding="utf-8")).get("records", [])
+    except (OSError, ValueError, AttributeError):
+        rows = []
+    recent = sorted(rows, key=lambda row: row.get("started_at", ""), reverse=True)[:5]
+    return {
+        "recent": recent,
+        "successful": sum(1 for row in recent if row.get("status") == "Success"),
+        "emailed": sum(1 for row in recent if row.get("email_sent")),
+    }
+
+
+def load_nyseg_recent_runs() -> dict:
+    try:
+        rows = json.loads(NYSEG_LOAD_HISTORY_PATH.read_text(encoding="utf-8")).get("records", [])
+    except (OSError, ValueError, AttributeError):
+        status = load_nyseg_daily_sync_status()
+        rows = ([{
+            "date": (status.get("completed_at") or status.get("started_at") or "")[:10],
+            "status": "Success" if status.get("status") == "success" else "Failed",
+            "saved_records": int(status.get("saved_records", 0)),
+            "email_sent": bool(status.get("email_sent")),
+            "message": status.get("error") or "",
+        }] if status else [])
+    recent = sorted(rows, key=lambda row: row.get("completed_at", row.get("date", "")), reverse=True)[:5]
+    return {"recent": recent, "successful": sum(1 for row in recent if row.get("status") == "Success"), "emailed": sum(1 for row in recent if row.get("email_sent"))}
 
 
 def nyseg_sync_process_pid() -> Optional[int]:
@@ -503,25 +535,13 @@ def nyseg_net_metering():
         report=build_net_metering_report(),
         reconciliation=build_net_metering_reconciliation(entries),
         data_as_of=data_as_of,
+        usage_report=build_nyseg_interval_usage_report(),
     )
 
 
 @main_blueprint.route("/nyseg-usage")
 def nyseg_usage():
-    net_metering_report = build_net_metering_report()
-    latest_credit_bill = max(
-        net_metering_report["rows"],
-        key=lambda row: row["statement_date"],
-        default={},
-    )
-    return render_template(
-        "nyseg_usage.html",
-        page_name="nyseg-usage",
-        local_snapshot_mode=False,
-        bootstrap_data=build_bootstrap_data(),
-        usage_report=build_nyseg_interval_usage_report(),
-        latest_credit_bill=latest_credit_bill,
-    )
+    return redirect(url_for("main.nyseg_net_metering"))
 
 @main_blueprint.route("/nyseg-usage-file")
 @main_blueprint.route("/nyseg-usage-file/daily")
@@ -604,6 +624,20 @@ def nyseg_usage_file():
         monthly_meter_totals=monthly_meter_totals,
         meter_totals=meter_totals,
         nyseg_sync_status=load_nyseg_daily_sync_status(),
+        bill_summary=build_bill_summary_report(),
+        sunrun_runs=load_sunrun_recent_runs(),
+        nyseg_runs=load_nyseg_recent_runs(),
+    )
+
+
+@main_blueprint.route("/nyseg-bill-summary")
+def nyseg_bill_summary():
+    return render_template(
+        "nyseg_bill_summary.html",
+        page_name="nyseg-usage-file",
+        local_snapshot_mode=False,
+        bootstrap_data=build_bootstrap_data(),
+        bill_summary=build_bill_summary_report(),
     )
 
 
@@ -626,6 +660,22 @@ def nyseg_daily_sync_log_api():
     response = jsonify({"lines": lines})
     response.headers["Cache-Control"] = "no-store"
     return response
+
+
+@main_blueprint.route("/nyseg-daily-sync-log")
+def nyseg_daily_sync_log_view():
+    try:
+        raw = NYSEG_DAILY_SYNC_LOG_PATH.read_bytes()
+        encoding = "utf-16" if raw.startswith((b"\xff\xfe", b"\xfe\xff")) else "utf-8-sig"
+        log_text = raw.decode(encoding, errors="replace")
+    except OSError:
+        log_text = "No NYSEG sync activity has been recorded yet."
+    return render_template(
+        "nyseg_daily_sync_log.html",
+        log_text=log_text,
+        page_name="nyseg-usage-file",
+        bootstrap_data=build_bootstrap_data(),
+    )
 
 
 @main_blueprint.route("/api/nyseg-daily-sync/run", methods=["POST"])

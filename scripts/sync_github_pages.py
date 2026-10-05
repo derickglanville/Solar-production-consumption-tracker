@@ -17,7 +17,7 @@ from solar_tracker.routes import build_bootstrap_data
 
 
 DOCS = ROOT / "docs"
-ASSET_VERSION = "20261004-nyseg-stop-and-recovery"
+ASSET_VERSION = "20261005-nyseg-grid-running-totals"
 
 ROUTE_REPLACEMENTS = {
     'href="/"': 'href="index.html"',
