@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/styles.css?v=20261004-nyseg-grid-sunrun-power">
+  <link rel="stylesheet" href="assets/css/styles.css?v=20261004-nyseg-monthly-cards">
   <script src="https://cdn.plot.ly/plotly-3.4.0.min.js"></script>
 </head>
 <body data-page="nyseg-usage-file" data-local-snapshot-mode="false">
@@ -61,7 +61,7 @@
         <button type="button" class="btn btn-contract btn-sm chart-popout-button" data-chart-popout>Pop Out</button>
         <section class="nyseg-monthly-net-box" data-chart-popout-content aria-label="Estimated monthly NYSEG net charges">
           <div class="nyseg-monthly-net-heading"><div><p class="eyebrow mb-1">Estimated monthly net charges</p><small>M01 import − M02 export at $0.24/kWh</small></div><a class="btn btn-contract btn-sm" href="nyseg-usage-file-daily.html">Group by day</a></div>
-          <div class="nyseg-monthly-net-list"><div class="nyseg-monthly-net-row"><strong>October 2026</strong><span>M01 12.2 · M02 19.8 kWh</span><b class="text-success">Credit $1.81</b></div><div class="nyseg-monthly-net-row"><strong>September 2026</strong><span>M01 479.4 · M02 1059.4 kWh</span><b class="text-success">Credit $139.20</b></div><div class="nyseg-monthly-net-row"><strong>August 2026</strong><span>M01 571.5 · M02 1425.1 kWh</span><b class="text-success">Credit $204.86</b></div><div class="nyseg-monthly-net-row"><strong>July 2026</strong><span>M01 17.6 · M02 48.7 kWh</span><b class="text-success">Credit $7.46</b></div></div>
+          <div class="nyseg-monthly-net-list"><div class="nyseg-monthly-net-row nyseg-monthly-net-row-credit"><strong>October 2026</strong><span><em>M01 import</em> 12.2 kWh</span><span><em>M02 export</em> 19.8 kWh</span><b class="text-success">Credit $1.81</b></div><div class="nyseg-monthly-net-row nyseg-monthly-net-row-credit"><strong>September 2026</strong><span><em>M01 import</em> 479.4 kWh</span><span><em>M02 export</em> 1059.4 kWh</span><b class="text-success">Credit $139.20</b></div><div class="nyseg-monthly-net-row nyseg-monthly-net-row-credit"><strong>August 2026</strong><span><em>M01 import</em> 571.5 kWh</span><span><em>M02 export</em> 1425.1 kWh</span><b class="text-success">Credit $204.86</b></div><div class="nyseg-monthly-net-row nyseg-monthly-net-row-credit"><strong>July 2026</strong><span><em>M01 import</em> 17.6 kWh</span><span><em>M02 export</em> 48.7 kWh</span><b class="text-success">Credit $7.46</b></div></div>
         </section>
       </div>
       <div class="chart-popout-frame nyseg-monthly-meter-popout" data-chart-popout-label="Monthly M01, M02, SunRun, and EDC totals">
@@ -82,9 +82,9 @@
     </div>
   </main>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/js/bootstrap.bundle.min.js"></script>
-  <script src="assets/js/site-bootstrap.js?v=20261004-nyseg-grid-sunrun-power"></script>
-  <script src="assets/js/firebase-config.js?v=20261004-nyseg-grid-sunrun-power"></script>
-  <script defer src="assets/js/app-bundle.js?v=20261004-nyseg-grid-sunrun-power"></script>
+  <script src="assets/js/site-bootstrap.js?v=20261004-nyseg-monthly-cards"></script>
+  <script src="assets/js/firebase-config.js?v=20261004-nyseg-monthly-cards"></script>
+  <script defer src="assets/js/app-bundle.js?v=20261004-nyseg-monthly-cards"></script>
 
 <script>
 (() => {

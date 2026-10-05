@@ -3695,6 +3695,7 @@ body[data-page="dashboard"].dashboard-compact-mode .btn-contract {
 .nyseg-monthly-net-row strong { color: #244a60; font-size: 0.78rem; }
 .nyseg-monthly-net-row span { color: #617b8d; font-size: 0.7rem; grid-column: 1; }
 .nyseg-monthly-net-row b { font-size: 0.77rem; grid-column: 2; grid-row: 1 / span 2; white-space: nowrap; }
+.nyseg-monthly-net-row em { color: #7c94a2; font-size: 0.64rem; font-style: normal; font-weight: 700; letter-spacing: 0.02em; text-transform: uppercase; }
 .nyseg-monthly-meter-row { border-top: 1px solid #d9e7ed; padding: 0.4rem 0; }
 .nyseg-monthly-meter-row > strong { color: #244a60; display: block; font-size: 0.78rem; margin-bottom: 0.2rem; }
 .nyseg-monthly-meter-values { display: flex; flex-wrap: wrap; gap: 0.18rem 0.6rem; }
@@ -3711,6 +3712,16 @@ body[data-page="dashboard"].dashboard-compact-mode .btn-contract {
 .chart-popout-body [data-chart-popout-content] { flex: 1 1 auto; max-width: none; overflow-y: auto; }
 
 .chart-popout-body [data-chart-popout-content] .nyseg-monthly-net-list { max-height: none; overflow-y: visible; }
+.chart-popout-body [data-chart-popout-content] .nyseg-monthly-net-list { display: grid; gap: 0.7rem; grid-template-columns: repeat(auto-fit, minmax(205px, 255px)); justify-content: start; padding: 0.35rem 0; }
+.chart-popout-body [data-chart-popout-content] .nyseg-monthly-net-row { align-content: start; border: 1px solid #c9dce5; border-radius: 0.65rem; display: grid; gap: 0.25rem 0.55rem; grid-template-columns: 1fr auto; min-height: 6.25rem; padding: 0.65rem 0.7rem; }
+.chart-popout-body [data-chart-popout-content] .nyseg-monthly-net-row strong { font-size: 0.86rem; }
+.chart-popout-body [data-chart-popout-content] .nyseg-monthly-net-row span { font-size: 0.75rem; grid-column: 1; }
+.chart-popout-body [data-chart-popout-content] .nyseg-monthly-net-row b { align-self: center; border-radius: 999px; font-size: 0.84rem; grid-column: 2; grid-row: 1 / span 3; padding: 0.4rem 0.55rem; }
+.chart-popout-body [data-chart-popout-content] .nyseg-monthly-net-row-credit { background: linear-gradient(135deg, #f5fcf8, #e5f5eb); border-color: #abd8bd; }
+.chart-popout-body [data-chart-popout-content] .nyseg-monthly-net-row-credit b { background: #d5f0df; color: #147446 !important; }
+.chart-popout-body [data-chart-popout-content] .nyseg-monthly-net-row-charge { background: linear-gradient(135deg, #fff9f6, #fff0ea); border-color: #edc7ba; }
+.chart-popout-body [data-chart-popout-content] .nyseg-monthly-net-row-charge b { background: #fde1d6; color: #ae4535 !important; }
+.chart-popout-body [data-chart-popout-content] .nyseg-monthly-net-row-even { background: #f4f8fa; }
 
 /* Shared modal frame used by Calibration V2 and the NYSEG utility-import review. */
 .calibration-v2-popout-shell { align-items: center; display: flex; inset: 0; justify-content: center; padding: 1rem; position: fixed; z-index: 2500; }
