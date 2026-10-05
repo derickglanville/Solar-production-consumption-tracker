@@ -270,6 +270,18 @@ def build_bill_summary_report() -> dict[str, Any]:
     latest_revision = revisions[-1] if revisions else {}
     savings = float(latest_revision.get("savings", 0.0))
     original_charge = float(latest_revision.get("original_energy_charges", 0.0))
+    prior_excess = float(latest_credit.get("prior_excess_generation_kwh", 0.0))
+    credited_usage = float(latest_credit.get("credited_usage_kwh", 0.0))
+    reported_remaining = float(latest_credit.get("remaining_excess_generation_kwh", 0.0))
+    expected_remaining = max(0.0, prior_excess - credited_usage)
+    unitemized_adjustment = max(0.0, expected_remaining - reported_remaining)
+    latest_period_net_export = float(latest_credit.get("exported_kwh", 0.0)) - float(latest_credit.get("imported_kwh", 0.0))
+    exports_without_itemized_bank = sum(
+        float(record.get("exported_kwh", 0.0))
+        for record in records
+        if float(record.get("exported_kwh", 0.0)) > 0
+        and record.get("prior_excess_generation_kwh") is None
+    )
     return {
         "available": bool(records),
         "file_count": len(all_records),
@@ -278,9 +290,13 @@ def build_bill_summary_report() -> dict[str, Any]:
         "authoritative_records": records,
         "latest": latest,
         "credit_bank": {
-            "prior_kwh": float(latest_credit.get("prior_excess_generation_kwh", 0.0)),
-            "remaining_kwh": float(latest_credit.get("remaining_excess_generation_kwh", 0.0)),
-            "billed_use_offset_kwh": float(latest_credit.get("credited_usage_kwh", 0.0)),
+            "prior_kwh": prior_excess,
+            "remaining_kwh": reported_remaining,
+            "billed_use_offset_kwh": credited_usage,
+            "expected_remaining_without_adjustments_kwh": expected_remaining,
+            "unitemized_adjustment_kwh": unitemized_adjustment,
+            "latest_period_net_export_kwh": latest_period_net_export,
+            "exports_without_itemized_bank_kwh": exports_without_itemized_bank,
             "statement_date": latest_credit.get("statement_date"),
             "note": latest_credit.get("meter_note", "NYSEG did not itemize a credit-bank balance on the available statements."),
         },
