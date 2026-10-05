@@ -3701,6 +3701,17 @@ body[data-page="dashboard"].dashboard-compact-mode .btn-contract {
 .nyseg-monthly-meter-values { display: flex; flex-wrap: wrap; gap: 0.18rem 0.6rem; }
 .nyseg-monthly-meter-values span { color: #617b8d; font-size: 0.7rem; white-space: nowrap; }
 .nyseg-monthly-meter-values b { color: #244a60; font-size: inherit; }
+.nyseg-monthly-meter-values em { display: block; font-size: 0.62rem; font-style: normal; font-weight: 700; letter-spacing: 0.02em; text-transform: uppercase; }
+.nyseg-monthly-energy-card .nyseg-monthly-meter-values span { border-radius: 0.42rem; display: grid; gap: 0.05rem; padding: 0.28rem 0.38rem; }
+.nyseg-monthly-energy-card .nyseg-monthly-meter-values b { font-size: 0.74rem; }
+.nyseg-energy-m01 { background: #e5f2f8; color: #23698a !important; }
+.nyseg-energy-m01 b { color: #185a79 !important; }
+.nyseg-energy-m02 { background: #e5f6ee; color: #237354 !important; }
+.nyseg-energy-m02 b { color: #146744 !important; }
+.nyseg-energy-sunrun { background: #fff3dc; color: #966217 !important; }
+.nyseg-energy-sunrun b { color: #84510f !important; }
+.nyseg-energy-edc { background: #eee8fa; color: #6546a4 !important; }
+.nyseg-energy-edc b { color: #573690 !important; }
 .nyseg-monthly-combined { color: #173f53; display: block; font-size: 0.72rem; margin-top: 0.2rem; }
 .nyseg-monthly-meter-grand-total { border-top: 2px solid #94bdcc; margin-top: 0.25rem; padding: 0.5rem 0 0; }
 .nyseg-monthly-meter-grand-total strong { color: #173f53; font-size: 0.78rem; }
@@ -3722,6 +3733,14 @@ body[data-page="dashboard"].dashboard-compact-mode .btn-contract {
 .chart-popout-body [data-chart-popout-content] .nyseg-monthly-net-row-charge { background: linear-gradient(135deg, #fff9f6, #fff0ea); border-color: #edc7ba; }
 .chart-popout-body [data-chart-popout-content] .nyseg-monthly-net-row-charge b { background: #fde1d6; color: #ae4535 !important; }
 .chart-popout-body [data-chart-popout-content] .nyseg-monthly-net-row-even { background: #f4f8fa; }
+.chart-popout-body [data-chart-popout-content] .nyseg-monthly-meter-list { display: grid; gap: 0.7rem; grid-template-columns: repeat(auto-fit, minmax(255px, 330px)); justify-content: start; padding: 0.35rem 0; }
+.chart-popout-body [data-chart-popout-content] .nyseg-monthly-energy-card { background: linear-gradient(135deg, #f8fcfd, #edf6f9); border: 1px solid #bed8e3; border-radius: 0.7rem; min-height: 7.25rem; padding: 0.7rem; }
+.chart-popout-body [data-chart-popout-content] .nyseg-monthly-energy-card > strong { color: #1d536d; font-size: 0.88rem; }
+.chart-popout-body [data-chart-popout-content] .nyseg-monthly-energy-card .nyseg-monthly-meter-values { gap: 0.42rem; margin-top: 0.4rem; }
+.chart-popout-body [data-chart-popout-content] .nyseg-monthly-energy-card .nyseg-monthly-meter-values span { flex: 1 1 calc(50% - 0.42rem); font-size: 0.72rem; }
+.chart-popout-body [data-chart-popout-content] .nyseg-monthly-energy-card .nyseg-monthly-meter-values b { font-size: 0.82rem; }
+.chart-popout-body [data-chart-popout-content] .nyseg-monthly-energy-card .nyseg-monthly-combined { background: #d9eaf1; border-radius: 0.4rem; color: #1d536d; font-size: 0.75rem; margin-top: 0.48rem; padding: 0.3rem 0.4rem; }
+.chart-popout-body [data-chart-popout-content] .nyseg-monthly-meter-grand-total { margin-top: 0.65rem; max-width: 330px; }
 
 /* Shared modal frame used by Calibration V2 and the NYSEG utility-import review. */
 .calibration-v2-popout-shell { align-items: center; display: flex; inset: 0; justify-content: center; padding: 1rem; position: fixed; z-index: 2500; }
