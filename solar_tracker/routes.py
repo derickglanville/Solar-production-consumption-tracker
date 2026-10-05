@@ -6,6 +6,7 @@ import json
 import os
 from pathlib import Path
 import subprocess
+from typing import Optional
 
 import pandas as pd
 from flask import Blueprint, Response, jsonify, redirect, render_template, request, send_file, send_from_directory, url_for
@@ -56,6 +57,7 @@ LOCAL_APPLICATION_SNAPSHOT_PATH = LOCAL_JSON_DIRECTORY / "application_data_curre
 NYSEG_DAILY_SYNC_STATUS_PATH = Path(__file__).resolve().parent.parent / "SunRun Data" / "nyseg-daily-sync-status.json"
 NYSEG_DAILY_SYNC_LOG_PATH = Path(os.environ.get("LOCALAPPDATA", "")) / "SolarEnergyTracker" / "nyseg-daily-sync.log"
 NYSEG_DAILY_SYNC_LOCK_PATH = NYSEG_DAILY_SYNC_STATUS_PATH.with_suffix(".lock")
+NYSEG_DAILY_SYNC_PROCESS_PATH = NYSEG_DAILY_SYNC_STATUS_PATH.with_name("nyseg-daily-sync-process.json")
 NYSEG_DAILY_SYNC_SCRIPT_PATH = Path(__file__).resolve().parent.parent / "NYSEG Download Script" / "run_nyseg_daily_sync.ps1"
 CIRCUIT_BREAKER_DIRECTORY_PATH = (
     Path(__file__).resolve().parent.parent
@@ -82,6 +84,26 @@ def load_nyseg_daily_sync_status() -> dict:
         return json.loads(NYSEG_DAILY_SYNC_STATUS_PATH.read_text(encoding="utf-8"))
     except (OSError, ValueError, TypeError):
         return {}
+
+
+def nyseg_sync_process_pid() -> Optional[int]:
+    try:
+        return int(json.loads(NYSEG_DAILY_SYNC_PROCESS_PATH.read_text(encoding="utf-8")).get("pid"))
+    except (OSError, ValueError, TypeError, AttributeError):
+        return None
+
+
+def clear_stale_nyseg_sync_state() -> None:
+    """Recover after an interrupted runner leaves its lock or running status behind."""
+    if NYSEG_DAILY_SYNC_LOCK_PATH.is_file() and not NYSEG_DAILY_SYNC_PROCESS_PATH.is_file():
+        try:
+            NYSEG_DAILY_SYNC_LOCK_PATH.unlink()
+        except FileNotFoundError:
+            pass
+    if not NYSEG_DAILY_SYNC_LOCK_PATH.is_file() and not NYSEG_DAILY_SYNC_PROCESS_PATH.is_file():
+        status = load_nyseg_daily_sync_status()
+        if status.get("status") == "running":
+            NYSEG_DAILY_SYNC_STATUS_PATH.write_text(json.dumps({"status": "idle"}), encoding="utf-8")
 
 
 def build_bootstrap_data():
@@ -587,6 +609,7 @@ def nyseg_usage_file():
 
 @main_blueprint.route("/api/nyseg-daily-sync-status")
 def nyseg_daily_sync_status_api():
+    clear_stale_nyseg_sync_state()
     response = jsonify(load_nyseg_daily_sync_status() or {"status": "idle"})
     response.headers["Cache-Control"] = "no-store"
     return response
@@ -609,7 +632,8 @@ def nyseg_daily_sync_log_api():
 def nyseg_daily_sync_run_api():
     if not NYSEG_DAILY_SYNC_SCRIPT_PATH.is_file():
         return jsonify({"error": "The NYSEG daily-sync script is unavailable."}), 404
-    if NYSEG_DAILY_SYNC_LOCK_PATH.is_file():
+    clear_stale_nyseg_sync_state()
+    if NYSEG_DAILY_SYNC_LOCK_PATH.is_file() or NYSEG_DAILY_SYNC_PROCESS_PATH.is_file():
         return jsonify({"error": "NYSEG sync is already running. Review the live activity log below."}), 409
     started_at = datetime.now().astimezone().isoformat(timespec="seconds")
     NYSEG_DAILY_SYNC_STATUS_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -618,12 +642,33 @@ def nyseg_daily_sync_run_api():
     )
     NYSEG_DAILY_SYNC_LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
     NYSEG_DAILY_SYNC_LOG_PATH.write_text(f"[{started_at}] Starting NYSEG daily sync\n", encoding="utf-8")
-    subprocess.Popen(
+    process = subprocess.Popen(
         ["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(NYSEG_DAILY_SYNC_SCRIPT_PATH)],
         cwd=NYSEG_DAILY_SYNC_SCRIPT_PATH.parent.parent,
         creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
     )
+    NYSEG_DAILY_SYNC_PROCESS_PATH.write_text(
+        json.dumps({"pid": process.pid, "started_at": started_at}), encoding="utf-8"
+    )
     return jsonify({"started": True})
+
+
+@main_blueprint.route("/api/nyseg-daily-sync/stop", methods=["POST"])
+def nyseg_daily_sync_stop_api():
+    pid = nyseg_sync_process_pid()
+    if pid:
+        subprocess.run(["taskkill", "/PID", str(pid), "/T", "/F"], capture_output=True, text=True, check=False)
+    for path in (NYSEG_DAILY_SYNC_LOCK_PATH, NYSEG_DAILY_SYNC_PROCESS_PATH):
+        try:
+            path.unlink()
+        except FileNotFoundError:
+            pass
+    NYSEG_DAILY_SYNC_STATUS_PATH.parent.mkdir(parents=True, exist_ok=True)
+    stopped_at = datetime.now().astimezone().isoformat(timespec="seconds")
+    NYSEG_DAILY_SYNC_STATUS_PATH.write_text(json.dumps({"status": "stopped", "completed_at": stopped_at}), encoding="utf-8")
+    with NYSEG_DAILY_SYNC_LOG_PATH.open("a", encoding="utf-8", newline="\n") as handle:
+        handle.write(f"[{stopped_at}] NYSEG daily sync stopped by user.\n")
+    return jsonify({"stopped": bool(pid)})
 
 @main_blueprint.route("/nyseg-reconciliation")
 def nyseg_reconciliation():

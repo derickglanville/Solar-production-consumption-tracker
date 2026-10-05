@@ -5734,17 +5734,18 @@ async function saveNysegMeterBackup(db, entries, updates = null) {
 async function setupNysegUsageFileActions(db) {
   const importButton = document.getElementById("nyseg-file-import");
   const runSyncButton = document.getElementById("nyseg-file-run-sync");
+  const stopSyncButton = document.getElementById("nyseg-file-stop-sync");
   const backupButton = document.getElementById("nyseg-file-backup");
   const restoreButton = document.getElementById("nyseg-file-restore");
   const status = document.getElementById("nyseg-file-action-status");
-  if (!importButton && !runSyncButton && !backupButton && !restoreButton) return;
+  if (!importButton && !runSyncButton && !stopSyncButton && !backupButton && !restoreButton) return;
   const show = (message, kind = "info") => {
     if (!status) return;
     status.className = `small mt-2 mb-0 text-${kind === "danger" ? "danger" : kind === "success" ? "success" : "muted"}`;
     status.textContent = message;
   };
   if (isStaticSite()) {
-    [importButton, runSyncButton, backupButton, restoreButton].filter(Boolean).forEach((button) => {
+    [importButton, runSyncButton, stopSyncButton, backupButton, restoreButton].filter(Boolean).forEach((button) => {
       button.disabled = true;
       button.title = "These actions require the private NYSEG CSV in the local tracker.";
     });
@@ -5765,6 +5766,10 @@ async function setupNysegUsageFileActions(db) {
     const original = runSyncButton.textContent;
     runSyncButton.textContent = "Starting sync…";
     try {
+      const activity = document.getElementById("nyseg-sync-log-lines");
+      const syncStatus = document.getElementById("nyseg-sync-status");
+      if (activity) activity.textContent = "Starting NYSEG daily sync…";
+      if (syncStatus) { syncStatus.className = "small mb-0 text-primary"; syncStatus.textContent = "Daily sync is running. New activity is shown below."; }
       const response = await fetch("/api/nyseg-daily-sync/run", { method: "POST" });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "The NYSEG sync could not start.");
@@ -5774,6 +5779,22 @@ async function setupNysegUsageFileActions(db) {
       runSyncButton.disabled = false;
       runSyncButton.textContent = original;
     }
+  });
+  if (stopSyncButton) stopSyncButton.addEventListener("click", async () => {
+    stopSyncButton.disabled = true;
+    try {
+      const response = await fetch("/api/nyseg-daily-sync/stop", { method: "POST" });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "The NYSEG sync could not be stopped.");
+      const activity = document.getElementById("nyseg-sync-log-lines");
+      const syncStatus = document.getElementById("nyseg-sync-status");
+      if (activity) activity.textContent = "NYSEG daily sync stopped by user.";
+      if (syncStatus) { syncStatus.className = "small mb-0 text-muted"; syncStatus.textContent = "NYSEG sync was stopped."; }
+      if (runSyncButton) { runSyncButton.disabled = false; runSyncButton.textContent = "Run NYSEG sync now"; }
+      show("NYSEG sync stopped. You can start a new run when ready.", "success");
+    } catch (error) {
+      show(`Could not stop the NYSEG sync: ${error.message || error}`, "danger");
+    } finally { stopSyncButton.disabled = false; }
   });
   if (backupButton) backupButton.addEventListener("click", async () => {
     backupButton.disabled = true;

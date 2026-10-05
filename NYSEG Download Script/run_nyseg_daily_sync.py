@@ -22,6 +22,7 @@ DOWNLOADER = Path(__file__).resolve().parent / "nyseg_download.py"
 STATUS_FILE = PROJECT_ROOT / "SunRun Data" / "nyseg-daily-sync-status.json"
 EMAIL_SETTINGS_FILE = PROJECT_ROOT / "SunRun Data" / "Script" / "Email_Info.txt"
 LOCK_FILE = STATUS_FILE.with_suffix(".lock")
+PROCESS_FILE = STATUS_FILE.with_name("nyseg-daily-sync-process.json")
 EMAIL_ENABLED_MARKER = STATUS_FILE.with_name("nyseg-daily-sync-email-enabled")
 
 
@@ -123,6 +124,7 @@ def main(test_email: bool = False, log_path: Path | None = None) -> int:
         progress("NYSEG daily sync is already running.")
         return 0
     started_at = datetime.now().astimezone().isoformat(timespec="seconds")
+    PROCESS_FILE.write_text(json.dumps({"pid": os.getpid(), "started_at": started_at}), encoding="utf-8")
     write_status({"status": "running", "started_at": started_at})
     try:
         progress("Starting NYSEG browser download…")
@@ -173,6 +175,10 @@ def main(test_email: bool = False, log_path: Path | None = None) -> int:
         os.close(lock_handle)
         try:
             LOCK_FILE.unlink()
+        except FileNotFoundError:
+            pass
+        try:
+            PROCESS_FILE.unlink()
         except FileNotFoundError:
             pass
 
