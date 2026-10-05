@@ -109,19 +109,18 @@ def main(test_email: bool = False) -> int:
         return 0
     started_at = datetime.now().astimezone().isoformat(timespec="seconds")
     try:
-        download = subprocess.run(
-            [sys.executable, str(DOWNLOADER)],
-            cwd=PROJECT_ROOT,
-            check=False,
-            capture_output=True,
-            text=True,
-        )
+        print("Starting NYSEG browser download…", flush=True)
+        # Let the downloader write directly to Task Scheduler's log stream so
+        # a person can follow sign-in, portal loading, download, and import
+        # progress while the run is still active.
+        download = subprocess.run([sys.executable, str(DOWNLOADER)], cwd=PROJECT_ROOT, check=False)
         if download.returncode:
-            raise RuntimeError(download.stderr.strip() or download.stdout.strip() or "NYSEG download failed.")
+            raise RuntimeError(f"NYSEG download failed with exit code {download.returncode}.")
 
         # Run the same server-verified import used by the Review / Apply button.
         from app import create_app
 
+        print("Saving new NYSEG M01/M02 readings to Firebase…", flush=True)
         response = create_app().test_client().post("/api/nyseg-meter-intervals/apply")
         result = response.get_json() or {}
         if response.status_code >= 400:
@@ -133,7 +132,7 @@ def main(test_email: bool = False) -> int:
             "completed_at": datetime.now().astimezone().isoformat(timespec="seconds"),
             "saved_records": int(result.get("saved", 0)),
             "saved_dates": result.get("dates", []),
-            "download_output": download.stdout.strip(),
+            "download_output": "Completed; see nyseg-daily-sync.log for step-by-step output.",
         }
         add_email_result(status)
         print(f"NYSEG daily sync completed: {status['saved_records']} Firebase records saved.")
