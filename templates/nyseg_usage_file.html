@@ -8,6 +8,7 @@
     <p class="text-muted mb-0">{{ interval_file.source_name }} contains {{ "{:,}".format(interval_file.rows|length) }} hourly intervals. Account-identifying columns are omitted.</p>
     <p class="small text-muted mb-0">Source location: <code>{{ interval_file.source_path }}</code></p>
     <p class="small mb-0 {{ 'text-success' if nyseg_sync_status.status == 'success' else 'text-danger' if nyseg_sync_status.status == 'failed' else 'text-muted' }}" id="nyseg-sync-status" data-sync-completed-at="{{ nyseg_sync_status.completed_at or '' }}">{% if nyseg_sync_status.status == 'success' %}Daily sync: {{ nyseg_sync_status.saved_records }} record{{ '' if nyseg_sync_status.saved_records == 1 else 's' }} saved {{ nyseg_sync_status.completed_at }}.{% elif nyseg_sync_status.status == 'failed' %}Daily sync failed: {{ nyseg_sync_status.error }}{% else %}Daily NYSEG sync is scheduled for 7:30 AM while this computer is signed in.{% endif %}</p>
+    <section class="nyseg-sync-log" aria-label="NYSEG daily sync activity"><div class="nyseg-sync-log-heading"><span>Daily sync activity</span><small>Live step-by-step progress</small></div><pre id="nyseg-sync-log-lines">Loading NYSEG sync activity…</pre></section>
     {% else %}
     <p class="text-muted mb-0">No NYSEG daily usage CSV is available in the expected folder yet.</p>
     {% endif %}
@@ -110,9 +111,24 @@
 <script>
 (() => {
   const status = document.getElementById("nyseg-sync-status");
+  const log = document.getElementById("nyseg-sync-log-lines");
   if (!status || location.protocol === "file:") return;
   const completedAt = status.dataset.syncCompletedAt || "";
+  const refreshLog = async () => {
+    if (!log) return;
+    try {
+      const response = await fetch("/api/nyseg-daily-sync-log", { cache: "no-store" });
+      if (!response.ok) return;
+      const payload = await response.json();
+      log.textContent = (payload.lines || []).join("\n");
+      log.scrollTop = log.scrollHeight;
+    } catch (_) {
+      log.textContent = "Live sync activity is available in the local tracker.";
+    }
+  };
+  refreshLog();
   window.setInterval(async () => {
+    refreshLog();
     try {
       const response = await fetch("/api/nyseg-daily-sync-status", { cache: "no-store" });
       if (!response.ok) return;
@@ -121,7 +137,7 @@
     } catch (_) {
       // GitHub Pages does not have the private local sync endpoint.
     }
-  }, 60_000);
+  }, 2_000);
 })();
 </script>
 {% endblock %}
