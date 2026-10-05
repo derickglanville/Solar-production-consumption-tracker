@@ -3787,3 +3787,101 @@ body[data-page="dashboard"].dashboard-compact-mode .btn-contract {
 .bill-report-grid { display: grid; gap: 1rem; grid-template-columns: 3fr 2fr; }.bill-history-chart { height: 330px; }.credit-bank-flow { align-items: center; display: flex; gap: .55rem; justify-content: space-between; margin: 1.5rem 0; text-align: center; }.credit-bank-flow div { background: #edf6fa; border-radius: .7rem; color: #24546d; display: grid; flex: 1; gap: .2rem; padding: .75rem .4rem; }.credit-bank-flow div:nth-of-type(2) { background: #e4f6e9; color: #187548; }.credit-bank-flow div:nth-of-type(3) { background: #f2ebff; color: #6944a3; }.credit-bank-flow span { font-size: .7rem; }.credit-bank-flow i { color: #6e8796; font-size: 1.2rem; }.bill-history-table .bill-authoritative { background: #f0fbf4; }.bill-history-table small { color: #6a8190; font-size: .72rem; }
 @media (max-width: 900px) { .bill-report-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }.bill-report-grid { grid-template-columns: 1fr; } }
 @media (max-width: 520px) { .bill-report-heading { align-items: stretch; flex-direction: column; }.bill-report-metrics { grid-template-columns: 1fr; }.credit-bank-flow { align-items: stretch; flex-direction: column; }.credit-bank-flow i { transform: rotate(90deg); }.bill-summary-nav { justify-content: center; } }
+
+/* NYSEG command center: a vivid, compact presentation for the downloaded utility file. */
+.nyseg-file-header {
+  gap: 1.05rem;
+  grid-template-columns: minmax(360px, .95fr) minmax(620px, 1.45fr);
+}
+.nyseg-file-header > :first-child {
+  background:
+    radial-gradient(circle at 92% 7%, rgba(56, 160, 205, .20), transparent 28%),
+    linear-gradient(145deg, #fffefd 0%, #f3fbff 57%, #eef8f5 100%);
+  border: 1px solid #bddce8;
+  border-radius: 1.15rem;
+  box-shadow: 0 .8rem 2rem rgba(32, 82, 105, .10);
+  padding: 1.15rem 1.2rem;
+  position: relative;
+}
+.nyseg-file-header > :first-child::before {
+  background: linear-gradient(90deg, #0e6f9c, #25a47a, #e7a82c);
+  border-radius: 999px;
+  content: "";
+  height: .28rem;
+  left: 1.2rem;
+  position: absolute;
+  right: 1.2rem;
+  top: 0;
+}
+.nyseg-file-header .eyebrow { color: #23779d; letter-spacing: .12em; }
+.nyseg-file-header h1 { color: #153f58; font-size: clamp(1.45rem, 2.1vw, 2rem); }
+.nyseg-file-header code { background: #f7eafe; border-radius: .3rem; color: #aa2474; font-size: .71rem; padding: .12rem .28rem; }
+.nyseg-file-header-side { gap: .85rem; }
+.nyseg-file-actions {
+  background: linear-gradient(110deg, #e7f6ff 0%, #f7fbfe 47%, #fff3d3 100%);
+  border: 1px solid #c9e0e9;
+  border-radius: 1rem;
+  box-shadow: 0 .55rem 1.35rem rgba(37, 90, 112, .09);
+  min-height: 4.45rem;
+  padding: .65rem .78rem;
+}
+.nyseg-file-actions .btn { box-shadow: 0 .25rem .6rem rgba(38, 88, 108, .10); font-weight: 700; }
+.nyseg-file-actions .btn-sun { background: linear-gradient(135deg, #f0bc45, #e6932e); border-color: #e19a28; color: #173e57; }
+#nyseg-file-action-status {
+  color: #4d7080 !important;
+  font-size: .72rem;
+  font-weight: 600;
+  letter-spacing: .01em;
+}
+.nyseg-sync-log {
+  background: linear-gradient(145deg, #123f58, #1c607c);
+  border: 0;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.13), 0 .45rem 1.1rem rgba(18, 63, 88, .17);
+  margin-top: .9rem;
+}
+.nyseg-sync-log-heading { background: rgba(255,255,255,.12); border-bottom-color: rgba(255,255,255,.17); color: #e8fbff; padding: .45rem .65rem; }
+.nyseg-sync-log-heading small { color: #bce4ee; }
+.nyseg-sync-log pre { color: #f1fbff; font-size: .71rem; line-height: 1.5; max-height: 9.2rem; padding: .65rem; }
+.bill-summary-box {
+  background: linear-gradient(135deg, #f5fffb 0%, #e8f8ee 57%, #fff9df 100%);
+  border-color: #abdcc6;
+  box-shadow: 0 .45rem 1.05rem rgba(28, 112, 77, .08);
+  margin-top: .9rem;
+  padding: .9rem;
+}
+.bill-summary-bank { background: linear-gradient(100deg, #d6f4e1, #ecfae9); border-left: .28rem solid #21a16a; }
+.nyseg-monthly-summary-grid { gap: .85rem; }
+.nyseg-monthly-net-box {
+  background: linear-gradient(145deg, #ffffff, #eefaff);
+  border-color: #badce8;
+  border-radius: 1rem;
+  box-shadow: 0 .55rem 1.25rem rgba(30, 91, 117, .10);
+  padding: .8rem .85rem;
+}
+.nyseg-monthly-meter-box { background: linear-gradient(145deg, #ffffff, #f4f0ff); border-color: #d4c7eb; }
+.nyseg-monthly-net-heading { border-bottom: 1px solid #d5e7ee; margin-bottom: .18rem; padding-bottom: .42rem; }
+.nyseg-monthly-net-heading .eyebrow { color: #176e94; font-size: .73rem; }
+.nyseg-monthly-net-row { border-top-color: #d4e6ee; padding: .46rem 0; }
+.nyseg-monthly-net-row-credit b { background: #d9f6e4; border-radius: 999px; color: #147244 !important; padding: .23rem .43rem; }
+.nyseg-monthly-net-row-charge b { background: #ffe7de; border-radius: 999px; color: #af4530 !important; padding: .23rem .43rem; }
+.nyseg-monthly-energy-card { border-top-color: #d7d1ed; }
+.nyseg-monthly-energy-card .nyseg-monthly-meter-values span { box-shadow: inset 0 1px 0 rgba(255,255,255,.65); }
+.nyseg-monthly-combined { background: #e4f2f7; border-radius: .42rem; margin-top: .38rem; padding: .26rem .38rem; }
+.chart-popout-frame > .chart-popout-button { box-shadow: 0 .18rem .5rem rgba(33, 82, 107, .10); }
+.daily-run-history-grid { gap: .85rem; }
+.sunrun-run-summary {
+  background: linear-gradient(145deg, #f6fcff, #e8f4fb);
+  border-color: #a9d3e4;
+  box-shadow: 0 .5rem 1.2rem rgba(29, 89, 115, .10);
+  padding: .9rem;
+}
+.nyseg-run-summary { background: linear-gradient(145deg, #f5fff9, #e5f7ec); border-color: #a8d7ba; }
+.sunrun-run-summary .eyebrow { color: #167397; }
+.nyseg-run-summary .eyebrow { color: #18804f; }
+.sunrun-run-summary-metrics span { background: #d9eff8; color: #245f79; font-weight: 600; }
+.nyseg-run-summary .sunrun-run-summary-metrics span { background: #d9f4e3; color: #177547; }
+.sunrun-run-row { border-top-color: #cfe3eb; padding-top: .42rem; }
+.nyseg-file-chart-card { border-radius: 1rem; box-shadow: 0 .55rem 1.35rem rgba(31, 83, 106, .09); overflow: hidden; }
+.nyseg-file-table-wrap { border: 1px solid #c8dfe8; border-radius: .8rem; box-shadow: inset 0 1px 0 rgba(255,255,255,.7); }
+.nyseg-file-table thead th { background: linear-gradient(180deg, #e9f7fb, #dceef4); color: #1b5b76; }
+@media (max-width: 1180px) { .nyseg-file-header { grid-template-columns: 1fr; } }
