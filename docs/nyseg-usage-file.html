@@ -44,7 +44,7 @@
 
     <p class="text-muted mb-0">NYSEG_Daily_Usage_Data.csv contains 1,512 hourly intervals. Account-identifying columns are omitted.</p>
     <p class="small text-muted mb-0">Source location: <code>C:\Software Developement\ChatGPT Codex\Solar Energy - SunRun\SunRun Data\NYSEG_Daily_Usage_Data.csv</code></p>
-    <p class="small mb-0 text-danger" id="nyseg-sync-status" data-sync-completed-at="2026-10-04T21:16:06-04:00">Daily sync failed: NYSEG download failed: NYSEG&#39;s sign-in service could not be reached after three attempts (ERR_HTTP2_PROTOCOL_ERROR). Try Run NYSEG sync now again later, or renew the session with --headed.</p>
+    <p class="small mb-0 text-muted" id="nyseg-sync-status" data-sync-completed-at="">Daily NYSEG sync is scheduled for 7:30 AM while this computer is signed in.</p>
     <section class="nyseg-sync-log" aria-label="NYSEG daily sync activity"><div class="nyseg-sync-log-heading"><span>Daily sync activity</span><small>Live step-by-step progress</small></div><pre id="nyseg-sync-log-lines">Loading NYSEG sync activity…</pre></section>
 
   </div>
@@ -161,6 +161,7 @@
     if (latest.status === "running") status.textContent = "Daily sync is running. New activity is shown below.";
     else if (latest.status === "success") status.textContent = `Daily sync: ${latest.saved_records || 0} record${Number(latest.saved_records || 0) === 1 ? "" : "s"} saved ${latest.completed_at || ""}.`;
     else if (latest.status === "failed") status.textContent = `Daily sync failed: ${latest.error || "Review the activity log below."}`;
+    else if (latest.status === "idle") status.textContent = "Daily NYSEG sync is scheduled for 7:30 AM while this computer is signed in.";
   };
   const refreshLog = async () => {
     if (!log) return;

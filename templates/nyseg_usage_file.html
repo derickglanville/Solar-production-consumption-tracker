@@ -120,6 +120,7 @@
     if (latest.status === "running") status.textContent = "Daily sync is running. New activity is shown below.";
     else if (latest.status === "success") status.textContent = `Daily sync: ${latest.saved_records || 0} record${Number(latest.saved_records || 0) === 1 ? "" : "s"} saved ${latest.completed_at || ""}.`;
     else if (latest.status === "failed") status.textContent = `Daily sync failed: ${latest.error || "Review the activity log below."}`;
+    else if (latest.status === "idle") status.textContent = "Daily NYSEG sync is scheduled for 7:30 AM while this computer is signed in.";
   };
   const refreshLog = async () => {
     if (!log) return;

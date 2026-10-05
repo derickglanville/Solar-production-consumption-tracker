@@ -55,6 +55,7 @@ LOCAL_JSON_DIRECTORY = Path(__file__).resolve().parent.parent / "JSON"
 LOCAL_APPLICATION_SNAPSHOT_PATH = LOCAL_JSON_DIRECTORY / "application_data_current.json"
 NYSEG_DAILY_SYNC_STATUS_PATH = Path(__file__).resolve().parent.parent / "SunRun Data" / "nyseg-daily-sync-status.json"
 NYSEG_DAILY_SYNC_LOG_PATH = Path(os.environ.get("LOCALAPPDATA", "")) / "SolarEnergyTracker" / "nyseg-daily-sync.log"
+NYSEG_DAILY_SYNC_LOCK_PATH = NYSEG_DAILY_SYNC_STATUS_PATH.with_suffix(".lock")
 NYSEG_DAILY_SYNC_SCRIPT_PATH = Path(__file__).resolve().parent.parent / "NYSEG Download Script" / "run_nyseg_daily_sync.ps1"
 CIRCUIT_BREAKER_DIRECTORY_PATH = (
     Path(__file__).resolve().parent.parent
@@ -586,7 +587,7 @@ def nyseg_usage_file():
 
 @main_blueprint.route("/api/nyseg-daily-sync-status")
 def nyseg_daily_sync_status_api():
-    response = jsonify(load_nyseg_daily_sync_status())
+    response = jsonify(load_nyseg_daily_sync_status() or {"status": "idle"})
     response.headers["Cache-Control"] = "no-store"
     return response
 
@@ -608,6 +609,8 @@ def nyseg_daily_sync_log_api():
 def nyseg_daily_sync_run_api():
     if not NYSEG_DAILY_SYNC_SCRIPT_PATH.is_file():
         return jsonify({"error": "The NYSEG daily-sync script is unavailable."}), 404
+    if NYSEG_DAILY_SYNC_LOCK_PATH.is_file():
+        return jsonify({"error": "NYSEG sync is already running. Review the live activity log below."}), 409
     started_at = datetime.now().astimezone().isoformat(timespec="seconds")
     NYSEG_DAILY_SYNC_STATUS_PATH.parent.mkdir(parents=True, exist_ok=True)
     NYSEG_DAILY_SYNC_STATUS_PATH.write_text(
