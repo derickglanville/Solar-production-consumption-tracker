@@ -608,6 +608,13 @@ def nyseg_daily_sync_log_api():
 def nyseg_daily_sync_run_api():
     if not NYSEG_DAILY_SYNC_SCRIPT_PATH.is_file():
         return jsonify({"error": "The NYSEG daily-sync script is unavailable."}), 404
+    started_at = datetime.now().astimezone().isoformat(timespec="seconds")
+    NYSEG_DAILY_SYNC_STATUS_PATH.parent.mkdir(parents=True, exist_ok=True)
+    NYSEG_DAILY_SYNC_STATUS_PATH.write_text(
+        json.dumps({"status": "running", "started_at": started_at}, indent=2), encoding="utf-8"
+    )
+    NYSEG_DAILY_SYNC_LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
+    NYSEG_DAILY_SYNC_LOG_PATH.write_text(f"[{started_at}] Starting NYSEG daily sync\n", encoding="utf-8")
     subprocess.Popen(
         ["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(NYSEG_DAILY_SYNC_SCRIPT_PATH)],
         cwd=NYSEG_DAILY_SYNC_SCRIPT_PATH.parent.parent,

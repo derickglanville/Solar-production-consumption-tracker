@@ -155,6 +155,13 @@
   const log = document.getElementById("nyseg-sync-log-lines");
   if (!status || location.protocol === "file:") return;
   const completedAt = status.dataset.syncCompletedAt || "";
+  const updateStatus = (latest) => {
+    if (!latest || !latest.status) return;
+    status.className = `small mb-0 ${latest.status === "success" ? "text-success" : latest.status === "failed" ? "text-danger" : "text-primary"}`;
+    if (latest.status === "running") status.textContent = "Daily sync is running. New activity is shown below.";
+    else if (latest.status === "success") status.textContent = `Daily sync: ${latest.saved_records || 0} record${Number(latest.saved_records || 0) === 1 ? "" : "s"} saved ${latest.completed_at || ""}.`;
+    else if (latest.status === "failed") status.textContent = `Daily sync failed: ${latest.error || "Review the activity log below."}`;
+  };
   const refreshLog = async () => {
     if (!log) return;
     try {
@@ -174,6 +181,7 @@
       const response = await fetch("/api/nyseg-daily-sync-status", { cache: "no-store" });
       if (!response.ok) return;
       const latest = await response.json();
+      updateStatus(latest);
       if (latest.status === "success" && latest.completed_at && latest.completed_at !== completedAt) window.location.reload();
     } catch (_) {
       // GitHub Pages does not have the private local sync endpoint.

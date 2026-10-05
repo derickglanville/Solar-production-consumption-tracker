@@ -123,6 +123,7 @@ def main(test_email: bool = False, log_path: Path | None = None) -> int:
         progress("NYSEG daily sync is already running.")
         return 0
     started_at = datetime.now().astimezone().isoformat(timespec="seconds")
+    write_status({"status": "running", "started_at": started_at})
     try:
         progress("Starting NYSEG browser download…")
         # Let the downloader write directly to Task Scheduler's log stream so
