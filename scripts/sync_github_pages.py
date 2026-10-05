@@ -17,7 +17,7 @@ from solar_tracker.routes import build_bootstrap_data
 
 
 DOCS = ROOT / "docs"
-ASSET_VERSION = "20261004-nyseg-energy-cards"
+ASSET_VERSION = "20261004-nyseg-matched-summary-height"
 
 ROUTE_REPLACEMENTS = {
     'href="/"': 'href="index.html"',

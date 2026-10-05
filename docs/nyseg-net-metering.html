@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/styles.css?v=20261004-nyseg-energy-cards">
+  <link rel="stylesheet" href="assets/css/styles.css?v=20261004-nyseg-matched-summary-height">
   <script src="https://cdn.plot.ly/plotly-3.4.0.min.js"></script>
 </head>
 <body data-page="nyseg-net-metering" data-local-snapshot-mode="false">
@@ -37,7 +37,7 @@
 
 
 
-<section class="mb-4"><p class="eyebrow mb-2">Official NYSEG bill and M02 reconciliation</p><h1 class="h3 mb-2">NYSEG grid credits and export reconciliation</h1><p class="text-muted mb-0">One report for what your smart meter recorded, what NYSEG billed, and how NYSEG applied net metering. Tracker data as of 2026-10-04T20:46:12.034703-04:00.</p></section>
+<section class="mb-4"><p class="eyebrow mb-2">Official NYSEG bill and M02 reconciliation</p><h1 class="h3 mb-2">NYSEG grid credits and export reconciliation</h1><p class="text-muted mb-0">One report for what your smart meter recorded, what NYSEG billed, and how NYSEG applied net metering. Tracker data as of 2026-10-04T20:50:13.775051-04:00.</p></section>
 <section class="row g-3 mb-4"><div class="col-md-3"><div class="metric-card"><span>Smart-meter import</span><strong>909 kWh</strong></div></div><div class="col-md-3"><div class="metric-card"><span>NYSEG billed export</span><strong>2,285 kWh</strong></div></div><div class="col-md-3"><div class="metric-card"><span>Matched M02 export</span><strong>1,200 kWh</strong></div></div><div class="col-md-3"><div class="metric-card sun"><span>NYSEG credited billed use</span><strong>518 kWh</strong></div></div></section>
 <section class="card tracker-card mb-4"><div class="card-body"><h2 class="h5">Why the NYSEG credit bank does not show a growing credit since July 16</h2><p class="mb-2">The July 2–August 5 statement spans the smart-meter transition. It records 1,025 kWh exported, but it does not itemize an official excess-generation credit balance. Because the tracker began after the billing period had already started, there is no matching opening M02 reading to reconcile that period.</p><p class="mb-2">The corrected September 16 statement does show NYSEG’s treatment: it applied credit against <strong>518 kWh</strong> of billed use. Its excess-generation table lists <strong>1,376 kWh prior excess</strong> and <strong>0 kWh remaining</strong> after the correction. That means the bill used the accumulated excess to offset energy use instead of carrying a visible kWh bank forward. The remaining $43.57 in energy-related charges were fixed or non-bypassable items, not a charge for the 518 kWh of use.</p><p class="tracker-modal-note mb-0">This report can show when NYSEG’s documented treatment differs from M02. It does not assume every exported kWh becomes a one-for-one dollar credit unless the statement explicitly says so.</p></div></section>
 <section class="card tracker-card mb-4"><div class="card-body"><h2 class="h5">M02 export compared with NYSEG</h2><div class="table-responsive"><table class="table align-middle"><thead><tr><th>NYSEG period</th><th>M02 export tracked</th><th>NYSEG export</th><th>Difference</th><th>Net metering actually applied</th><th>Remaining NYSEG excess</th></tr></thead><tbody><tr><td><strong>2026-07-02 to 2026-08-05</strong><br><small class="text-muted">Statement 2026-09-03</small></td><td>Not available</td><td>1,025 kWh</td><td>—</td><td>No credit amount itemized<br><small class="text-muted">Export is measured on the bill; no official credit balance is itemized.</small></td><td>Not itemized</td></tr><tr><td><strong>2026-08-06 to 2026-09-03</strong><br><small class="text-muted">Statement 2026-09-16</small></td><td>1,200.1 kWh<br><small class="text-muted">2026-08-06 to 2026-09-03</small></td><td>1,260 kWh</td><td><span class="text-warning">%+.1f kWh</span></td><td><strong>518 kWh of billed use offset</strong><br><small class="text-muted">NYSEG offset 518 kWh of billed use; only fixed and non-bypassable charges remained.</small></td><td>0 kWh</td></tr></tbody></table></div></div></section>
@@ -46,9 +46,9 @@
     </div>
   </main>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/js/bootstrap.bundle.min.js"></script>
-  <script src="assets/js/site-bootstrap.js?v=20261004-nyseg-energy-cards"></script>
-  <script src="assets/js/firebase-config.js?v=20261004-nyseg-energy-cards"></script>
-  <script defer src="assets/js/app-bundle.js?v=20261004-nyseg-energy-cards"></script>
+  <script src="assets/js/site-bootstrap.js?v=20261004-nyseg-matched-summary-height"></script>
+  <script src="assets/js/firebase-config.js?v=20261004-nyseg-matched-summary-height"></script>
+  <script defer src="assets/js/app-bundle.js?v=20261004-nyseg-matched-summary-height"></script>
 
 </body>
 </html>
