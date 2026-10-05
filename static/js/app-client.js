@@ -2830,7 +2830,7 @@ function openChartPopout(frame) {
     closeChartPopout();
   }
 
-  const chartNode = frame.querySelector(".dashboard-chart, .nyseg-file-comparison-chart, [data-chart-popout-content]");
+  const chartNode = frame.querySelector("[data-chart-popout-content], .dashboard-chart, .nyseg-file-comparison-chart");
   if (!chartNode) return;
 
   const label = frame.getAttribute("data-chart-popout-label") || "Chart";
