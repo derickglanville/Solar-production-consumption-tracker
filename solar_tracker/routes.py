@@ -625,6 +625,16 @@ def nyseg_usage_file():
         "edc_kwh": sum(month["edc_kwh"] for month in monthly_meter_totals),
     }
     meter_totals["combined_kwh"] = meter_totals["m01_kwh"] + meter_totals["m02_kwh"]
+    daily_dates = sorted(row["Date"] for row in interval_file.get("daily_rows", []))
+    net_charge_summary = {
+        "import_kwh": meter_totals["m01_kwh"],
+        "export_kwh": meter_totals["m02_kwh"],
+        "net_cost": (meter_totals["m01_kwh"] - meter_totals["m02_kwh"]) * electric_rate,
+        "first_date": daily_dates[0] if daily_dates else None,
+        "last_date": daily_dates[-1] if daily_dates else None,
+        "day_count": len(daily_dates),
+        "interval_count": len(interval_file.get("rows", [])),
+    }
     return render_template(
         "nyseg_usage_file.html",
         page_name="nyseg-usage-file",
@@ -636,6 +646,7 @@ def nyseg_usage_file():
         hourly_chart_rows=hourly_chart_rows,
         electric_rate=electric_rate,
         monthly_net_charges=monthly_net_charges,
+        net_charge_summary=net_charge_summary,
         monthly_meter_totals=monthly_meter_totals,
         meter_totals=meter_totals,
         nyseg_sync_status=load_nyseg_daily_sync_status(),

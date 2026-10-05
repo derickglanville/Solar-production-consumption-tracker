@@ -3694,7 +3694,7 @@ body[data-page="dashboard"].dashboard-compact-mode .btn-contract {
 .nyseg-monthly-summary-grid { align-items: stretch; display: grid; gap: 0.75rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .nyseg-monthly-summary-grid > .chart-popout-frame { display: flex; min-width: 0; }
 .nyseg-monthly-summary-grid > .chart-popout-frame > .nyseg-monthly-net-box { flex: 1 1 auto; height: 100%; }
-.nyseg-monthly-net-box { background: #f7fbfc; border: 1px solid #c8dce5; border-radius: 0.75rem; padding: 0.65rem 0.75rem; width: 100%; }
+.nyseg-monthly-net-box { background: #f7fbfc; border: 1px solid #c8dce5; border-radius: 0.75rem; display: flex; flex-direction: column; padding: 0.65rem 0.75rem; width: 100%; }
 .nyseg-monthly-net-heading { align-items: start; display: flex; gap: 0.6rem; justify-content: space-between; }
 .nyseg-monthly-net-box small { color: #617b8d; display: block; font-size: 0.72rem; }
 .nyseg-monthly-net-list { max-height: 116px; overflow-y: auto; padding-right: 0.2rem; }
@@ -3703,6 +3703,8 @@ body[data-page="dashboard"].dashboard-compact-mode .btn-contract {
 .nyseg-monthly-net-row span { color: #617b8d; font-size: 0.7rem; grid-column: 1; }
 .nyseg-monthly-net-row b { font-size: 0.77rem; grid-column: 2; grid-row: 1 / span 2; white-space: nowrap; }
 .nyseg-monthly-net-row em { color: #7c94a2; font-size: 0.64rem; font-style: normal; font-weight: 700; letter-spacing: 0.02em; text-transform: uppercase; }
+.nyseg-monthly-net-footer { background: linear-gradient(135deg, #e5f5fb, #effaf3); border: 1px solid #bfdfd2; border-radius: .6rem; display: grid; gap: .32rem .55rem; grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: auto; padding: .48rem .55rem; }
+.nyseg-monthly-net-footer div { display: grid; gap: .05rem; }.nyseg-monthly-net-footer span { color: #5e7d8c; font-size: .62rem; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; }.nyseg-monthly-net-footer strong, .nyseg-monthly-net-footer b { color: #1c526c; font-size: .75rem; }.nyseg-monthly-net-footer small { border-top: 1px solid #cde4dc; color: #537283; font-size: .66rem; grid-column: 1 / -1; padding-top: .28rem; }
 .nyseg-monthly-meter-row { border-top: 1px solid #d9e7ed; padding: 0.4rem 0; }
 .nyseg-monthly-meter-row > strong { color: #244a60; display: block; font-size: 0.78rem; margin-bottom: 0.2rem; }
 .nyseg-monthly-meter-values { display: flex; flex-wrap: wrap; gap: 0.18rem 0.6rem; }
