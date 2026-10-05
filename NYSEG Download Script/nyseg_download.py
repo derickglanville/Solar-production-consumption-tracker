@@ -31,7 +31,12 @@ OUTPUT_DIRECTORY = PROJECT_ROOT / "SunRun Data"
 OUTPUT_FILE = OUTPUT_DIRECTORY / "NYSEG_Daily_Usage_Data.csv"
 ARCHIVE_DIRECTORY = OUTPUT_DIRECTORY / "archive"
 LOCAL_APP_DATA = Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData" / "Local"))
-PROFILE_DIRECTORY = LOCAL_APP_DATA / "SolarEnergyTracker" / "nyseg-playwright-profile"
+PROFILE_ROOT = LOCAL_APP_DATA / "SolarEnergyTracker"
+
+
+def profile_directory_for(browser: str) -> Path:
+    """Keep Edge and Chrome authenticated profiles separate."""
+    return PROFILE_ROOT / f"nyseg-playwright-profile-{browser}"
 DIAGNOSTIC_DIRECTORY = LOCAL_APP_DATA / "SolarEnergyTracker" / "nyseg-download-diagnostics"
 REQUIRED_COLUMNS = {"Date", "Delivered", "Received"}
 HTTP2_ERROR_TEXT = "ERR_HTTP2_PROTOCOL_ERROR"
@@ -236,19 +241,20 @@ def download_usage(page: Page, start: date, end: date) -> tuple[Path, int]:
 def main() -> int:
     parser = argparse.ArgumentParser(description="Download NYSEG Usage CSV for the solar tracker.")
     parser.add_argument("--headed", action="store_true", help="show the browser for first login, MFA, or selector troubleshooting")
-    parser.add_argument("--browser", choices=("edge", "chromium"), default="edge", help="browser to automate; Edge is the Windows default")
+    parser.add_argument("--browser", choices=("chrome", "edge", "chromium"), default="chrome", help="browser to automate; Chrome is the NYSEG default")
     parser.add_argument("--start", type=date.fromisoformat, default=date(2026, 7, 1), help="first requested date, YYYY-MM-DD")
     parser.add_argument("--end", type=date.fromisoformat, default=date.today(), help="last requested date, YYYY-MM-DD")
     args = parser.parse_args()
     if args.end < args.start:
         parser.error("--end must be on or after --start")
-    PROFILE_DIRECTORY.mkdir(parents=True, exist_ok=True)
+    profile_directory = profile_directory_for(args.browser)
+    profile_directory.mkdir(parents=True, exist_ok=True)
     DIAGNOSTIC_DIRECTORY.mkdir(parents=True, exist_ok=True)
     print(f"Launching {'visible ' if args.headed else ''}{args.browser.title()} browser…", flush=True)
     with sync_playwright() as playwright:
         context = playwright.chromium.launch_persistent_context(
-            str(PROFILE_DIRECTORY), headless=not args.headed, accept_downloads=True,
-            channel="msedge" if args.browser == "edge" else None,
+            str(profile_directory), headless=not args.headed, accept_downloads=True,
+            channel={"edge": "msedge", "chrome": "chrome"}.get(args.browser),
             # NYSEG's SSO sometimes fails in Edge with ERR_HTTP2_PROTOCOL_ERROR.
             # Use HTTP/1.1 for this automation profile while preserving its saved session.
             args=["--disable-http2"],

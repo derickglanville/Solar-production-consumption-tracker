@@ -132,7 +132,7 @@ def main(test_email: bool = False, log_path: Path | None = None) -> int:
         # a person can follow sign-in, portal loading, download, and import
         # progress while the run is still active.
         download = subprocess.Popen(
-            [sys.executable, str(DOWNLOADER)], cwd=PROJECT_ROOT,
+            [sys.executable, str(DOWNLOADER), "--browser", "chrome"], cwd=PROJECT_ROOT,
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1,
         )
         assert download.stdout is not None
