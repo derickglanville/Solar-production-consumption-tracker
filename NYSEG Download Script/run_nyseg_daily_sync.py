@@ -25,6 +25,7 @@ EMAIL_SETTINGS_FILE = PROJECT_ROOT / "SunRun Data" / "Script" / "Email_Info.txt"
 LOCK_FILE = STATUS_FILE.with_suffix(".lock")
 PROCESS_FILE = STATUS_FILE.with_name("nyseg-daily-sync-process.json")
 EMAIL_ENABLED_MARKER = STATUS_FILE.with_name("nyseg-daily-sync-email-enabled")
+PROJECT_LOG_FILE = STATUS_FILE.with_name("nyseg-daily-sync.log")
 
 
 def write_status(payload: dict) -> None:
@@ -55,14 +56,18 @@ def save_daily_load_history(status: dict) -> None:
 
 
 def progress_writer(log_path: Path | None):
+    destinations = [PROJECT_LOG_FILE]
+    if log_path and log_path not in destinations:
+        destinations.append(log_path)
+
     def write(message: str) -> None:
         text = message.rstrip()
         if not text:
             return
         print(text, flush=True)
-        if log_path:
-            log_path.parent.mkdir(parents=True, exist_ok=True)
-            with log_path.open("a", encoding="utf-8", newline="\n") as handle:
+        for destination in destinations:
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            with destination.open("a", encoding="utf-8", newline="\n") as handle:
                 handle.write(text + "\n")
     return write
 

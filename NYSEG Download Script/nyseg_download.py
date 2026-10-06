@@ -271,17 +271,19 @@ def main() -> int:
     DIAGNOSTIC_DIRECTORY.mkdir(parents=True, exist_ok=True)
     print(f"Launching {'visible ' if args.headed else ''}{args.browser.title()} browser…", flush=True)
     with sync_playwright() as playwright:
-        context = playwright.chromium.launch_persistent_context(
-            str(profile_directory), headless=not args.headed, accept_downloads=True,
-            channel={"edge": "msedge", "chrome": "chrome"}.get(args.browser),
-            # NYSEG's SSO sometimes fails in Edge with ERR_HTTP2_PROTOCOL_ERROR.
-            # Use HTTP/1.1 for this automation profile while preserving its saved session.
-            args=["--disable-http2"],
-        )
-        page = context.pages[0] if context.pages else context.new_page()
-        page.set_default_timeout(20_000)
+        context = None
+        page = None
         download_completed = False
         try:
+            context = playwright.chromium.launch_persistent_context(
+                str(profile_directory), headless=not args.headed, accept_downloads=True,
+                channel={"edge": "msedge", "chrome": "chrome"}.get(args.browser),
+                # NYSEG's SSO sometimes fails in Edge with ERR_HTTP2_PROTOCOL_ERROR.
+                # Use HTTP/1.1 for this automation profile while preserving its saved session.
+                args=["--disable-http2"],
+            )
+            page = context.pages[0] if context.pages else context.new_page()
+            page.set_default_timeout(20_000)
             ensure_signed_in(page, os.getenv("NYSEG_USER"), os.getenv("NYSEG_PASS"), args.headed)
             destination, rows = download_usage(page, args.start, args.end)
             download_completed = True
@@ -290,9 +292,12 @@ def main() -> int:
         except Exception as error:
             stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
             screenshot = DIAGNOSTIC_DIRECTORY / f"nyseg-download-{stamp}.png"
-            try:
-                page.screenshot(path=str(screenshot), full_page=True)
-            except Exception:
+            if page is not None:
+                try:
+                    page.screenshot(path=str(screenshot), full_page=True)
+                except Exception:
+                    screenshot = None
+            else:
                 screenshot = None
             print(f"NYSEG download failed: {error}", file=sys.stderr)
             if screenshot:
@@ -303,13 +308,14 @@ def main() -> int:
             # completed download. The CSV has already been saved and validated
             # at that point, so a second close request must not turn success
             # into a Python traceback.
-            try:
-                context.close()
-            except Exception as close_error:
-                if download_completed:
-                    print(f"Download completed; Edge had already closed during cleanup ({close_error}).")
-                else:
-                    print(f"Browser cleanup warning: {close_error}", file=sys.stderr)
+            if context is not None:
+                try:
+                    context.close()
+                except Exception as close_error:
+                    if download_completed:
+                        print(f"Download completed; Edge had already closed during cleanup ({close_error}).")
+                    else:
+                        print(f"Browser cleanup warning: {close_error}", file=sys.stderr)
 
 
 if __name__ == "__main__":

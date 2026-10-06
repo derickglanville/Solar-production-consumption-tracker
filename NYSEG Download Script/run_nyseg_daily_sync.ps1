@@ -2,7 +2,7 @@ $ErrorActionPreference = 'Stop'
 
 $projectRoot = Split-Path -Parent $PSScriptRoot
 $python = (Get-Command python -ErrorAction Stop).Source
-$logDirectory = Join-Path $env:LOCALAPPDATA 'SolarEnergyTracker'
+$logDirectory = Join-Path $projectRoot 'SunRun Data'
 $logPath = Join-Path $logDirectory 'nyseg-daily-sync.log'
 New-Item -ItemType Directory -Force -Path $logDirectory | Out-Null
 
