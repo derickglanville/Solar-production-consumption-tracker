@@ -12,6 +12,7 @@ import os
 import smtplib
 import subprocess
 import sys
+import time
 from datetime import datetime
 from email.message import EmailMessage
 from pathlib import Path
@@ -56,9 +57,13 @@ def save_daily_load_history(status: dict) -> None:
 
 
 def progress_writer(log_path: Path | None):
-    destinations = [PROJECT_LOG_FILE]
-    if log_path and log_path not in destinations:
-        destinations.append(log_path)
+    # Callers may pass the project log as a relative path. Normalize both
+    # paths so each progress line is recorded once rather than duplicated.
+    destinations = [PROJECT_LOG_FILE.resolve()]
+    if log_path:
+        requested_log = log_path.resolve()
+        if requested_log not in destinations:
+            destinations.append(requested_log)
 
     def write(message: str) -> None:
         text = message.rstrip()
@@ -155,19 +160,38 @@ def main(test_email: bool = False, log_path: Path | None = None) -> int:
     PROCESS_FILE.write_text(json.dumps({"pid": os.getpid(), "started_at": started_at}), encoding="utf-8")
     write_status({"status": "running", "started_at": started_at})
     try:
-        progress("Starting NYSEG browser download…")
-        # Let the downloader write directly to Task Scheduler's log stream so
-        # a person can follow sign-in, portal loading, download, and import
-        # progress while the run is still active.
-        download = subprocess.Popen(
-            [sys.executable, str(DOWNLOADER), "--browser", "chrome"], cwd=PROJECT_ROOT,
-            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1,
-        )
-        assert download.stdout is not None
-        for line in download.stdout:
-            progress(line)
-        if download.wait() != 0:
-            raise RuntimeError("NYSEG download failed. Review the activity log for the portal error and diagnostic screenshot.")
+        # An NYSEG SSO HTTP/2 error is often transient. Restart Chrome and
+        # repeat the complete browser session once, rather than leaving the
+        # daily file stale after only the downloader's in-page retries.
+        download_error = ""
+        for browser_attempt in range(1, 3):
+            progress(f"Starting NYSEG browser download (browser attempt {browser_attempt}/2)…")
+            download = subprocess.Popen(
+                [sys.executable, str(DOWNLOADER), "--browser", "chrome"], cwd=PROJECT_ROOT,
+                stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1,
+            )
+            assert download.stdout is not None
+            output_lines: list[str] = []
+            for line in download.stdout:
+                text = line.rstrip()
+                if text:
+                    output_lines.append(text)
+                    progress(text)
+            if download.wait() == 0:
+                break
+            download_error = next(
+                (line for line in reversed(output_lines) if line.startswith("NYSEG download failed:")),
+                output_lines[-1] if output_lines else "NYSEG download exited without diagnostic output.",
+            )
+            if browser_attempt < 2 and "ERR_HTTP2_PROTOCOL_ERROR" in "\n".join(output_lines):
+                progress("NYSEG SSO returned an HTTP/2 error. Restarting Chrome and retrying once in 30 seconds…")
+                time.sleep(30)
+                continue
+            break
+        else:
+            raise RuntimeError(download_error)
+        if download.returncode != 0:
+            raise RuntimeError(download_error)
 
         # Run the same server-verified import used by the Review / Apply button.
         # Python starts with this script's folder on sys.path, even when the
