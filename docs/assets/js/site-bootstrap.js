@@ -2242,9 +2242,15 @@ window.SOLAR_BOOTSTRAP = {
         "end_of_day_meter_kwh": 4907.283,
         "entry_date": "2026-10-03",
         "production_kwh": 44.724
+      },
+      "2026-10-04": {
+        "available": true,
+        "end_of_day_meter_kwh": 4932.475,
+        "entry_date": "2026-10-04",
+        "production_kwh": 25.192
       }
     },
-    "latest_available_date": "2026-10-03",
+    "latest_available_date": "2026-10-04",
     "rows": [
       {
         "available": false,
@@ -2769,15 +2775,21 @@ window.SOLAR_BOOTSTRAP = {
         "production_kwh": 44.724
       },
       {
-        "available": false,
-        "end_of_day_meter_kwh": 0.0,
+        "available": true,
+        "end_of_day_meter_kwh": 4932.475,
         "entry_date": "2026-10-04",
-        "production_kwh": 0.0
+        "production_kwh": 25.192
       },
       {
         "available": false,
         "end_of_day_meter_kwh": 0.0,
         "entry_date": "2026-10-05",
+        "production_kwh": 0.0
+      },
+      {
+        "available": false,
+        "end_of_day_meter_kwh": 0.0,
+        "entry_date": "2026-10-06",
         "production_kwh": 0.0
       }
     ]

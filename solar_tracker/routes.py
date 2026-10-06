@@ -95,6 +95,10 @@ def load_sunrun_recent_runs() -> dict:
     except (OSError, ValueError, AttributeError):
         rows = []
     recent = sorted(rows, key=lambda row: row.get("started_at", ""), reverse=True)[:5]
+    recent = [
+        {**row, "run_time": format_run_time(row.get("finished_at") or row.get("started_at"))}
+        for row in recent
+    ]
     return {
         "recent": recent,
         "successful": sum(1 for row in recent if row.get("status") == "Success"),
@@ -115,7 +119,22 @@ def load_nyseg_recent_runs() -> dict:
             "message": status.get("error") or "",
         }] if status else [])
     recent = sorted(rows, key=lambda row: row.get("completed_at", row.get("date", "")), reverse=True)[:5]
+    recent = [
+        {**row, "run_time": format_run_time(row.get("completed_at") or row.get("started_at"))}
+        for row in recent
+    ]
     return {"recent": recent, "successful": sum(1 for row in recent if row.get("status") == "Success"), "emailed": sum(1 for row in recent if row.get("email_sent"))}
+
+
+def format_run_time(value: object) -> str:
+    """Render a stored local ISO timestamp compactly for the history cards."""
+    if not isinstance(value, str) or not value:
+        return "Time unavailable"
+    try:
+        parsed = datetime.fromisoformat(value)
+        return f"{parsed.strftime('%I').lstrip('0') or '0'}:{parsed.strftime('%M %p')}"
+    except ValueError:
+        return "Time unavailable"
 
 
 def nyseg_sync_process_pid() -> Optional[int]:

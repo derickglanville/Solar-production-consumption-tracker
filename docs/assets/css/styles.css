@@ -3892,6 +3892,8 @@ body[data-page="dashboard"].dashboard-compact-mode .btn-contract {
 .sunrun-run-summary-metrics span { background: #d9eff8; color: #245f79; font-weight: 600; }
 .nyseg-run-summary .sunrun-run-summary-metrics span { background: #d9f4e3; color: #177547; }
 .sunrun-run-row { border-top-color: #cfe3eb; padding-top: .42rem; }
+.sunrun-run-row strong { display: grid; gap: .08rem; line-height: 1.05; }
+.sunrun-run-time { color: #6a8090; font-size: .61rem; font-weight: 600; white-space: nowrap; }
 .nyseg-file-chart-card { border-radius: 1rem; box-shadow: 0 .55rem 1.35rem rgba(31, 83, 106, .09); overflow: hidden; }
 .nyseg-analytics-grid { display: grid; gap: 1rem; grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .nyseg-analytics-grid .nyseg-file-chart-card { min-width: 0; }.nyseg-analytics-grid .card-body { padding: 1rem; }
