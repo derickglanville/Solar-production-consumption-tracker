@@ -5698,6 +5698,8 @@ async function setupNysegUsageFileActions(db) {
   const stopSyncButton = document.getElementById("nyseg-file-stop-sync");
   const backupButton = document.getElementById("nyseg-file-backup");
   const restoreButton = document.getElementById("nyseg-file-restore");
+  const advancedControls = document.getElementById("nyseg-file-advanced-controls");
+  const controlsToggle = document.getElementById("nyseg-file-toggle-controls");
   const status = document.getElementById("nyseg-file-action-status");
   if (!importButton && !useDownloadButton && !runSyncButton && !stopSyncButton && !backupButton && !restoreButton) return;
   const show = (message, kind = "info") => {
@@ -5705,6 +5707,14 @@ async function setupNysegUsageFileActions(db) {
     status.className = `small mt-2 mb-0 text-${kind === "danger" ? "danger" : kind === "success" ? "success" : "muted"}`;
     status.textContent = message;
   };
+  const setAdvancedControls = (expanded) => {
+    if (advancedControls) advancedControls.hidden = !expanded;
+    if (controlsToggle) {
+      controlsToggle.setAttribute("aria-expanded", String(expanded));
+      controlsToggle.textContent = expanded ? "Hide tools" : "More tools";
+    }
+  };
+  if (controlsToggle) controlsToggle.addEventListener("click", () => setAdvancedControls(advancedControls?.hidden));
   if (isStaticSite()) {
     [importButton, useDownloadButton, runSyncButton, stopSyncButton, backupButton, restoreButton].filter(Boolean).forEach((button) => {
       button.disabled = true;
@@ -5743,8 +5753,7 @@ async function setupNysegUsageFileActions(db) {
     const original = runSyncButton.textContent;
     runSyncButton.textContent = "Starting…";
     try {
-      const advancedControls = document.getElementById("nyseg-file-advanced-controls");
-      if (advancedControls) advancedControls.open = true;
+      setAdvancedControls(true);
       const activity = document.getElementById("nyseg-sync-log-lines");
       const syncStatus = document.getElementById("nyseg-sync-status");
       if (activity) activity.textContent = "Starting NYSEG_File_Download_Test.py…";

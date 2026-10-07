@@ -3684,9 +3684,9 @@ body[data-page="dashboard"].dashboard-compact-mode .btn-contract {
 .nyseg-file-table .nyseg-interval-count { min-width: 3.8rem; padding-left: 0.35rem; padding-right: 0.35rem; width: 3.8rem; }
 .nyseg-file-chart-card { border-color: #c7dce2; }
 .nyseg-file-comparison-chart { min-height: 290px; width: 100%; }
-.nyseg-file-header { align-items: stretch; display: grid; gap: 1.2rem; grid-template-columns: minmax(0, 1fr) minmax(390px, 55%); }
+.nyseg-file-header { align-items: start; display: grid; gap: 1.2rem; grid-template-columns: minmax(0, 1fr) minmax(390px, 55%); }
 .nyseg-file-header > :first-child { display: flex; flex-direction: column; min-width: 0; }
-.nyseg-file-header-side { display: grid; gap: 0.75rem; grid-template-rows: auto auto 1fr; }
+.nyseg-file-header-side { align-self: start; display: grid; gap: 0.75rem; grid-template-rows: auto auto; }
 .nyseg-sync-log { background: #f6fafb; border: 1px solid #c8dce5; border-radius: 0.65rem; margin-top: 0.65rem; max-width: none; overflow: hidden; }
 .nyseg-sync-log-heading { align-items: center; background: #e8f3f6; border-bottom: 1px solid #c8dce5; color: #24566d; display: flex; font-size: 0.72rem; font-weight: 700; justify-content: space-between; letter-spacing: 0.05em; padding: 0.35rem 0.55rem; text-transform: uppercase; }
 .nyseg-sync-log-heading small { color: #668291; font-size: 0.62rem; font-weight: 600; letter-spacing: 0; text-transform: none; }
@@ -3839,9 +3839,7 @@ body[data-page="dashboard"].dashboard-compact-mode .btn-contract {
 .nyseg-file-actions .btn { box-shadow: 0 .25rem .6rem rgba(38, 88, 108, .10); font-weight: 700; }
 .nyseg-file-actions .btn-sun { background: linear-gradient(135deg, #f0bc45, #e6932e); border-color: #e19a28; color: #173e57; }
 .nyseg-file-primary-actions { align-items: center; display: flex; flex-wrap: wrap; gap: .45rem; justify-content: flex-end; }
-.nyseg-file-advanced-actions { margin-left: auto; text-align: right; }
-.nyseg-file-advanced-actions summary { color: #315f75; cursor: pointer; font-size: .78rem; font-weight: 700; list-style-position: inside; }
-.nyseg-file-advanced-actions[open] summary { margin-bottom: .15rem; }
+.nyseg-file-advanced-actions { text-align: right; }
 #nyseg-file-action-status {
   color: #4d7080 !important;
   font-size: .72rem;
