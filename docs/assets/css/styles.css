@@ -3827,14 +3827,14 @@ body[data-page="dashboard"].dashboard-compact-mode .btn-contract {
 .nyseg-file-header .eyebrow { color: #23779d; letter-spacing: .12em; }
 .nyseg-file-header h1 { color: #153f58; font-size: clamp(1.45rem, 2.1vw, 2rem); }
 .nyseg-file-header code { background: #f7eafe; border-radius: .3rem; color: #aa2474; font-size: .71rem; padding: .12rem .28rem; }
-.nyseg-file-header-side { gap: .85rem; }
+.nyseg-file-header-side { gap: .85rem; grid-template-rows: auto auto; }
 .nyseg-file-actions {
   background: linear-gradient(110deg, #e7f6ff 0%, #f7fbfe 47%, #fff3d3 100%);
   border: 1px solid #c9e0e9;
   border-radius: 1rem;
   box-shadow: 0 .55rem 1.35rem rgba(37, 90, 112, .09);
-  min-height: 4.45rem;
-  padding: .65rem .78rem;
+  min-height: 2.25rem;
+  padding: .35rem .78rem;
 }
 .nyseg-file-actions .btn { box-shadow: 0 .25rem .6rem rgba(38, 88, 108, .10); font-weight: 700; }
 .nyseg-file-actions .btn-sun { background: linear-gradient(135deg, #f0bc45, #e6932e); border-color: #e19a28; color: #173e57; }
