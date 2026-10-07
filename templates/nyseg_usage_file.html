@@ -11,7 +11,7 @@
     <p class="text-muted mb-0">{{ interval_file.source_name }} contains {{ "{:,}".format(interval_file.rows|length) }} hourly intervals. Account-identifying columns are omitted.</p>
     <p class="small text-muted mb-0">Source location: <code>{{ interval_file.source_path }}</code></p>
     <p class="small mb-0 {{ 'text-success' if nyseg_sync_status.status == 'success' else 'text-danger' if nyseg_sync_status.status == 'failed' else 'text-muted' }}" id="nyseg-sync-status" data-sync-completed-at="{{ nyseg_sync_status.completed_at or '' }}">{% if nyseg_sync_status.status == 'success' %}Daily sync: {{ nyseg_sync_status.saved_records }} record{{ '' if nyseg_sync_status.saved_records == 1 else 's' }} saved {{ nyseg_sync_status.completed_at }}.{% elif nyseg_sync_status.status == 'failed' %}Daily sync failed: {{ nyseg_sync_status.error }}{% else %}Daily NYSEG sync is scheduled for 7:30 AM while this computer is signed in.{% endif %}</p>
-    <section class="nyseg-sync-log" aria-label="NYSEG daily sync activity"><div class="nyseg-sync-log-heading"><span>Daily sync activity</span><small>Live step-by-step progress</small></div><pre id="nyseg-sync-log-lines">Loading NYSEG sync activity…</pre></section>
+    <section class="nyseg-sync-log" aria-label="NYSEG daily sync activity"><div class="nyseg-sync-log-heading"><span>Daily sync activity</span><div class="d-flex align-items-center gap-2"><small>Live step-by-step progress</small><button type="button" class="btn btn-contract btn-sm" id="nyseg-sync-clear">Clear</button></div></div><pre id="nyseg-sync-log-lines">Loading NYSEG sync activity…</pre></section>
     {% if bill_summary.available %}
     <section class="bill-summary-box" aria-label="NYSEG bill summary">
       <div class="bill-summary-heading"><div><p class="eyebrow mb-1">Bill summary</p><h2 class="h6 mb-0">NYSEG bills and solar credit bank</h2></div><a class="btn btn-contract btn-sm" href="{{ url_for('main.nyseg_bill_summary') }}" target="_blank" rel="noopener">Pop Out</a></div>
@@ -255,7 +255,8 @@
 (() => {
   const status = document.getElementById("nyseg-sync-status");
   const log = document.getElementById("nyseg-sync-log-lines");
-  if (!status || location.protocol === "file:") return;
+  const clear = document.getElementById("nyseg-sync-clear");
+  if (!status || location.protocol === "file:" || window.SOLAR_STATIC_SITE) {`r`n    if (clear) clear.hidden = true;`r`n    return;`r`n  }
   let completedAt = status.dataset.syncCompletedAt || "";
   const updateStatus = (latest) => {
     if (!latest || !latest.status) return;
@@ -278,6 +279,22 @@
       log.textContent = "Live sync activity is available in the local tracker.";
     }
   };
+  if (clear) clear.addEventListener("click", async () => {
+    clear.disabled = true;
+    try {
+      const response = await fetch("/api/nyseg-daily-sync/clear", { method: "POST" });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "The NYSEG sync activity could not be cleared.");
+      status.className = "small mb-0 text-muted";
+      status.textContent = "Daily NYSEG sync is scheduled for 7:30 AM while this computer is signed in.";
+      if (log) log.textContent = "No NYSEG sync activity has been recorded yet.";
+    } catch (error) {
+      status.className = "small mb-0 text-danger";
+      status.textContent = `Could not clear NYSEG sync activity: ${error.message || error}`;
+    } finally {
+      clear.disabled = false;
+    }
+  });
   refreshLog();
   window.setInterval(async () => {
     refreshLog();

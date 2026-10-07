@@ -781,6 +781,18 @@ def nyseg_daily_sync_log_view():
     )
 
 
+@main_blueprint.route("/api/nyseg-daily-sync/clear", methods=["POST"])
+def nyseg_daily_sync_clear_api():
+    """Clear the visible sync outcome and diagnostics without touching usage data."""
+    clear_stale_nyseg_sync_state()
+    if NYSEG_DAILY_SYNC_LOCK_PATH.is_file() or NYSEG_DAILY_SYNC_PROCESS_PATH.is_file():
+        return jsonify({"error": "A NYSEG sync is running and its activity cannot be cleared yet."}), 409
+    NYSEG_DAILY_SYNC_STATUS_PATH.parent.mkdir(parents=True, exist_ok=True)
+    NYSEG_DAILY_SYNC_STATUS_PATH.write_text(json.dumps({"status": "idle"}), encoding="utf-8")
+    NYSEG_DAILY_SYNC_LOG_PATH.write_text("", encoding="utf-8")
+    return jsonify({"cleared": True})
+
+
 @main_blueprint.route("/api/nyseg-daily-sync/run", methods=["POST"])
 def nyseg_daily_sync_run_api():
     if not NYSEG_DAILY_SYNC_SCRIPT_PATH.is_file():
