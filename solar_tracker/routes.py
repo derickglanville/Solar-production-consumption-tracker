@@ -65,6 +65,7 @@ NYSEG_DAILY_SYNC_LOG_PATH = Path(__file__).resolve().parent.parent / "SunRun Dat
 NYSEG_DAILY_SYNC_LOCK_PATH = NYSEG_DAILY_SYNC_STATUS_PATH.with_suffix(".lock")
 NYSEG_DAILY_SYNC_PROCESS_PATH = NYSEG_DAILY_SYNC_STATUS_PATH.with_name("nyseg-daily-sync-process.json")
 NYSEG_DAILY_SYNC_SCRIPT_PATH = Path(__file__).resolve().parent.parent / "NYSEG Download Script" / "run_nyseg_daily_sync.ps1"
+NYSEG_MANUAL_RUN_SCRIPT_PATH = Path(__file__).resolve().parent.parent / "NYSEG Download Script" / "run_nyseg_manual_run.ps1"
 SUNRUN_LOAD_HISTORY_PATH = Path(__file__).resolve().parent.parent / "JSON" / "Daily_Load_History.json"
 NYSEG_LOAD_HISTORY_PATH = Path(__file__).resolve().parent.parent / "JSON" / "Daily_NYSEG_Load_History.json"
 NYSEG_MANUAL_DOWNLOAD_DIRECTORY = Path.home() / "Downloads"
@@ -795,8 +796,8 @@ def nyseg_daily_sync_clear_api():
 
 @main_blueprint.route("/api/nyseg-daily-sync/run", methods=["POST"])
 def nyseg_daily_sync_run_api():
-    if not NYSEG_DAILY_SYNC_SCRIPT_PATH.is_file():
-        return jsonify({"error": "The NYSEG daily-sync script is unavailable."}), 404
+    if not NYSEG_MANUAL_RUN_SCRIPT_PATH.is_file():
+        return jsonify({"error": "The NYSEG Manual Run script is unavailable."}), 404
     clear_stale_nyseg_sync_state()
     if NYSEG_DAILY_SYNC_LOCK_PATH.is_file() or NYSEG_DAILY_SYNC_PROCESS_PATH.is_file():
         return jsonify({"error": "NYSEG sync is already running. Review the live activity log below."}), 409
@@ -806,10 +807,10 @@ def nyseg_daily_sync_run_api():
         json.dumps({"status": "running", "started_at": started_at}, indent=2), encoding="utf-8"
     )
     NYSEG_DAILY_SYNC_LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
-    NYSEG_DAILY_SYNC_LOG_PATH.write_text(f"[{started_at}] Starting NYSEG daily sync\n", encoding="utf-8")
+    NYSEG_DAILY_SYNC_LOG_PATH.write_text(f"[{started_at}] Starting NYSEG Manual Run\n", encoding="utf-8")
     process = subprocess.Popen(
-        ["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(NYSEG_DAILY_SYNC_SCRIPT_PATH)],
-        cwd=NYSEG_DAILY_SYNC_SCRIPT_PATH.parent.parent,
+        ["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(NYSEG_MANUAL_RUN_SCRIPT_PATH)],
+        cwd=NYSEG_MANUAL_RUN_SCRIPT_PATH.parent.parent,
         creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
     )
     NYSEG_DAILY_SYNC_PROCESS_PATH.write_text(

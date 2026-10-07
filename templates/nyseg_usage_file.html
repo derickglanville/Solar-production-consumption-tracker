@@ -28,7 +28,7 @@
   {% if interval_file.available %}
   <div class="nyseg-file-header-side">
     <div class="d-flex flex-wrap align-items-center justify-content-end gap-2 nyseg-file-actions" data-nyseg-file-actions>
-      <button type="button" class="btn btn-sun" id="nyseg-file-run-sync">Run NYSEG sync now</button><button type="button" class="btn btn-contract" id="nyseg-file-use-download">Use latest NYSEG download</button>
+      <button type="button" class="btn btn-sun" id="nyseg-file-run-sync">Manual Run</button><button type="button" class="btn btn-contract" id="nyseg-file-use-download">Use latest NYSEG download</button>
       <button type="button" class="btn btn-contract" id="nyseg-file-stop-sync">Stop NYSEG sync</button>
       <button type="button" class="btn btn-sun" id="nyseg-file-import">Import latest M01/M02</button>
       <button type="button" class="btn btn-contract" id="nyseg-file-backup">Back up M01/M02</button>
@@ -269,7 +269,7 @@
     else if (latest.status === "stopped") status.textContent = "NYSEG sync was stopped.";
     if (runSyncButton && latest.status !== "running") {
       runSyncButton.disabled = false;
-      runSyncButton.textContent = "Run NYSEG sync now";
+      runSyncButton.textContent = "Manual Run";
     }
   };
   const refreshLog = async () => {

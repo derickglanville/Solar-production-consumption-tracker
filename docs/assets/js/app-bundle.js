@@ -28399,9 +28399,9 @@ This is a reconciliation, not an independent measurement, because EDC includes S
         const response = await fetch("/api/nyseg-daily-sync/run", { method: "POST" });
         const result = await response.json();
         if (!response.ok) throw new Error(result.error || "The NYSEG sync could not start.");
-        show("NYSEG sync started. This page will refresh automatically when the download and Firebase import finish.", "success");
+        show("NYSEG Manual Run started. This page will refresh automatically after the download, validation, import, and housekeeping finish.", "success");
       } catch (error) {
-        show(`Could not start the NYSEG sync: ${error.message || error}`, "danger");
+        show(`Could not start NYSEG Manual Run: ${error.message || error}`, "danger");
         runSyncButton.disabled = false;
         runSyncButton.textContent = original;
       }
@@ -28421,7 +28421,7 @@ This is a reconciliation, not an independent measurement, because EDC includes S
         }
         if (runSyncButton) {
           runSyncButton.disabled = false;
-          runSyncButton.textContent = "Run NYSEG sync now";
+          runSyncButton.textContent = "Manual Run";
         }
         show("NYSEG sync stopped. You can start a new run when ready.", "success");
       } catch (error) {

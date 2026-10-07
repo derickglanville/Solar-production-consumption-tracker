@@ -5724,7 +5724,7 @@ async function setupNysegUsageFileActions(db) {
   if (runSyncButton) runSyncButton.addEventListener("click", async () => {
     runSyncButton.disabled = true;
     const original = runSyncButton.textContent;
-    runSyncButton.textContent = "Starting sync…";
+    runSyncButton.textContent = "Starting Manual Run…";
     try {
       const activity = document.getElementById("nyseg-sync-log-lines");
       const syncStatus = document.getElementById("nyseg-sync-status");
@@ -5733,9 +5733,9 @@ async function setupNysegUsageFileActions(db) {
       const response = await fetch("/api/nyseg-daily-sync/run", { method: "POST" });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "The NYSEG sync could not start.");
-      show("NYSEG sync started. This page will refresh automatically when the download and Firebase import finish.", "success");
+      show("NYSEG Manual Run started. This page will refresh automatically after the download, validation, import, and housekeeping finish.", "success");
     } catch (error) {
-      show(`Could not start the NYSEG sync: ${error.message || error}`, "danger");
+      show(`Could not start NYSEG Manual Run: ${error.message || error}`, "danger");
       runSyncButton.disabled = false;
       runSyncButton.textContent = original;
     }
@@ -5750,7 +5750,7 @@ async function setupNysegUsageFileActions(db) {
       const syncStatus = document.getElementById("nyseg-sync-status");
       if (activity) activity.textContent = "NYSEG daily sync stopped by user.";
       if (syncStatus) { syncStatus.className = "small mb-0 text-muted"; syncStatus.textContent = "NYSEG sync was stopped."; }
-      if (runSyncButton) { runSyncButton.disabled = false; runSyncButton.textContent = "Run NYSEG sync now"; }
+      if (runSyncButton) { runSyncButton.disabled = false; runSyncButton.textContent = "Manual Run"; }
       show("NYSEG sync stopped. You can start a new run when ready.", "success");
     } catch (error) {
       show(`Could not stop the NYSEG sync: ${error.message || error}`, "danger");

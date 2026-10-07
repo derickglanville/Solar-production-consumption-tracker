@@ -1,8 +1,10 @@
 """Run the daily NYSEG download, then save new utility meter readings to Firebase.
 
-This script is designed for Windows Task Scheduler and the dashboard sync button. It runs
-``Run_NYSEG_File_Download.py`` to download the current NYSEG CSV, then imports the
-validated utility readings, records the outcome, and sends the configured status email.
+Run validated NYSEG M01/M02 imports, status history, and email housekeeping.
+
+The 7:20 AM task downloads the CSV. The 7:30 AM task calls this script with
+``--skip-download`` to validate and import that file. The dashboard Manual Run
+uses the same script with the manual downloader before the import.
 """
 from __future__ import annotations
 
@@ -19,7 +21,7 @@ from pathlib import Path
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-DOWNLOADER = Path(__file__).resolve().parent / "Run_NYSEG_File_Download.py"
+DOWNLOADER = Path(__file__).resolve().parent / "Run_NYSEG_File_Download_Manual.py"
 STATUS_FILE = PROJECT_ROOT / "SunRun Data" / "nyseg-daily-sync-status.json"
 HISTORY_FILE = PROJECT_ROOT / "JSON" / "Daily_NYSEG_Load_History.json"
 EMAIL_SETTINGS_FILE = PROJECT_ROOT / "SunRun Data" / "Script" / "Email_Info.txt"
@@ -143,7 +145,12 @@ def add_email_result(status: dict) -> dict:
     return status
 
 
-def main(test_email: bool = False, log_path: Path | None = None) -> int:
+def main(
+    test_email: bool = False,
+    log_path: Path | None = None,
+    download_script: Path | None = None,
+    skip_download: bool = False,
+) -> int:
     progress = progress_writer(log_path)
     if test_email:
         status = {"status": "success", "completed_at": datetime.now().astimezone().isoformat(timespec="seconds"), "saved_records": 0}
@@ -160,38 +167,31 @@ def main(test_email: bool = False, log_path: Path | None = None) -> int:
     PROCESS_FILE.write_text(json.dumps({"pid": os.getpid(), "started_at": started_at}), encoding="utf-8")
     write_status({"status": "running", "started_at": started_at})
     try:
-        # An NYSEG SSO HTTP/2 error is often transient. Restart Chrome and
-        # repeat the complete browser session once, rather than leaving the
-        # daily file stale after only the downloader's in-page retries.
-        download_error = ""
-        for browser_attempt in range(1, 3):
-            progress(f"Starting NYSEG browser download (browser attempt {browser_attempt}/2)…")
+        if skip_download:
+            progress("Using the 7:20 AM NYSEG download for validated M01/M02 import…")
+        else:
+            downloader = (download_script or DOWNLOADER).resolve()
+            if not downloader.is_file():
+                raise RuntimeError(f"NYSEG downloader is unavailable: {downloader}")
+            progress(f"Starting NYSEG manual download with {downloader.name}…")
             download = subprocess.Popen(
-                [sys.executable, str(DOWNLOADER), "--channel", "chrome"], cwd=PROJECT_ROOT,
-                stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1,
+                [sys.executable, str(downloader), "--offscreen", "--channel", "chrome"],
+                cwd=PROJECT_ROOT,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                bufsize=1,
             )
             assert download.stdout is not None
             output_lines: list[str] = []
             for line in download.stdout:
-                text = line.rstrip()
-                if text:
-                    output_lines.append(text)
-                    progress(text)
-            if download.wait() == 0:
-                break
-            download_error = next(
-                (line for line in reversed(output_lines) if line.startswith("NYSEG download failed:")),
-                output_lines[-1] if output_lines else "NYSEG download exited without diagnostic output.",
-            )
-            if browser_attempt < 2 and "ERR_HTTP2_PROTOCOL_ERROR" in "\n".join(output_lines):
-                progress("NYSEG download did not complete. Retrying the configured NYSEG download script once in 30 seconds…")
-                time.sleep(30)
-                continue
-            break
-        else:
-            raise RuntimeError(download_error)
-        if download.returncode != 0:
-            raise RuntimeError(download_error)
+                output = line.rstrip()
+                if output:
+                    output_lines.append(output)
+                    progress(output)
+            if download.wait() != 0:
+                detail = output_lines[-1] if output_lines else "NYSEG downloader exited without diagnostic output."
+                raise RuntimeError(detail)
 
         # Run the same server-verified import used by the Review / Apply button.
         # Python starts with this script's folder on sys.path, even when the
@@ -244,8 +244,10 @@ def main(test_email: bool = False, log_path: Path | None = None) -> int:
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Run the NYSEG daily download and Firebase sync.")
+    parser = argparse.ArgumentParser(description="Run NYSEG validated import and housekeeping.")
     parser.add_argument("--test-email", action="store_true")
     parser.add_argument("--log-path", type=Path)
+    parser.add_argument("--skip-download", action="store_true", help="Import the CSV already downloaded by the 7:20 AM task.")
+    parser.add_argument("--download-script", type=Path, help="Downloader to run before import; defaults to Run_NYSEG_File_Download_Manual.py.")
     args = parser.parse_args()
-    raise SystemExit(main(args.test_email, args.log_path))
+    raise SystemExit(main(args.test_email, args.log_path, args.download_script, args.skip_download))
