@@ -257,7 +257,10 @@
   const log = document.getElementById("nyseg-sync-log-lines");
   const clear = document.getElementById("nyseg-sync-clear");
   const runSyncButton = document.getElementById("nyseg-file-run-sync");
-  if (!status || location.protocol === "file:" || window.SOLAR_STATIC_SITE) {`r`n    if (clear) clear.hidden = true;`r`n    return;`r`n  }
+  if (!status || location.protocol === "file:" || window.SOLAR_STATIC_SITE) {
+    if (clear) clear.hidden = true;
+    return;
+  }
   let completedAt = status.dataset.syncCompletedAt || "";
   const updateStatus = (latest) => {
     if (!latest || !latest.status) return;
