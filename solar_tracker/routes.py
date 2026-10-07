@@ -807,7 +807,11 @@ def nyseg_daily_sync_run_api():
         json.dumps({"status": "running", "started_at": started_at}, indent=2), encoding="utf-8"
     )
     NYSEG_DAILY_SYNC_LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
-    NYSEG_DAILY_SYNC_LOG_PATH.write_text(f"[{started_at}] Starting NYSEG Manual Run\n", encoding="utf-8")
+    NYSEG_DAILY_SYNC_LOG_PATH.write_text(
+        f"[{started_at}] Starting NYSEG Manual Run\n"
+        "Step 0/6: Preparing NYSEG_File_Download_Test.py. No M01/M02 import, email, history, or housekeeping will run.\n",
+        encoding="utf-8",
+    )
     process = subprocess.Popen(
         ["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(NYSEG_MANUAL_RUN_SCRIPT_PATH)],
         cwd=NYSEG_MANUAL_RUN_SCRIPT_PATH.parent.parent,

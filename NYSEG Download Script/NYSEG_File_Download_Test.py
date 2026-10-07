@@ -112,10 +112,10 @@ def on_download(download):
     try:
         OUT_DIR.mkdir(parents=True, exist_ok=True)
         tmp = OUT_DIR / TMP_FILE
-        log(f"Download started: {download.suggested_filename}")
+        log(f"Step 5/6: Download started: {download.suggested_filename}")
         download.save_as(str(tmp))
         STATE["saved"] = True
-        log("Download saved to temp file.")
+        log("Step 6/6: Download CSV saved to the temporary file.")
     except Exception as e:
         STATE["error"] = str(e)
         log(f"Download save error: {e}")
@@ -161,7 +161,7 @@ def ensure_logged_in(page, user, pwd, timeout=150):
         dismiss_banners(page)
 
         if find_download_link(page):
-            log("Insights page is ready (logged in).")
+            log("Step 2/6: NYSEG Insights is ready and signed in.")
             return
 
         if login_error_visible(page):
@@ -214,7 +214,7 @@ def download_usage(page, keepalive) -> Path:
     link = find_download_link(page)
     if not link:
         raise RuntimeError("Download link not found.")
-    log("Opening download page...")
+    log("Step 3/6: Opening the NYSEG download page...")
     link.scroll_into_view_if_needed()
     link.click()
     page.wait_for_load_state("domcontentloaded")
@@ -224,7 +224,7 @@ def download_usage(page, keepalive) -> Path:
     page.get_by_label(re.compile(r"^Custom$", re.I)).check()
 
     end_date = date.today().strftime("%m/%d/%Y")
-    log(f"Date range: {START_DATE} -> {end_date}")
+    log(f"Step 4/6: Setting the CSV date range: {START_DATE} -> {end_date}")
     set_date_field(page, "Start date", START_DATE)
     set_date_field(page, "End date", end_date)
 
@@ -232,7 +232,7 @@ def download_usage(page, keepalive) -> Path:
 
     btn = page.get_by_role("button", name=re.compile(r"download|export", re.I)).last
     btn.scroll_into_view_if_needed()
-    log("Downloading...")
+    log("Step 5/6: Requesting the NYSEG CSV download...")
     btn.click()
 
     # Poll using the spare tab, so events still process even if the main page closes
@@ -319,10 +319,10 @@ def run_once(args, user, pwd):
                 page.goto(START_URL, wait_until="commit", timeout=60_000)
             except Exception as nav_err:
                 log(f"Initial navigation slow ({type(nav_err).__name__}); continuing anyway...")
-            log(f"Landed on: {page.url[:90]}")
+            log(f"Step 1/6: Opened NYSEG Insights: {page.url[:90]}")
             ensure_logged_in(page, user, pwd)
             path = download_usage(page, keepalive)
-            log(f"Saved: {path.resolve()}")
+            log(f"Step 6/6: NYSEG CSV saved: {path.resolve()}")
             ok = True
         except Exception as e:
             log(f"FAILED: {e}")
