@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}?v=20261007-nyseg-balanced-layout">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}?v=20261007-dashboard-nav-compact">
   <script src="{{ url_for('main.plotly_javascript') }}"></script>
 </head>
 <body data-page="{{ page_name }}" data-local-snapshot-mode="{% if local_snapshot_mode %}true{% else %}false{% endif %}">
@@ -25,7 +25,15 @@
           title="Validate and open the local dashboard on port 8765"
         >Open Local Dashboard</button>
         {% endif %}
-        <a class="nav-link" href="{{ url_for('main.dashboard') }}">Dashboard</a>
+        <div class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="{{ url_for('main.dashboard') }}" id="dashboardMenu" role="button" data-bs-toggle="dropdown" aria-expanded="false">Dashboard</a>
+          <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dashboardMenu">
+            <li><a class="dropdown-item" href="{{ url_for('main.dashboard') }}">Dashboard overview</a></li>
+            <li><a class="dropdown-item" href="{{ url_for('main.electricity_usage') }}">Electricity Usage</a></li>
+            <li><a class="dropdown-item" href="{{ url_for('main.circuit_breakers') }}" target="_blank" rel="noopener noreferrer">Circuit Breakers</a></li>
+            <li><a class="dropdown-item" href="{{ url_for('main.light_bulbs') }}">Light Bulbs</a></li>
+          </ul>
+        </div>
         <a class="nav-link" href="{{ url_for('main.entries') }}">Daily Entry</a>
         <a class="nav-link" href="{{ url_for('main.nyseg_net_metering') }}">NYSEG Report</a>
         <a class="nav-link" href="{{ url_for('main.nyseg_usage_file') }}">View NYSEG file</a>
@@ -56,7 +64,7 @@
     window.SOLAR_BOOTSTRAP = {{ bootstrap_data|tojson }};
   </script>
   <script src="{{ url_for('static', filename='js/firebase-config.js') }}?v=20261003-calibration-v2"></script>
-  <script defer src="{{ url_for('static', filename='js/app-bundle.js') }}?v=20261007-nyseg-balanced-layout"></script>
+  <script defer src="{{ url_for('static', filename='js/app-bundle.js') }}?v=20261007-dashboard-nav-compact"></script>
   {% block extra_scripts %}{% endblock %}
 </body>
 </html>

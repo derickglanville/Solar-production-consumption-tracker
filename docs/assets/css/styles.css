@@ -182,6 +182,15 @@ body[data-page="dashboard"].dashboard-compact-mode .container {
   color: #f6ecd3;
 }
 
+.tracker-nav .dropdown-menu {
+  border-color: rgba(109, 149, 171, 0.28);
+  box-shadow: 0 0.75rem 1.5rem rgba(29, 48, 58, 0.18);
+}
+
+.tracker-nav .dropdown-item { color: #27495a; font-size: 0.9rem; }
+.tracker-nav .dropdown-item:hover,
+.tracker-nav .dropdown-item:focus { background: #edf7fa; color: #174e69; }
+
 .tracker-nav .nav-link-button {
   margin-left: 0.35rem;
   padding: 0.45rem 0.9rem;
@@ -245,6 +254,12 @@ body[data-page="dashboard"].dashboard-compact-mode .container {
   align-items: center;
   gap: 0.45rem;
 }
+
+body[data-page="dashboard"] .hero-panel { padding: 0.68rem 0.92rem; }
+body[data-page="dashboard"] .dashboard-hero-copy .eyebrow { margin-bottom: 0.35rem !important; }
+body[data-page="dashboard"] .dashboard-hero-copy .hero-title { margin-bottom: 0.45rem !important; }
+body[data-page="dashboard"] .dashboard-hero-actions { gap: 0.35rem; }
+body[data-page="dashboard"] .dashboard-projection-callout { padding: 0.48rem 0.62rem; }
 
 .hero-title {
   font-size: clamp(1.35rem, 2vw, 1.8rem);
