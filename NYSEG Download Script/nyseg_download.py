@@ -32,11 +32,66 @@ OUTPUT_FILE = OUTPUT_DIRECTORY / "NYSEG_Daily_Usage_Data.csv"
 ARCHIVE_DIRECTORY = OUTPUT_DIRECTORY / "archive"
 LOCAL_APP_DATA = Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData" / "Local"))
 PROFILE_ROOT = LOCAL_APP_DATA / "SolarEnergyTracker"
+SYSTEM_CHROME_USER_DATA = LOCAL_APP_DATA / "Google" / "Chrome" / "User Data"
 
 
 def profile_directory_for(browser: str) -> Path:
     """Keep Edge and Chrome authenticated profiles separate."""
     return PROFILE_ROOT / f"nyseg-playwright-profile-{browser}"
+
+
+def copy_system_chrome_session(profile_directory: Path) -> None:
+    """Refresh the automation profile with the signed-in user's Chrome session.
+
+    Playwright cannot drive Chrome's live Default profile while Chrome is open.
+    Copying the authentication-related profile files lets the separate,
+    automation-owned profile use the same locally authenticated NYSEG session
+    without closing or changing the user's browser.
+    """
+    source_profile = SYSTEM_CHROME_USER_DATA / "Default"
+    if not source_profile.is_dir():
+        raise RuntimeError("The signed-in Chrome Default profile was not found on this computer.")
+
+    profile_directory.mkdir(parents=True, exist_ok=True)
+    destination_profile = profile_directory / "Default"
+    destination_profile.mkdir(parents=True, exist_ok=True)
+    copied: list[str] = []
+    session_items = (
+        "Network",
+        "Local Storage",
+        "Session Storage",
+        "IndexedDB",
+        "Service Worker",
+        "Preferences",
+        "Secure Preferences",
+    )
+    for name in session_items:
+        source = source_profile / name
+        destination = destination_profile / name
+        if not source.exists():
+            continue
+        try:
+            if source.is_dir():
+                shutil.copytree(
+                    source,
+                    destination,
+                    dirs_exist_ok=True,
+                    ignore=shutil.ignore_patterns("Cache", "Code Cache", "GPUCache"),
+                )
+            else:
+                shutil.copy2(source, destination)
+            copied.append(name)
+        except OSError as error:
+            # Chrome can hold ancillary cache files open. Continue as long as
+            # the cookies and local storage copied successfully.
+            print(f"Could not copy Chrome session item {name}: {error}", flush=True)
+
+    local_state = SYSTEM_CHROME_USER_DATA / "Local State"
+    if local_state.is_file():
+        shutil.copy2(local_state, profile_directory / "Local State")
+    if "Network" not in copied:
+        raise RuntimeError("Chrome's NYSEG session cookies could not be copied.")
+    print("Refreshed the NYSEG automation profile from the signed-in Chrome session.", flush=True)
 DIAGNOSTIC_DIRECTORY = LOCAL_APP_DATA / "SolarEnergyTracker" / "nyseg-download-diagnostics"
 REQUIRED_COLUMNS = {"Date", "Delivered", "Received"}
 HTTP2_ERROR_TEXT = "ERR_HTTP2_PROTOCOL_ERROR"
@@ -261,6 +316,11 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Download NYSEG Usage CSV for the solar tracker.")
     parser.add_argument("--headed", action="store_true", help="show the browser for first login, MFA, or selector troubleshooting")
     parser.add_argument("--browser", choices=("chrome", "edge", "chromium"), default="chrome", help="browser to automate; Chrome is the NYSEG default")
+    parser.add_argument(
+        "--use-system-chrome-session",
+        action="store_true",
+        help="refresh the automation profile from the signed-in Chrome Default profile before downloading",
+    )
     parser.add_argument("--start", type=date.fromisoformat, default=date(2026, 7, 1), help="first requested date, YYYY-MM-DD")
     parser.add_argument("--end", type=date.fromisoformat, default=date.today(), help="last requested date, YYYY-MM-DD")
     args = parser.parse_args()
@@ -269,6 +329,10 @@ def main() -> int:
     profile_directory = profile_directory_for(args.browser)
     profile_directory.mkdir(parents=True, exist_ok=True)
     DIAGNOSTIC_DIRECTORY.mkdir(parents=True, exist_ok=True)
+    if args.use_system_chrome_session:
+        if args.browser != "chrome":
+            parser.error("--use-system-chrome-session is available only with --browser chrome")
+        copy_system_chrome_session(profile_directory)
     print(f"Launching {'visible ' if args.headed else ''}{args.browser.title()} browser…", flush=True)
     with sync_playwright() as playwright:
         context = None
