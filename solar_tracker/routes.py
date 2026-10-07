@@ -177,8 +177,24 @@ def nyseg_sync_process_pid() -> Optional[int]:
         return None
 
 
+def nyseg_sync_process_is_active(pid: Optional[int]) -> bool:
+    if not pid:
+        return False
+    try:
+        os.kill(pid, 0)
+    except OSError:
+        return False
+    return True
+
+
 def clear_stale_nyseg_sync_state() -> None:
     """Recover after an interrupted runner leaves its lock or running status behind."""
+    pid = nyseg_sync_process_pid()
+    if pid and not nyseg_sync_process_is_active(pid):
+        try:
+            NYSEG_DAILY_SYNC_PROCESS_PATH.unlink()
+        except FileNotFoundError:
+            pass
     if NYSEG_DAILY_SYNC_LOCK_PATH.is_file() and not NYSEG_DAILY_SYNC_PROCESS_PATH.is_file():
         try:
             NYSEG_DAILY_SYNC_LOCK_PATH.unlink()

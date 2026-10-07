@@ -193,7 +193,10 @@ def main(
                 output = line.rstrip()
                 if output:
                     output_lines.append(output)
-                    progress(output)
+                    # NYSEG_File_Download_Test.py writes its own live activity lines,
+                    # including when it is run directly in PowerShell.
+                    if not (download_only and download_no_arguments):
+                        progress(output)
             if download.wait() != 0:
                 detail = output_lines[-1] if output_lines else "NYSEG downloader exited without diagnostic output."
                 raise RuntimeError(detail)

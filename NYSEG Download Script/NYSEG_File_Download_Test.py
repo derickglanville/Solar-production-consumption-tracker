@@ -25,6 +25,7 @@ START_DATE = "07/01/2026"
 OUT_DIR = Path(r"C:\Software Developement\ChatGPT Codex\Solar Energy - SunRun\SunRun Data")
 OUT_FILE = "NYSEG_Daily_Usage_Data.csv"
 TMP_FILE = OUT_FILE + ".tmp"
+ACTIVITY_LOG = OUT_DIR / "nyseg-daily-sync.log"
 
 LINK_RE = re.compile(r"download my energy use data", re.I)
 USER_SEL = (
@@ -40,7 +41,15 @@ STATE = {"saved": False, "error": None}
 
 
 def log(msg):
-    print(f"[nyseg] {msg}", flush=True)
+    line = f"[nyseg] {msg}"
+    print(line, flush=True)
+    # Make direct PowerShell runs visible in the tracker activity panel too.
+    try:
+        OUT_DIR.mkdir(parents=True, exist_ok=True)
+        with ACTIVITY_LOG.open("a", encoding="utf-8", newline="\n") as handle:
+            handle.write(line + "\n")
+    except OSError:
+        pass
 
 
 # ---------- helpers ----------------------------------------------------------
