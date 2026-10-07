@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/styles.css?v=20261007-nyseg-split-workflow">
+  <link rel="stylesheet" href="assets/css/styles.css?v=20261007-nyseg-sync-activity">
   <script src="https://cdn.plot.ly/plotly-3.4.0.min.js"></script>
 </head>
 <body data-page="nyseg-usage-file" data-local-snapshot-mode="false">
@@ -47,7 +47,7 @@
 
     <p class="text-muted mb-0">NYSEG_Daily_Usage_Data.csv contains 1,608 hourly intervals. Account-identifying columns are omitted.</p>
     <p class="small text-muted mb-0">Source location: <code>C:\Software Developement\ChatGPT Codex\Solar Energy - SunRun\SunRun Data\NYSEG_Daily_Usage_Data.csv</code></p>
-    <p class="small mb-0 text-success" id="nyseg-sync-status" data-sync-completed-at="2026-10-07T17:01:40-04:00">Daily sync: 0 records saved 2026-10-07T17:01:40-04:00.</p>
+    <p class="small mb-0 text-muted" id="nyseg-sync-status" data-sync-completed-at="">Daily NYSEG sync is scheduled for 7:30 AM while this computer is signed in.</p>
     <section class="nyseg-sync-log" aria-label="NYSEG daily sync activity"><div class="nyseg-sync-log-heading"><span>Daily sync activity</span><div class="d-flex align-items-center gap-2"><small>Live step-by-step progress</small><button type="button" class="btn btn-contract btn-sm" id="nyseg-sync-clear">Clear</button></div></div><pre id="nyseg-sync-log-lines">Loading NYSEG sync activity…</pre></section>
 
     <section class="bill-summary-box" aria-label="NYSEG bill summary">
@@ -109,9 +109,9 @@
     </div>
   </main>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/js/bootstrap.bundle.min.js"></script>
-  <script src="assets/js/site-bootstrap.js?v=20261007-nyseg-split-workflow"></script>
-  <script src="assets/js/firebase-config.js?v=20261007-nyseg-split-workflow"></script>
-  <script defer src="assets/js/app-bundle.js?v=20261007-nyseg-split-workflow"></script>
+  <script src="assets/js/site-bootstrap.js?v=20261007-nyseg-sync-activity"></script>
+  <script src="assets/js/firebase-config.js?v=20261007-nyseg-sync-activity"></script>
+  <script defer src="assets/js/app-bundle.js?v=20261007-nyseg-sync-activity"></script>
 
 <script>
 (() => {
