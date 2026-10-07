@@ -5693,19 +5693,20 @@ async function saveNysegMeterBackup(db, entries, updates = null) {
 
 async function setupNysegUsageFileActions(db) {
   const importButton = document.getElementById("nyseg-file-import");
+  const useDownloadButton = document.getElementById("nyseg-file-use-download");
   const runSyncButton = document.getElementById("nyseg-file-run-sync");
   const stopSyncButton = document.getElementById("nyseg-file-stop-sync");
   const backupButton = document.getElementById("nyseg-file-backup");
   const restoreButton = document.getElementById("nyseg-file-restore");
   const status = document.getElementById("nyseg-file-action-status");
-  if (!importButton && !runSyncButton && !stopSyncButton && !backupButton && !restoreButton) return;
+  if (!importButton && !useDownloadButton && !runSyncButton && !stopSyncButton && !backupButton && !restoreButton) return;
   const show = (message, kind = "info") => {
     if (!status) return;
     status.className = `small mt-2 mb-0 text-${kind === "danger" ? "danger" : kind === "success" ? "success" : "muted"}`;
     status.textContent = message;
   };
   if (isStaticSite()) {
-    [importButton, runSyncButton, stopSyncButton, backupButton, restoreButton].filter(Boolean).forEach((button) => {
+    [importButton, useDownloadButton, runSyncButton, stopSyncButton, backupButton, restoreButton].filter(Boolean).forEach((button) => {
       button.disabled = true;
       button.title = "These actions require the private NYSEG CSV in the local tracker.";
     });
@@ -5721,11 +5722,29 @@ async function setupNysegUsageFileActions(db) {
   }
   const backup = state.config?.nyseg_meter_import_backup;
   if (backup?.recorded_at) show(`Latest backup: ${backup.rows?.length || 0} readings saved ${new Date(backup.recorded_at).toLocaleString()}.`);
+  if (useDownloadButton) useDownloadButton.addEventListener("click", async () => {
+    useDownloadButton.disabled = true;
+    const original = useDownloadButton.textContent;
+    useDownloadButton.textContent = "Processing download…";
+    try {
+      const response = await fetch("/api/nyseg-downloads/latest", { method: "POST" });
+      const body = await response.text();
+      let result;
+      try { result = JSON.parse(body); }
+      catch (_) { throw new Error(response.ok ? "The local tracker returned an invalid response. Refresh the page and try again." : `The local tracker returned an outdated response (${response.status}). Restart the local tracker, refresh this page, and try again.`); }
+      if (!response.ok) throw new Error(result.error || "The NYSEG download could not be processed.");
+      show(`${result.filename} was validated and added to the tracker (${Number(result.rows || 0).toLocaleString()} intervals). Review and apply the latest M01/M02 readings next.`, "success");
+      window.setTimeout(() => window.location.reload(), 900);
+    } catch (error) { show(`Could not process the latest NYSEG download: ${error.message || error}`, "danger"); }
+    finally { useDownloadButton.disabled = false; useDownloadButton.textContent = original; }
+  });
   if (runSyncButton) runSyncButton.addEventListener("click", async () => {
     runSyncButton.disabled = true;
     const original = runSyncButton.textContent;
-    runSyncButton.textContent = "Starting Manual Run…";
+    runSyncButton.textContent = "Starting…";
     try {
+      const advancedControls = document.getElementById("nyseg-file-advanced-controls");
+      if (advancedControls) advancedControls.open = true;
       const activity = document.getElementById("nyseg-sync-log-lines");
       const syncStatus = document.getElementById("nyseg-sync-status");
       if (activity) activity.textContent = "Starting NYSEG_File_Download_Test.py…";

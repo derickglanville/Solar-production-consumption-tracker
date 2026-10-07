@@ -1,10 +1,8 @@
 """Run the daily NYSEG download, then save new utility meter readings to Firebase.
 
-Run validated NYSEG M01/M02 imports, status history, and email housekeeping.
-
-The 7:20 AM task downloads the CSV. The 7:30 AM task calls this script with
-``--skip-download`` to validate and import that file. The dashboard Manual Run
-uses the same script with the manual downloader before the import.
+The 7:30 AM workflow first runs the proven NYSEG_File_Download_Test.py
+downloader. Only a successful CSV download proceeds to validated M01/M02
+imports, history, and email housekeeping.
 """
 from __future__ import annotations
 
@@ -21,7 +19,7 @@ from pathlib import Path
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-DOWNLOADER = Path(__file__).resolve().parent / "Run_NYSEG_File_Download.py"
+DOWNLOADER = Path(__file__).resolve().parent / "NYSEG_File_Download_Test.py"
 STATUS_FILE = PROJECT_ROOT / "SunRun Data" / "nyseg-daily-sync-status.json"
 HISTORY_FILE = PROJECT_ROOT / "JSON" / "Daily_NYSEG_Load_History.json"
 EMAIL_SETTINGS_FILE = PROJECT_ROOT / "SunRun Data" / "Script" / "Email_Info.txt"
@@ -170,15 +168,15 @@ def main(
     write_status({"status": "running", "started_at": started_at})
     try:
         if skip_download:
-            progress("Using the 7:20 AM NYSEG download for validated M01/M02 import…")
+            progress("Step 1/2: Using the already downloaded NYSEG CSV…")
         else:
             downloader = (download_script or DOWNLOADER).resolve()
             if not downloader.is_file():
                 raise RuntimeError(f"NYSEG downloader is unavailable: {downloader}")
-            progress(f"Starting NYSEG manual download with {downloader.name}…")
+            progress(f"Step 1/2: Downloading the NYSEG CSV with {downloader.name}…")
             command = [sys.executable, str(downloader)]
             if not download_no_arguments:
-                command.append("--headless")
+                command.append("--workflow-step" if downloader.name == "NYSEG_File_Download_Test.py" else "--headless")
             download = subprocess.Popen(
                 command,
                 cwd=PROJECT_ROOT,
@@ -193,13 +191,15 @@ def main(
                 output = line.rstrip()
                 if output:
                     output_lines.append(output)
-                    # NYSEG_File_Download_Test.py writes its own live activity lines,
-                    # including when it is run directly in PowerShell.
-                    if not (download_only and download_no_arguments):
+                    # The proven test downloader writes its own activity lines.
+                    if downloader.name != "NYSEG_File_Download_Test.py" and not (download_only and download_no_arguments):
                         progress(output)
             if download.wait() != 0:
                 detail = output_lines[-1] if output_lines else "NYSEG downloader exited without diagnostic output."
                 raise RuntimeError(detail)
+            progress("Step 1/2 complete: NYSEG CSV downloaded successfully.")
+            write_status({"status": "running", "started_at": started_at, "stage": "validate"})
+            PROCESS_FILE.write_text(json.dumps({"pid": os.getpid(), "started_at": started_at}), encoding="utf-8")
 
         if download_only:
             status = {
@@ -222,7 +222,7 @@ def main(
             sys.path.insert(0, project_root_text)
         from app import create_app
 
-        progress("Saving new NYSEG M01/M02 readings to Firebase…")
+        progress("Step 2/2: Validating and saving new NYSEG M01/M02 readings to Firebase…")
         response = create_app().test_client().post("/api/nyseg-meter-intervals/apply")
         result = response.get_json() or {}
         if response.status_code >= 400:
@@ -238,7 +238,7 @@ def main(
         }
         add_email_result(status)
         save_daily_load_history(status)
-        progress(f"NYSEG daily sync completed: {status['saved_records']} Firebase records saved.")
+        progress(f"Step 2/2 complete: {status['saved_records']} Firebase records saved; history and email housekeeping finished.")
         return 0
     except Exception as error:
         status = {
@@ -271,9 +271,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run NYSEG validated import and housekeeping.")
     parser.add_argument("--test-email", action="store_true")
     parser.add_argument("--log-path", type=Path)
-    parser.add_argument("--skip-download", action="store_true", help="Import the CSV already downloaded by the 7:20 AM task.")
+    parser.add_argument("--skip-download", action="store_true", help="Import an already downloaded CSV without running step 1.")
     parser.add_argument("--download-only", action="store_true", help="Download the CSV only; do not import M01/M02, send email, or update history.")
-    parser.add_argument("--download-script", type=Path, help="Downloader to run before import; defaults to Run_NYSEG_File_Download.py.")
+    parser.add_argument("--download-script", type=Path, help="Downloader to run before import; defaults to NYSEG_File_Download_Test.py.")
     parser.add_argument("--download-no-arguments", action="store_true", help="Run the selected downloader exactly as python SCRIPT, with no extra options.")
     args = parser.parse_args()
     raise SystemExit(main(args.test_email, args.log_path, args.download_script, args.skip_download, args.download_only, args.download_no_arguments))

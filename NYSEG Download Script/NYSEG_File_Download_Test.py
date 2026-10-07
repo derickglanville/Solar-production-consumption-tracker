@@ -395,6 +395,7 @@ def main():
                       help="normal window parked off-screen (most reliable way to run unseen)")
     ap.add_argument("--channel", default="chrome", help="chrome | msedge | chromium")
     ap.add_argument("--retries", type=int, default=3, help="attempts before giving up (default 3)")
+    ap.add_argument("--workflow-step", action="store_true", help="Let the parent daily workflow manage the final status.")
     args = ap.parse_args()
 
     started_at = datetime.now().astimezone().isoformat(timespec="seconds")
@@ -403,6 +404,8 @@ def main():
     for attempt in range(1, args.retries + 1):
         log(f"Attempt {attempt} of {args.retries}")
         if run_once(args, user, pwd):
+            if args.workflow_step:
+                return 0
             write_activity_status("success", started_at)
             clear_process_marker()
             return 0
@@ -412,6 +415,8 @@ def main():
 
     error = "NYSEG_File_Download_Test.py could not download the CSV."
     log("All attempts failed.")
+    if args.workflow_step:
+        return 1
     write_activity_status("failed", started_at, error=error)
     clear_process_marker()
     return 1

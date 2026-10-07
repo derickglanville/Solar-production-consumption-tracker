@@ -3838,6 +3838,10 @@ body[data-page="dashboard"].dashboard-compact-mode .btn-contract {
 }
 .nyseg-file-actions .btn { box-shadow: 0 .25rem .6rem rgba(38, 88, 108, .10); font-weight: 700; }
 .nyseg-file-actions .btn-sun { background: linear-gradient(135deg, #f0bc45, #e6932e); border-color: #e19a28; color: #173e57; }
+.nyseg-file-primary-actions { align-items: center; display: flex; flex-wrap: wrap; gap: .45rem; justify-content: flex-end; }
+.nyseg-file-advanced-actions { margin-left: auto; text-align: right; }
+.nyseg-file-advanced-actions summary { color: #315f75; cursor: pointer; font-size: .78rem; font-weight: 700; list-style-position: inside; }
+.nyseg-file-advanced-actions[open] summary { margin-bottom: .15rem; }
 #nyseg-file-action-status {
   color: #4d7080 !important;
   font-size: .72rem;

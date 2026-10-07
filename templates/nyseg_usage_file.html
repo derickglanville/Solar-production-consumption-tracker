@@ -27,13 +27,10 @@
   </div>
   {% if interval_file.available %}
   <div class="nyseg-file-header-side">
-    <div class="d-flex flex-wrap align-items-center justify-content-end gap-2 nyseg-file-actions" data-nyseg-file-actions>
-      <button type="button" class="btn btn-sun" id="nyseg-file-run-sync">Manual Run</button><button type="button" class="btn btn-contract" id="nyseg-file-use-download">Use latest NYSEG download</button>
-      <button type="button" class="btn btn-contract" id="nyseg-file-stop-sync">Stop NYSEG sync</button>
-      <button type="button" class="btn btn-sun" id="nyseg-file-import">Import latest M01/M02</button>
-      <button type="button" class="btn btn-contract" id="nyseg-file-backup">Back up M01/M02</button>
-      <button type="button" class="btn btn-contract" id="nyseg-file-restore">Restore backup</button>
-      <p class="w-100 text-end small mt-1 mb-0 text-muted" id="nyseg-file-action-status">A backup is saved automatically before reviewed utility readings are applied.</p>
+    <div class="nyseg-file-actions" data-nyseg-file-actions>
+      <div class="nyseg-file-primary-actions"><button type="button" class="btn btn-sun btn-sm" id="nyseg-file-run-sync">Manual Run</button><span class="small text-muted">Runs the download step only.</span></div>
+      <details class="nyseg-file-advanced-actions" id="nyseg-file-advanced-controls"><summary>More NYSEG tools</summary><div class="d-flex flex-wrap justify-content-end gap-2 mt-2"><button type="button" class="btn btn-contract btn-sm" id="nyseg-file-use-download">Use latest NYSEG download</button><button type="button" class="btn btn-contract btn-sm" id="nyseg-file-stop-sync">Stop NYSEG sync</button><button type="button" class="btn btn-sun btn-sm" id="nyseg-file-import">Import latest M01/M02</button><button type="button" class="btn btn-contract btn-sm" id="nyseg-file-backup">Back up M01/M02</button><button type="button" class="btn btn-contract btn-sm" id="nyseg-file-restore">Restore backup</button></div></details>
+      <p class="small mt-1 mb-0 text-muted" id="nyseg-file-action-status">The 7:30 AM workflow downloads first, then validates and applies M01/M02 only after a successful download. A backup is saved automatically before reviewed readings are applied.</p>
     </div>
     <div class="nyseg-monthly-summary-grid">
       <div class="chart-popout-frame nyseg-monthly-net-popout" data-chart-popout-label="Estimated monthly net charges">

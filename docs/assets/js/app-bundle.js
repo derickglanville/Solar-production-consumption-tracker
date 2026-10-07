@@ -28364,14 +28364,14 @@ This is a reconciliation, not an independent measurement, because EDC includes S
     if (useDownloadButton) useDownloadButton.addEventListener("click", async () => {
       useDownloadButton.disabled = true;
       const original = useDownloadButton.textContent;
-      useDownloadButton.textContent = "Processing download…";
+      useDownloadButton.textContent = "Processing download\u2026";
       try {
         const response = await fetch("/api/nyseg-downloads/latest", { method: "POST" });
         const body = await response.text();
         let result;
         try {
           result = JSON.parse(body);
-        } catch (_error) {
+        } catch (_) {
           throw new Error(response.ok ? "The local tracker returned an invalid response. Refresh the page and try again." : `The local tracker returned an outdated response (${response.status}). Restart the local tracker, refresh this page, and try again.`);
         }
         if (!response.ok) throw new Error(result.error || "The NYSEG download could not be processed.");
@@ -28387,8 +28387,10 @@ This is a reconciliation, not an independent measurement, because EDC includes S
     if (runSyncButton) runSyncButton.addEventListener("click", async () => {
       runSyncButton.disabled = true;
       const original = runSyncButton.textContent;
-      runSyncButton.textContent = "Starting sync\u2026";
+      runSyncButton.textContent = "Starting\u2026";
       try {
+        const advancedControls = document.getElementById("nyseg-file-advanced-controls");
+        if (advancedControls) advancedControls.open = true;
         const activity = document.getElementById("nyseg-sync-log-lines");
         const syncStatus = document.getElementById("nyseg-sync-status");
         if (activity) activity.textContent = "Starting NYSEG_File_Download_Test.py\u2026";
