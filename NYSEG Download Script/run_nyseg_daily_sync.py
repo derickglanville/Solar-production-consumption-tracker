@@ -1,8 +1,8 @@
 """Run the daily NYSEG download, then save new utility meter readings to Firebase.
 
-This script is designed for Windows Task Scheduler. It uses the saved Playwright
-NYSEG session created during the interactive ``nyseg_download.py --headed`` run;
-no username or password is stored in this script or task.
+This script is designed for Windows Task Scheduler and the dashboard sync button. It runs
+``Run_NYSEG_File_Download.py`` to download the current NYSEG CSV, then imports the
+validated utility readings, records the outcome, and sends the configured status email.
 """
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ from pathlib import Path
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-DOWNLOADER = Path(__file__).resolve().parent / "nyseg_download.py"
+DOWNLOADER = Path(__file__).resolve().parent / "Run_NYSEG_File_Download.py"
 STATUS_FILE = PROJECT_ROOT / "SunRun Data" / "nyseg-daily-sync-status.json"
 HISTORY_FILE = PROJECT_ROOT / "JSON" / "Daily_NYSEG_Load_History.json"
 EMAIL_SETTINGS_FILE = PROJECT_ROOT / "SunRun Data" / "Script" / "Email_Info.txt"
@@ -167,7 +167,7 @@ def main(test_email: bool = False, log_path: Path | None = None) -> int:
         for browser_attempt in range(1, 3):
             progress(f"Starting NYSEG browser download (browser attempt {browser_attempt}/2)…")
             download = subprocess.Popen(
-                [sys.executable, str(DOWNLOADER), "--browser", "chrome"], cwd=PROJECT_ROOT,
+                [sys.executable, str(DOWNLOADER), "--headless", "--channel", "chrome"], cwd=PROJECT_ROOT,
                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1,
             )
             assert download.stdout is not None
@@ -184,7 +184,7 @@ def main(test_email: bool = False, log_path: Path | None = None) -> int:
                 output_lines[-1] if output_lines else "NYSEG download exited without diagnostic output.",
             )
             if browser_attempt < 2 and "ERR_HTTP2_PROTOCOL_ERROR" in "\n".join(output_lines):
-                progress("NYSEG SSO returned an HTTP/2 error. Restarting Chrome and retrying once in 30 seconds…")
+                progress("NYSEG download did not complete. Retrying the configured NYSEG download script once in 30 seconds…")
                 time.sleep(30)
                 continue
             break

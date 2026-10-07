@@ -12,7 +12,7 @@ $trigger = New-ScheduledTaskTrigger -Daily -At 7:30AM
 $principal = New-ScheduledTaskPrincipal -UserId $currentUser -LogonType Interactive -RunLevel Limited
 $settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -ExecutionTimeLimit (New-TimeSpan -Minutes 20) -MultipleInstances IgnoreNew
 
-Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -Principal $principal -Settings $settings -Description 'Downloads NYSEG usage data, imports reviewed M01/M02 readings to Firebase, and refreshes tracker data.' -Force | Out-Null
+Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -Principal $principal -Settings $settings -Description 'Runs Run_NYSEG_File_Download.py daily, imports validated M01/M02 readings to Firebase, and refreshes tracker data.' -Force | Out-Null
 Write-Host "Created '$taskName' for every day at 7:30 AM while $currentUser is signed in."
 if ($RunNow) {
     Start-ScheduledTask -TaskName $taskName
