@@ -10,7 +10,7 @@
     {% if interval_file.available %}
     <p class="text-muted mb-0">{{ interval_file.source_name }} contains {{ "{:,}".format(interval_file.rows|length) }} hourly intervals. Account-identifying columns are omitted.</p>
     <p class="small text-muted mb-0">Source location: <code>{{ interval_file.source_path }}</code></p>
-    <p class="small mb-0 {{ 'text-success' if nyseg_sync_status.status == 'success' else 'text-danger' if nyseg_sync_status.status == 'failed' else 'text-muted' }}" id="nyseg-sync-status" data-sync-completed-at="{{ nyseg_sync_status.completed_at or '' }}">{% if nyseg_sync_status.status == 'success' %}Daily sync: {{ nyseg_sync_status.saved_records }} record{{ '' if nyseg_sync_status.saved_records == 1 else 's' }} saved {{ nyseg_sync_status.completed_at }}.{% elif nyseg_sync_status.status == 'failed' %}Daily sync failed: {{ nyseg_sync_status.error }}{% else %}Daily NYSEG sync is scheduled for 7:30 AM while this computer is signed in.{% endif %}</p>
+    <p class="small mb-0 {{ 'text-success' if nyseg_sync_status.status == 'success' else 'text-danger' if nyseg_sync_status.status == 'failed' else 'text-muted' }}" id="nyseg-sync-status" data-sync-completed-at="{{ nyseg_sync_status.completed_at or '' }}">{% if nyseg_sync_status.operation == 'download' and nyseg_sync_status.status == 'success' %}Manual NYSEG download completed {{ nyseg_sync_status.completed_at }}. M01/M02 import, email, and housekeeping were not run.{% elif nyseg_sync_status.operation == 'download' and nyseg_sync_status.status == 'failed' %}Manual NYSEG download failed: {{ nyseg_sync_status.error }}{% elif nyseg_sync_status.status == 'success' %}Daily sync: {{ nyseg_sync_status.saved_records }} record{{ '' if nyseg_sync_status.saved_records == 1 else 's' }} saved {{ nyseg_sync_status.completed_at }}.{% elif nyseg_sync_status.status == 'failed' %}Daily sync failed: {{ nyseg_sync_status.error }}{% else %}Daily NYSEG sync is scheduled for 7:30 AM while this computer is signed in.{% endif %}</p>
     <section class="nyseg-sync-log" aria-label="NYSEG daily sync activity"><div class="nyseg-sync-log-heading"><span>Daily sync activity</span><div class="d-flex align-items-center gap-2"><small>Live step-by-step progress</small><button type="button" class="btn btn-contract btn-sm" id="nyseg-sync-clear">Clear</button></div></div><pre id="nyseg-sync-log-lines">Loading NYSEG sync activity…</pre></section>
     {% if bill_summary.available %}
     <section class="bill-summary-box" aria-label="NYSEG bill summary">
@@ -262,7 +262,9 @@
   const updateStatus = (latest) => {
     if (!latest || !latest.status) return;
     status.className = `small mb-0 ${latest.status === "success" ? "text-success" : latest.status === "failed" ? "text-danger" : "text-primary"}`;
-    if (latest.status === "running") status.textContent = "Daily sync is running. New activity is shown below.";
+    if (latest.status === "running") status.textContent = "NYSEG Manual Run is downloading the CSV. New activity is shown below.";
+    else if (latest.operation === "download" && latest.status === "success") status.textContent = `Manual NYSEG download completed ${latest.completed_at || ""}. M01/M02 import, email, and housekeeping were not run.`;
+    else if (latest.operation === "download" && latest.status === "failed") status.textContent = `Manual NYSEG download failed: ${latest.error || "Review the activity log below."}`;
     else if (latest.status === "success") status.textContent = `Daily sync: ${latest.saved_records || 0} record${Number(latest.saved_records || 0) === 1 ? "" : "s"} saved ${latest.completed_at || ""}.`;
     else if (latest.status === "failed") status.textContent = `Daily sync failed: ${latest.error || "Review the activity log below."}`;
     else if (latest.status === "idle") status.textContent = "Daily NYSEG sync is scheduled for 7:30 AM while this computer is signed in.";

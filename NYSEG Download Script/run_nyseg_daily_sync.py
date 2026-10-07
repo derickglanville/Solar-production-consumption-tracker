@@ -150,6 +150,7 @@ def main(
     log_path: Path | None = None,
     download_script: Path | None = None,
     skip_download: bool = False,
+    download_only: bool = False,
 ) -> int:
     progress = progress_writer(log_path)
     if test_email:
@@ -193,6 +194,18 @@ def main(
                 detail = output_lines[-1] if output_lines else "NYSEG downloader exited without diagnostic output."
                 raise RuntimeError(detail)
 
+        if download_only:
+            status = {
+                "status": "success",
+                "operation": "download",
+                "started_at": started_at,
+                "completed_at": datetime.now().astimezone().isoformat(timespec="seconds"),
+                "saved_records": 0,
+            }
+            write_status(status)
+            progress("NYSEG Manual Run download completed. M01/M02 import, email, and housekeeping were not run.")
+            return 0
+
         # Run the same server-verified import used by the Review / Apply button.
         # Python starts with this script's folder on sys.path, even when the
         # working directory is the project root.  Add the project explicitly
@@ -223,13 +236,17 @@ def main(
     except Exception as error:
         status = {
             "status": "failed",
+            "operation": "download" if download_only else "sync",
             "started_at": started_at,
             "completed_at": datetime.now().astimezone().isoformat(timespec="seconds"),
             "error": str(error),
         }
-        add_email_result(status)
-        save_daily_load_history(status)
-        progress(f"NYSEG daily sync failed: {error}")
+        if not download_only:
+            add_email_result(status)
+            save_daily_load_history(status)
+        else:
+            write_status(status)
+        progress(f"NYSEG {'Manual Run download' if download_only else 'daily sync'} failed: {error}")
         return 1
     finally:
         os.close(lock_handle)
@@ -248,6 +265,7 @@ if __name__ == "__main__":
     parser.add_argument("--test-email", action="store_true")
     parser.add_argument("--log-path", type=Path)
     parser.add_argument("--skip-download", action="store_true", help="Import the CSV already downloaded by the 7:20 AM task.")
+    parser.add_argument("--download-only", action="store_true", help="Download the CSV only; do not import M01/M02, send email, or update history.")
     parser.add_argument("--download-script", type=Path, help="Downloader to run before import; defaults to Run_NYSEG_File_Download.py.")
     args = parser.parse_args()
-    raise SystemExit(main(args.test_email, args.log_path, args.download_script, args.skip_download))
+    raise SystemExit(main(args.test_email, args.log_path, args.download_script, args.skip_download, args.download_only))
