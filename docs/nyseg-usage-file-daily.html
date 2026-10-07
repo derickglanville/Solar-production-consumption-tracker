@@ -304,8 +304,8 @@
     if (!latest || !latest.status) return;
     status.className = `small mb-0 ${latest.status === "success" ? "text-success" : latest.status === "failed" ? "text-danger" : "text-primary"}`;
     if (latest.status === "running") status.textContent = "NYSEG Manual Run is downloading the CSV. New activity is shown below.";
-    else if (latest.operation === "download" && latest.status === "success") status.textContent = `Manual NYSEG download completed ${latest.completed_at || ""}. M01/M02 import, email, and housekeeping were not run.`;
-    else if (latest.operation === "download" && latest.status === "failed") status.textContent = `Manual NYSEG download failed: ${latest.error || "Review the activity log below."}`;
+    else if (latest.operation === "download" && latest.status === "success") status.textContent = `NYSEG_File_Download_Test.py completed ${latest.completed_at || ""}. M01/M02 import, email, history, and housekeeping were not run.`;
+    else if (latest.operation === "download" && latest.status === "failed") status.textContent = `NYSEG_File_Download_Test.py failed: ${latest.error || "Review the activity log below."}`;
     else if (latest.status === "success") status.textContent = `Daily sync: ${latest.saved_records || 0} record${Number(latest.saved_records || 0) === 1 ? "" : "s"} saved ${latest.completed_at || ""}.`;
     else if (latest.status === "failed") status.textContent = `Daily sync failed: ${latest.error || "Review the activity log below."}`;
     else if (latest.status === "idle") status.textContent = "Daily NYSEG sync is scheduled for 7:30 AM while this computer is signed in.";

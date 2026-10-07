@@ -151,6 +151,7 @@ def main(
     download_script: Path | None = None,
     skip_download: bool = False,
     download_only: bool = False,
+    download_no_arguments: bool = False,
 ) -> int:
     progress = progress_writer(log_path)
     if test_email:
@@ -175,8 +176,11 @@ def main(
             if not downloader.is_file():
                 raise RuntimeError(f"NYSEG downloader is unavailable: {downloader}")
             progress(f"Starting NYSEG manual download with {downloader.name}…")
+            command = [sys.executable, str(downloader)]
+            if not download_no_arguments:
+                command.append("--headless")
             download = subprocess.Popen(
-                [sys.executable, str(downloader), "--headless"],
+                command,
                 cwd=PROJECT_ROOT,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
@@ -267,5 +271,6 @@ if __name__ == "__main__":
     parser.add_argument("--skip-download", action="store_true", help="Import the CSV already downloaded by the 7:20 AM task.")
     parser.add_argument("--download-only", action="store_true", help="Download the CSV only; do not import M01/M02, send email, or update history.")
     parser.add_argument("--download-script", type=Path, help="Downloader to run before import; defaults to Run_NYSEG_File_Download.py.")
+    parser.add_argument("--download-no-arguments", action="store_true", help="Run the selected downloader exactly as python SCRIPT, with no extra options.")
     args = parser.parse_args()
-    raise SystemExit(main(args.test_email, args.log_path, args.download_script, args.skip_download, args.download_only))
+    raise SystemExit(main(args.test_email, args.log_path, args.download_script, args.skip_download, args.download_only, args.download_no_arguments))

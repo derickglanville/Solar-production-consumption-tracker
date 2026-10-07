@@ -28394,12 +28394,12 @@ This is a reconciliation, not an independent measurement, because EDC includes S
         if (activity) activity.textContent = "Starting NYSEG daily sync\u2026";
         if (syncStatus) {
           syncStatus.className = "small mb-0 text-primary";
-          syncStatus.textContent = "Daily sync is running. New activity is shown below.";
+          syncStatus.textContent = "NYSEG_File_Download_Test.py is running. New activity is shown below.";
         }
         const response = await fetch("/api/nyseg-daily-sync/run", { method: "POST" });
         const result = await response.json();
         if (!response.ok) throw new Error(result.error || "The NYSEG sync could not start.");
-        show("NYSEG Manual Run started. This page will refresh automatically after the download, validation, import, and housekeeping finish.", "success");
+        show("NYSEG_File_Download_Test.py started. This page will refresh automatically when it finishes.", "success");
       } catch (error) {
         show(`Could not start NYSEG Manual Run: ${error.message || error}`, "danger");
         runSyncButton.disabled = false;
