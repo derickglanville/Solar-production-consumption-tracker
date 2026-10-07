@@ -21,7 +21,7 @@ from pathlib import Path
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-DOWNLOADER = Path(__file__).resolve().parent / "Run_NYSEG_File_Download_Manual.py"
+DOWNLOADER = Path(__file__).resolve().parent / "Run_NYSEG_File_Download.py"
 STATUS_FILE = PROJECT_ROOT / "SunRun Data" / "nyseg-daily-sync-status.json"
 HISTORY_FILE = PROJECT_ROOT / "JSON" / "Daily_NYSEG_Load_History.json"
 EMAIL_SETTINGS_FILE = PROJECT_ROOT / "SunRun Data" / "Script" / "Email_Info.txt"
@@ -175,7 +175,7 @@ def main(
                 raise RuntimeError(f"NYSEG downloader is unavailable: {downloader}")
             progress(f"Starting NYSEG manual download with {downloader.name}…")
             download = subprocess.Popen(
-                [sys.executable, str(downloader), "--offscreen", "--channel", "chrome"],
+                [sys.executable, str(downloader), "--headless"],
                 cwd=PROJECT_ROOT,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
@@ -248,6 +248,6 @@ if __name__ == "__main__":
     parser.add_argument("--test-email", action="store_true")
     parser.add_argument("--log-path", type=Path)
     parser.add_argument("--skip-download", action="store_true", help="Import the CSV already downloaded by the 7:20 AM task.")
-    parser.add_argument("--download-script", type=Path, help="Downloader to run before import; defaults to Run_NYSEG_File_Download_Manual.py.")
+    parser.add_argument("--download-script", type=Path, help="Downloader to run before import; defaults to Run_NYSEG_File_Download.py.")
     args = parser.parse_args()
     raise SystemExit(main(args.test_email, args.log_path, args.download_script, args.skip_download))

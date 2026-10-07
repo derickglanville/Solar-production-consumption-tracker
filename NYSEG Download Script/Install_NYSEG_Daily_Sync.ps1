@@ -11,7 +11,7 @@ $downloadTaskName = 'Solar Energy Tracker - NYSEG Download'
 $downloadScript = Join-Path $PSScriptRoot 'run_nyseg_download_720.ps1'
 $downloadAction = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$downloadScript`""
 $downloadTrigger = New-ScheduledTaskTrigger -Daily -At 7:20AM
-Register-ScheduledTask -TaskName $downloadTaskName -Action $downloadAction -Trigger $downloadTrigger -Principal $principal -Settings $settings -Description 'Runs Run_NYSEG_File_Download_Manual.py daily at 7:20 AM to save the NYSEG CSV.' -Force | Out-Null
+Register-ScheduledTask -TaskName $downloadTaskName -Action $downloadAction -Trigger $downloadTrigger -Principal $principal -Settings $settings -Description 'Runs Run_NYSEG_File_Download.py --headless daily at 7:20 AM to save the NYSEG CSV.' -Force | Out-Null
 
 $importTaskName = 'Solar Energy Tracker - NYSEG Daily Sync'
 $importScript = Join-Path $PSScriptRoot 'run_nyseg_daily_sync.ps1'
