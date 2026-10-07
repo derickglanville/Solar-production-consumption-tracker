@@ -17,7 +17,7 @@ from solar_tracker.routes import build_bootstrap_data
 
 
 DOCS = ROOT / "docs"
-ASSET_VERSION = "20261005-monthly-summary-footer"
+ASSET_VERSION = "20261007-manual-nyseg-download"
 
 ROUTE_REPLACEMENTS = {
     'href="/"': 'href="index.html"',

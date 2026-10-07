@@ -1,12 +1,14 @@
 from dataclasses import asdict
 from datetime import date, datetime
+import csv
 from http.client import HTTPConnection
 from io import StringIO
 import json
 import os
 from pathlib import Path
+import shutil
 import subprocess
-from typing import Optional
+from typing import Optional, Tuple
 
 import pandas as pd
 from flask import Blueprint, Response, jsonify, redirect, render_template, request, send_file, send_from_directory, url_for
@@ -26,7 +28,11 @@ from .energy_references import (
 from .firestore import AppConfig, DailySolarEntry, FirestoreRepository
 from .historical_usage import historical_usage_to_dict, load_historical_usage_summary
 from .monthly_bill import build_bill_summary_report, build_net_metering_reconciliation, build_net_metering_report, load_monthly_bill_summary, monthly_bill_to_dict
-from .nyseg_interval_usage import build_nyseg_interval_usage_report, load_nyseg_interval_file_rows
+from .nyseg_interval_usage import (
+    DEFAULT_INTERVAL_USAGE_PATH,
+    build_nyseg_interval_usage_report,
+    load_nyseg_interval_file_rows,
+)
 from .seed import build_sample_entries
 from .sunrun_production import (
     SUNRUN_CSV_PATH,
@@ -61,6 +67,7 @@ NYSEG_DAILY_SYNC_PROCESS_PATH = NYSEG_DAILY_SYNC_STATUS_PATH.with_name("nyseg-da
 NYSEG_DAILY_SYNC_SCRIPT_PATH = Path(__file__).resolve().parent.parent / "NYSEG Download Script" / "run_nyseg_daily_sync.ps1"
 SUNRUN_LOAD_HISTORY_PATH = Path(__file__).resolve().parent.parent / "JSON" / "Daily_Load_History.json"
 NYSEG_LOAD_HISTORY_PATH = Path(__file__).resolve().parent.parent / "JSON" / "Daily_NYSEG_Load_History.json"
+NYSEG_MANUAL_DOWNLOAD_DIRECTORY = Path.home() / "Downloads"
 CIRCUIT_BREAKER_DIRECTORY_PATH = (
     Path(__file__).resolve().parent.parent
     / "Documents"
@@ -124,6 +131,31 @@ def load_nyseg_recent_runs() -> dict:
         for row in recent
     ]
     return {"recent": recent, "successful": sum(1 for row in recent if row.get("status") == "Success"), "emailed": sum(1 for row in recent if row.get("email_sent"))}
+
+
+def latest_manual_nyseg_download() -> Tuple[Path, int]:
+    """Find the newest valid NYSEG interval CSV in the user's Downloads folder."""
+    candidates = sorted(
+        (
+            path for path in NYSEG_MANUAL_DOWNLOAD_DIRECTORY.glob("*.csv")
+            if "nyseg" in path.name.lower() or "avangrid-em" in path.name.lower()
+        ),
+        key=lambda path: path.stat().st_mtime,
+        reverse=True,
+    )
+    for candidate in candidates:
+        try:
+            with candidate.open("r", encoding="utf-8-sig", newline="") as handle:
+                reader = csv.DictReader(handle)
+                required = {"Date", "Delivered", "Received"}
+                if not required.issubset(set(reader.fieldnames or [])):
+                    continue
+                rows = sum(1 for _ in reader)
+            if rows:
+                return candidate, rows
+        except OSError:
+            continue
+    raise FileNotFoundError("No valid NYSEG interval CSV was found in Downloads.")
 
 
 def format_run_time(value: object) -> str:
@@ -673,6 +705,32 @@ def nyseg_usage_file():
         sunrun_runs=load_sunrun_recent_runs(),
         nyseg_runs=load_nyseg_recent_runs(),
     )
+
+
+@main_blueprint.route("/api/nyseg-downloads/latest", methods=["POST"])
+def process_latest_nyseg_download_api():
+    """Promote a manually downloaded NYSEG CSV to the tracker source file."""
+    try:
+        source, rows = latest_manual_nyseg_download()
+    except FileNotFoundError as error:
+        return jsonify({"error": str(error)}), 404
+
+    destination = DEFAULT_INTERVAL_USAGE_PATH
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    if source.resolve() != destination.resolve() and destination.is_file():
+        archive = destination.parent / "archive"
+        archive.mkdir(parents=True, exist_ok=True)
+        stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+        shutil.copy2(destination, archive / f"NYSEG_Daily_Usage_Data_{stamp}.csv")
+    temporary = destination.with_suffix(".manual.partial.csv")
+    shutil.copy2(source, temporary)
+    temporary.replace(destination)
+    return jsonify({
+        "filename": source.name,
+        "rows": rows,
+        "source_modified_at": datetime.fromtimestamp(source.stat().st_mtime).astimezone().isoformat(timespec="seconds"),
+        "destination": str(destination),
+    })
 
 
 @main_blueprint.route("/nyseg-bill-summary")
