@@ -256,6 +256,7 @@
   const status = document.getElementById("nyseg-sync-status");
   const log = document.getElementById("nyseg-sync-log-lines");
   const clear = document.getElementById("nyseg-sync-clear");
+  const runSyncButton = document.getElementById("nyseg-file-run-sync");
   if (!status || location.protocol === "file:" || window.SOLAR_STATIC_SITE) {`r`n    if (clear) clear.hidden = true;`r`n    return;`r`n  }
   let completedAt = status.dataset.syncCompletedAt || "";
   const updateStatus = (latest) => {
@@ -266,6 +267,10 @@
     else if (latest.status === "failed") status.textContent = `Daily sync failed: ${latest.error || "Review the activity log below."}`;
     else if (latest.status === "idle") status.textContent = "Daily NYSEG sync is scheduled for 7:30 AM while this computer is signed in.";
     else if (latest.status === "stopped") status.textContent = "NYSEG sync was stopped.";
+    if (runSyncButton && latest.status !== "running") {
+      runSyncButton.disabled = false;
+      runSyncButton.textContent = "Run NYSEG sync now";
+    }
   };
   const refreshLog = async () => {
     if (!log) return;

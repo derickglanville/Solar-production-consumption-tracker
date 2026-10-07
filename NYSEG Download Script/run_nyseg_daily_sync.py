@@ -167,7 +167,7 @@ def main(test_email: bool = False, log_path: Path | None = None) -> int:
         for browser_attempt in range(1, 3):
             progress(f"Starting NYSEG browser download (browser attempt {browser_attempt}/2)…")
             download = subprocess.Popen(
-                [sys.executable, str(DOWNLOADER), "--headless", "--channel", "chrome"], cwd=PROJECT_ROOT,
+                [sys.executable, str(DOWNLOADER), "--channel", "chrome"], cwd=PROJECT_ROOT,
                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1,
             )
             assert download.stdout is not None
