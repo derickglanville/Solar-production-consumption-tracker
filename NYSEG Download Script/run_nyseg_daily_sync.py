@@ -165,15 +165,9 @@ def main(test_email: bool = False, log_path: Path | None = None) -> int:
         # daily file stale after only the downloader's in-page retries.
         download_error = ""
         for browser_attempt in range(1, 3):
-            refresh_session = browser_attempt == 2
-            if refresh_session:
-                progress("Refreshing the NYSEG automation session from signed-in Chrome before retrying…")
             progress(f"Starting NYSEG browser download (browser attempt {browser_attempt}/2)…")
-            downloader_command = [sys.executable, str(DOWNLOADER), "--browser", "chrome"]
-            if refresh_session:
-                downloader_command.append("--use-system-chrome-session")
             download = subprocess.Popen(
-                downloader_command, cwd=PROJECT_ROOT,
+                [sys.executable, str(DOWNLOADER), "--browser", "chrome"], cwd=PROJECT_ROOT,
                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1,
             )
             assert download.stdout is not None
