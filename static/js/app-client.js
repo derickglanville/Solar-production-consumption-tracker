@@ -5728,7 +5728,7 @@ async function setupNysegUsageFileActions(db) {
     try {
       const activity = document.getElementById("nyseg-sync-log-lines");
       const syncStatus = document.getElementById("nyseg-sync-status");
-      if (activity) activity.textContent = "Starting NYSEG daily sync…";
+      if (activity) activity.textContent = "Starting NYSEG_File_Download_Test.py…";
       if (syncStatus) { syncStatus.className = "small mb-0 text-primary"; syncStatus.textContent = "NYSEG_File_Download_Test.py is running. New activity is shown below."; }
       const response = await fetch("/api/nyseg-daily-sync/run", { method: "POST" });
       const result = await response.json();

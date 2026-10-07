@@ -11,11 +11,12 @@ Run:
 """
 
 import argparse
+import json
 import os
 import re
 import sys
 import time
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 
 from playwright.sync_api import sync_playwright
@@ -26,6 +27,8 @@ OUT_DIR = Path(r"C:\Software Developement\ChatGPT Codex\Solar Energy - SunRun\Su
 OUT_FILE = "NYSEG_Daily_Usage_Data.csv"
 TMP_FILE = OUT_FILE + ".tmp"
 ACTIVITY_LOG = OUT_DIR / "nyseg-daily-sync.log"
+STATUS_FILE = OUT_DIR / "nyseg-daily-sync-status.json"
+PROCESS_FILE = OUT_DIR / "nyseg-daily-sync-process.json"
 
 LINK_RE = re.compile(r"download my energy use data", re.I)
 USER_SEL = (
@@ -49,6 +52,29 @@ def log(msg):
         with ACTIVITY_LOG.open("a", encoding="utf-8", newline="\n") as handle:
             handle.write(line + "\n")
     except OSError:
+        pass
+
+def write_activity_status(status: str, started_at: str, *, error: str = "") -> None:
+    payload = {
+        "status": status,
+        "operation": "download",
+        "started_at": started_at,
+        "completed_at": datetime.now().astimezone().isoformat(timespec="seconds"),
+        "saved_records": 0,
+    }
+    if error:
+        payload["error"] = error
+    try:
+        OUT_DIR.mkdir(parents=True, exist_ok=True)
+        STATUS_FILE.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    except OSError:
+        pass
+
+
+def clear_process_marker() -> None:
+    try:
+        PROCESS_FILE.unlink()
+    except FileNotFoundError:
         pass
 
 
@@ -371,19 +397,25 @@ def main():
     ap.add_argument("--retries", type=int, default=3, help="attempts before giving up (default 3)")
     args = ap.parse_args()
 
+    started_at = datetime.now().astimezone().isoformat(timespec="seconds")
     user, pwd = load_credentials()
 
     for attempt in range(1, args.retries + 1):
         log(f"Attempt {attempt} of {args.retries}")
         if run_once(args, user, pwd):
-            sys.exit(0)
+            write_activity_status("success", started_at)
+            clear_process_marker()
+            return 0
         if attempt < args.retries:
             log("Retrying with a fresh browser in 10 seconds...")
             time.sleep(10)
 
+    error = "NYSEG_File_Download_Test.py could not download the CSV."
     log("All attempts failed.")
-    sys.exit(1)
+    write_activity_status("failed", started_at, error=error)
+    clear_process_marker()
+    return 1
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

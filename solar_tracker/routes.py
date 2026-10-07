@@ -8,6 +8,7 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 from typing import Optional, Tuple
 
 import pandas as pd
@@ -65,7 +66,7 @@ NYSEG_DAILY_SYNC_LOG_PATH = Path(__file__).resolve().parent.parent / "SunRun Dat
 NYSEG_DAILY_SYNC_LOCK_PATH = NYSEG_DAILY_SYNC_STATUS_PATH.with_suffix(".lock")
 NYSEG_DAILY_SYNC_PROCESS_PATH = NYSEG_DAILY_SYNC_STATUS_PATH.with_name("nyseg-daily-sync-process.json")
 NYSEG_DAILY_SYNC_SCRIPT_PATH = Path(__file__).resolve().parent.parent / "NYSEG Download Script" / "run_nyseg_daily_sync.ps1"
-NYSEG_MANUAL_RUN_SCRIPT_PATH = Path(__file__).resolve().parent.parent / "NYSEG Download Script" / "run_nyseg_manual_run.ps1"
+NYSEG_MANUAL_RUN_SCRIPT_PATH = Path(__file__).resolve().parent.parent / "NYSEG Download Script" / "NYSEG_File_Download_Test.py"
 SUNRUN_LOAD_HISTORY_PATH = Path(__file__).resolve().parent.parent / "JSON" / "Daily_Load_History.json"
 NYSEG_LOAD_HISTORY_PATH = Path(__file__).resolve().parent.parent / "JSON" / "Daily_NYSEG_Load_History.json"
 NYSEG_MANUAL_DOWNLOAD_DIRECTORY = Path.home() / "Downloads"
@@ -829,8 +830,8 @@ def nyseg_daily_sync_run_api():
         encoding="utf-8",
     )
     process = subprocess.Popen(
-        ["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(NYSEG_MANUAL_RUN_SCRIPT_PATH)],
-        cwd=NYSEG_MANUAL_RUN_SCRIPT_PATH.parent.parent,
+        [sys.executable, str(NYSEG_MANUAL_RUN_SCRIPT_PATH)],
+        cwd=NYSEG_MANUAL_RUN_SCRIPT_PATH.parent,
         creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
     )
     NYSEG_DAILY_SYNC_PROCESS_PATH.write_text(

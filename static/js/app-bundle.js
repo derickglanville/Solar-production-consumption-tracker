@@ -28391,7 +28391,7 @@ This is a reconciliation, not an independent measurement, because EDC includes S
       try {
         const activity = document.getElementById("nyseg-sync-log-lines");
         const syncStatus = document.getElementById("nyseg-sync-status");
-        if (activity) activity.textContent = "Starting NYSEG daily sync\u2026";
+        if (activity) activity.textContent = "Starting NYSEG_File_Download_Test.py\u2026";
         if (syncStatus) {
           syncStatus.className = "small mb-0 text-primary";
           syncStatus.textContent = "NYSEG_File_Download_Test.py is running. New activity is shown below.";
