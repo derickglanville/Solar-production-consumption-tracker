@@ -615,6 +615,39 @@ def nyseg_net_metering():
 def nyseg_usage():
     return redirect(url_for("main.nyseg_net_metering"))
 
+def build_meter_file_reconciliation(interval_file: dict) -> dict:
+    """Explain the difference between a cumulative smart meter and delayed NYSEG CSV data."""
+    # This is the on-site meter snapshot supplied on October 8.  It is kept
+    # separate from the NYSEG file because NYSEG publishes delayed intervals,
+    # while the meter is a cumulative, near-real-time register.
+    snapshot = {
+        "reading_date": "2026-10-08",
+        "activation_date": "2026-07-09",
+        "solar_produced_kwh": 5079.0,
+        "m01_kwh": 1421.0,
+        "m02_kwh": 3495.0,
+    }
+    daily_rows = interval_file.get("daily_rows", [])
+    file_m01 = sum(float(row.get("Delivered") or 0.0) for row in daily_rows)
+    file_m02 = sum(float(row.get("Received") or 0.0) for row in daily_rows)
+    dates = sorted(str(row.get("Date")) for row in daily_rows if row.get("Date"))
+    self_consumed = max(0.0, snapshot["solar_produced_kwh"] - snapshot["m02_kwh"])
+    return {
+        **snapshot,
+        "file_start": dates[0] if dates else None,
+        "file_end": dates[-1] if dates else None,
+        "file_m01_kwh": file_m01,
+        "file_m02_kwh": file_m02,
+        "m01_not_in_file_kwh": max(0.0, snapshot["m01_kwh"] - file_m01),
+        "m02_not_in_file_kwh": max(0.0, snapshot["m02_kwh"] - file_m02),
+        "smart_net_export_kwh": snapshot["m02_kwh"] - snapshot["m01_kwh"],
+        "file_net_export_kwh": file_m02 - file_m01,
+        "self_consumed_kwh": self_consumed,
+        "self_consumption_percent": (self_consumed / snapshot["solar_produced_kwh"] * 100)
+        if snapshot["solar_produced_kwh"] else 0.0,
+    }
+
+
 @main_blueprint.route("/nyseg-usage-file")
 @main_blueprint.route("/nyseg-usage-file/daily")
 def nyseg_usage_file():
@@ -721,6 +754,7 @@ def nyseg_usage_file():
         meter_totals=meter_totals,
         nyseg_sync_status=load_nyseg_daily_sync_status(),
         bill_summary=build_bill_summary_report(),
+        meter_reconciliation=build_meter_file_reconciliation(interval_file),
         sunrun_runs=load_sunrun_recent_runs(),
         nyseg_runs=load_nyseg_recent_runs(),
     )
