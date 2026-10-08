@@ -788,7 +788,7 @@ def process_latest_nyseg_download_api():
 
 @main_blueprint.route("/nyseg-bill-summary")
 def nyseg_bill_summary():
-    interval_file = build_nyseg_interval_usage_report()
+    interval_file = load_nyseg_interval_file_rows()
     return render_template(
         "nyseg_bill_summary.html",
         page_name="nyseg-usage-file",
