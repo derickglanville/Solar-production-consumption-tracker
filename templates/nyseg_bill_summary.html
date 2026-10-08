@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 <section class="bill-report-shell">
-  <div class="bill-report-heading"><div><p class="eyebrow mb-1">All NYSEG bills in the local Bills folder</p><h1 class="h3 mb-1">Electricity cost and solar-credit history</h1><p class="text-muted mb-0">{{ bill_summary.file_count }} PDF files · {{ bill_summary.period_count }} unique billing periods. Corrected statements replace earlier versions in history totals.</p></div><a class="btn btn-contract" href="{{ url_for('main.nyseg_usage_file') }}">Close</a></div>
+  <div class="bill-report-heading"><div><p class="eyebrow mb-1">All NYSEG bills in the local Bills folder</p><h1 class="h3 mb-1">Electricity cost and solar-credit history</h1><p class="text-muted mb-0">{{ bill_summary.file_count }} PDF files · {{ bill_summary.period_count }} unique billing periods. Newly saved NYSEG PDFs are extracted automatically when this report opens; corrected statements replace earlier versions in history totals.</p></div><a class="btn btn-contract" href="{{ url_for('main.nyseg_usage_file') }}">Close</a></div>
   {% if bill_summary.available %}
   <section class="bill-report-metrics">
     <article class="bill-report-metric blue"><span>Reviewed energy charges</span><strong>${{ "%.2f"|format(bill_summary.totals.energy_charges) }}</strong><small>{{ "%.0f"|format(bill_summary.totals.imported_kwh) }} kWh imported</small></article>

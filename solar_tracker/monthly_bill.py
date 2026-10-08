@@ -1,10 +1,16 @@
 from __future__ import annotations
 
 import csv
+import re
 from dataclasses import dataclass, field
 from datetime import date, datetime
 from pathlib import Path
 from typing import Any
+
+try:
+    from pypdf import PdfReader
+except ImportError:  # The bill report remains usable when the optional parser is absent.
+    PdfReader = None
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -114,6 +120,99 @@ def _iso_date(value: str) -> str:
     return datetime.fromisoformat(value.strip()).date().isoformat()
 
 
+def _money(text: str, label: str) -> float:
+    """Read a dollar amount following a NYSEG statement label."""
+    match = re.search(rf"{re.escape(label)}\s*\$?\s*(-?[\d,]+\.\d{{2}})", text, re.IGNORECASE)
+    return _number(match.group(1).replace(",", "")) if match else 0.0
+
+
+def _date_from_bill(value: str) -> str:
+    return datetime.strptime(value.strip(), "%B %d, %Y").date().isoformat()
+
+
+def _parse_nyseg_bill_pdf(path: Path) -> dict[str, Any] | None:
+    """Extract the recurring NYSEG electric-bill fields from a newly saved PDF.
+
+    The parser intentionally returns no record if the bill's core identifiers
+    are missing. That keeps an unfamiliar or image-only PDF out of financial
+    totals until it can be reviewed.
+    """
+    if PdfReader is None:
+        return None
+    try:
+        text = "\n".join(page.extract_text() or "" for page in PdfReader(str(path)).pages)
+    except Exception:
+        return None
+    statement_match = re.search(r"Statement Date:\s*([A-Z][a-z]+ \d{1,2}, \d{4})", text)
+    period_match = re.search(
+        r"Service from:.*?(\d{2}/\d{2}/\d{2})\s*-\s*(\d{2}/\d{2}/\d{2})",
+        text,
+        re.DOTALL,
+    )
+    if not statement_match or not period_match:
+        return None
+    try:
+        statement_date = _date_from_bill(statement_match.group(1))
+        billing_start_date = datetime.strptime(period_match.group(1), "%m/%d/%y").date().isoformat()
+        billing_end_date = datetime.strptime(period_match.group(2), "%m/%d/%y").date().isoformat()
+    except ValueError:
+        return None
+
+    meter_section_match = re.search(r"Number Difference Usage Period(.*?)Type of read", text, re.DOTALL | re.IGNORECASE)
+    meter_section = meter_section_match.group(1) if meter_section_match else ""
+    meter_rows = [float(value.replace(",", "")) for value in re.findall(r"\d+\s*days\s*(\d[\d,]*)\s*kwh", meter_section, re.IGNORECASE)]
+    periods = [int(value) for value in re.findall(r"(\d+)\s*days\s*\d[\d,]*\s*kwh", meter_section, re.IGNORECASE)]
+    if not meter_rows:
+        return None
+    if len(meter_rows) == 1:
+        imported_kwh, smart_import_kwh, exported_kwh = meter_rows[0], 0.0, 0.0
+    elif len(meter_rows) == 2:
+        imported_kwh, smart_import_kwh, exported_kwh = meter_rows[0], meter_rows[0], meter_rows[1]
+    else:
+        # A meter-exchange bill has old-meter import, smart-meter import,
+        # then smart-meter export.
+        imported_kwh = meter_rows[0] + meter_rows[1]
+        smart_import_kwh, exported_kwh = meter_rows[1], meter_rows[2]
+
+    credit_match = re.search(
+        r"Prior Excess\s+Generation.*?Meter\s+Number\s*(\d[\d,]*)\s*kwh\s*(\d[\d,]*)\s*kwh\s*(\d[\d,]*)\s*kwh\s*(\d[\d,]*)\s*kwh\s*(\d[\d,]*)\s*kwh",
+        text,
+        re.DOTALL | re.IGNORECASE,
+    )
+    credit_values = [float(value.replace(",", "")) for value in credit_match.groups()] if credit_match else []
+    days_in_period = (date.fromisoformat(billing_end_date) - date.fromisoformat(billing_start_date)).days + 1
+    total_energy_charges = _money(text, "Total Energy Charges")
+    record = {
+        "statement_date": statement_date,
+        "billing_start_date": billing_start_date,
+        "billing_end_date": billing_end_date,
+        "days_in_period": days_in_period,
+        "imported_kwh": imported_kwh,
+        "smart_meter_import_kwh": smart_import_kwh,
+        "exported_kwh": exported_kwh,
+        "delivery_charges": _money(text, "Subtotal Electricity Delivery"),
+        "supply_charges": _money(text, "Subtotal Electricity Supply"),
+        "taxes": _money(text, "Subtotal Electricity Taxes and Surcharges"),
+        "miscellaneous_charges": _money(text, "Total Miscellaneous Charges"),
+        "total_energy_charges": total_energy_charges,
+        "amount_due": _money(text, "Amount Due:"),
+        "budget_billing_amount": 0.0,
+        "payment_agreement_amount": 0.0,
+        "balance_forward": _money(text, "Balance forward"),
+        "total_adjustments": _money(text, "Total Adjustments"),
+        "supply_rate_per_kwh": _number((re.search(r"price for providing electricity supply.*?\$([\d.]+)/kwh", text, re.IGNORECASE | re.DOTALL) or [None, 0])[1]),
+        "meter_note": "Automatically extracted from the saved NYSEG PDF. Review the source bill if a corrected statement changes the period.",
+        "ingestion_source": "PDF extraction",
+    }
+    if len(credit_values) == 5:
+        record.update({
+            "prior_excess_generation_kwh": credit_values[0],
+            "credited_usage_kwh": credit_values[3],
+            "remaining_excess_generation_kwh": credit_values[4],
+        })
+    return record
+
+
 def _load_usage_records(path: Path) -> list[dict[str, Any]]:
     if not path.exists():
         return []
@@ -139,12 +238,14 @@ def _load_usage_records(path: Path) -> list[dict[str, Any]]:
 
 def _load_billing_records(bills_dir: Path) -> list[dict[str, Any]]:
     records: list[dict[str, Any]] = []
-    for filename, source in BILL_REFERENCE_DATA.items():
-        path = bills_dir / filename
-        if not path.exists():
+    for path in sorted(bills_dir.glob("*.pdf")):
+        source = BILL_REFERENCE_DATA.get(path.name)
+        # Existing transcribed records retain their reviewed values. Any new
+        # PDF is ingested automatically, with no filename registration step.
+        record = dict(source) if source else _parse_nyseg_bill_pdf(path)
+        if not record:
             continue
-        record = dict(source)
-        record.update({"display_name": filename, "source_path": str(path)})
+        record.update({"display_name": path.name, "source_path": str(path)})
         record["current_usage_kwh"] = record["imported_kwh"]
         record["average_daily_use_kwh"] = record["imported_kwh"] / record["days_in_period"]
         record["effective_energy_rate"] = record["total_energy_charges"] / record["imported_kwh"]
