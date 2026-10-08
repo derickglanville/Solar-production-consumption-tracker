@@ -15,11 +15,8 @@
     {% if bill_summary.available %}
     <section class="bill-summary-box" aria-label="NYSEG bill summary">
       <div class="bill-summary-heading"><div><p class="eyebrow mb-1">Bill summary</p><h2 class="h6 mb-0">NYSEG bills and solar credit bank</h2></div><a class="btn btn-contract btn-sm" href="{{ url_for('main.nyseg_bill_summary') }}" target="_blank" rel="noopener">Pop Out</a></div>
-      <div class="bill-summary-current" id="bill-summary-current"></div>
-      <div class="bill-summary-nav"><button type="button" class="btn btn-contract btn-sm" id="bill-summary-previous">Previous bill</button><span id="bill-summary-position"></span><button type="button" class="btn btn-contract btn-sm" id="bill-summary-next">Next bill</button></div>
-      <div class="bill-summary-bank"><strong>{{ "{:,.0f}".format(bill_summary.credit_bank.prior_kwh) }} kWh</strong><span>prior excess generation</span><b>{{ "{:,.0f}".format(bill_summary.credit_bank.billed_use_offset_kwh) }} kWh used to offset billed use</b></div>
       <section class="bill-summary-meter-reconciliation" aria-label="Smart meter and NYSEG file reconciliation">
-        <p class="eyebrow mb-1">Meter and NYSEG file reconciliation</p>
+        <p class="eyebrow mb-1">Bill Summary reconciliation</p>
         <strong>Since solar power-on {{ meter_reconciliation.activation_date }}, {{ "{:,.0f}".format(meter_reconciliation.solar_produced_kwh) }} kWh was produced.</strong>
         <div class="bill-summary-reconciliation-grid">
           <span><b>{{ "{:,.0f}".format(meter_reconciliation.self_consumed_kwh) }} kWh</b> self-consumed<br><small>{{ "%.1f"|format(meter_reconciliation.self_consumption_percent) }}% of solar production</small></span>
@@ -28,6 +25,9 @@
         <div class="bill-summary-meter-comparison"><span>Meter {{ meter_reconciliation.reading_date }}<b>M01 {{ "{:,.0f}".format(meter_reconciliation.m01_kwh) }} · M02 {{ "{:,.0f}".format(meter_reconciliation.m02_kwh) }}</b></span><span>NYSEG file {{ meter_reconciliation.file_start }}–{{ meter_reconciliation.file_end }}<b>M01 {{ "{:,.0f}".format(meter_reconciliation.file_m01_kwh) }} · M02 {{ "{:,.0f}".format(meter_reconciliation.file_m02_kwh) }}</b></span></div>
         <p class="mb-0">The file is delayed and starts later than solar activation. It does not yet include <b>{{ "{:,.0f}".format(meter_reconciliation.m01_not_in_file_kwh) }} kWh M01</b> and <b>{{ "{:,.0f}".format(meter_reconciliation.m02_not_in_file_kwh) }} kWh M02</b> shown by the smart meter. This is a timing and coverage difference, not an additional NYSEG credit-bank balance.</p>
       </section>
+      <div class="bill-summary-current" id="bill-summary-current"></div>
+      <div class="bill-summary-nav"><button type="button" class="btn btn-contract btn-sm" id="bill-summary-previous">Previous bill</button><span id="bill-summary-position"></span><button type="button" class="btn btn-contract btn-sm" id="bill-summary-next">Next bill</button></div>
+      <div class="bill-summary-bank"><strong>{{ "{:,.0f}".format(bill_summary.credit_bank.prior_kwh) }} kWh</strong><span>prior excess generation</span><b>{{ "{:,.0f}".format(bill_summary.credit_bank.billed_use_offset_kwh) }} kWh used to offset billed use</b></div>
       <script id="bill-summary-records" type="application/json">{{ bill_summary.records|tojson }}</script>
     </section>
     {% endif %}
