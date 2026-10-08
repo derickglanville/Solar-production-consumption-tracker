@@ -364,10 +364,19 @@ def _build_next_bill_estimate(latest_bill: dict[str, Any], usage_records: list[d
     imported_kwh = sum(_number(row.get("import_kwh")) for row in period_days)
     exported_kwh = sum(_number(row.get("export_kwh")) for row in period_days)
     latest_import = _number(latest_bill.get("imported_kwh"))
+    latest_delivery = _number(latest_bill.get("delivery_charges"))
+    latest_supply = _number(latest_bill.get("supply_charges"))
+    latest_taxes = _number(latest_bill.get("taxes"))
     latest_energy_charges = _number(latest_bill.get("total_energy_charges"))
     latest_miscellaneous = _number(latest_bill.get("miscellaneous_charges"))
+    delivery_rate = latest_delivery / latest_import if latest_import else 0.0
+    supply_rate = latest_supply / latest_import if latest_import else 0.0
+    tax_rate = latest_taxes / latest_import if latest_import else 0.0
     solar_adjusted_rate = latest_energy_charges / latest_import if latest_import else 0.0
-    projected_energy_charges = imported_kwh * solar_adjusted_rate
+    projected_delivery = imported_kwh * delivery_rate
+    projected_supply = imported_kwh * supply_rate
+    projected_taxes = imported_kwh * tax_rate
+    projected_energy_charges = projected_delivery + projected_supply + projected_taxes
     projected_new_charges = projected_energy_charges + latest_miscellaneous
 
     # A normal, non-corrected NYSEG bill is usually issued about five days after
@@ -379,6 +388,29 @@ def _build_next_bill_estimate(latest_bill: dict[str, Any], usage_records: list[d
         and date.fromisoformat(row["billing_end_date"]).year < file_end.year
     ]
     seasonal_reference = max(seasonal_candidates, key=lambda row: row["billing_end_date"], default={})
+    calculation_tooltip = (
+        "Estimated next-bill calculation (not an NYSEG invoice):\n"
+        f"Unbilled interval window: {period_start.isoformat()} through {file_end.isoformat()} ({len(period_days)} days)\n"
+        f"M01 grid import: {imported_kwh:,.1f} kWh\n"
+        f"M02 solar export: {exported_kwh:,.1f} kWh\n"
+        f"M02 - M01 net meter flow: {exported_kwh - imported_kwh:+,.1f} kWh\n"
+        "---\n"
+        f"Rate basis: latest corrected bill, ${latest_energy_charges:,.2f} on {latest_import:,.0f} kWh M01\n"
+        f"Delivery rate: ${latest_delivery:,.2f} / {latest_import:,.0f} kWh = ${delivery_rate:.4f}/kWh\n"
+        f"Supply rate: ${latest_supply:,.2f} / {latest_import:,.0f} kWh = ${supply_rate:.4f}/kWh\n"
+        f"Tax rate: ${latest_taxes:,.2f} / {latest_import:,.0f} kWh = ${tax_rate:.4f}/kWh\n"
+        "---\n"
+        f"Delivery: {imported_kwh:,.1f} kWh x ${delivery_rate:.4f}/kWh = ${projected_delivery:,.2f}\n"
+        f"Supply: {imported_kwh:,.1f} kWh x ${supply_rate:.4f}/kWh = ${projected_supply:,.2f}\n"
+        f"Taxes and surcharges: {imported_kwh:,.1f} kWh x ${tax_rate:.4f}/kWh = ${projected_taxes:,.2f}\n"
+        f"Estimated energy charges: ${projected_energy_charges:,.2f}\n"
+        f"Payment/billing service charge: ${latest_miscellaneous:,.2f}\n"
+        f"---\nEstimated new charges: ${projected_new_charges:,.2f}\n"
+        "Solar assumption: the latest corrected bill applied a solar offset and showed $0.00 supply charges. "
+        "NYSEG determines the official credit treatment.\n"
+        f"Estimated statement date: {estimated_statement_date.isoformat()} (five days after the interval period)\n"
+        "NYSEG's bills say payment is due upon receipt. Prior balance and payment-plan amounts are excluded."
+    )
     return {
         "available": True,
         "period_start": period_start.isoformat(),
@@ -390,6 +422,7 @@ def _build_next_bill_estimate(latest_bill: dict[str, Any], usage_records: list[d
         "solar_adjusted_rate": solar_adjusted_rate,
         "projected_energy_charges": projected_energy_charges,
         "projected_new_charges": projected_new_charges,
+        "calculation_tooltip": calculation_tooltip,
         "estimated_statement_date": estimated_statement_date.isoformat(),
         "due_date_label": f"Due upon receipt (about {estimated_statement_date.strftime('%b')} {estimated_statement_date.day}, {estimated_statement_date.year})",
         "seasonal_reference_label": seasonal_reference.get("month_label"),
