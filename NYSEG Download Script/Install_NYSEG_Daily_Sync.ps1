@@ -13,7 +13,12 @@ $importAction = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-No
 $importTrigger = New-ScheduledTaskTrigger -Daily -At 7:30AM
 Register-ScheduledTask -TaskName $importTaskName -Action $importAction -Trigger $importTrigger -Principal $principal -Settings $settings -Description 'At 7:30 AM downloads NYSEG with the proven test script, then validates/imports M01/M02, records history, and sends email.' -Force | Out-Null
 
-Unregister-ScheduledTask -TaskName 'Solar Energy Tracker - NYSEG Download' -Confirm:$false -ErrorAction SilentlyContinue
+@(
+    'Solar Energy Tracker - NYSEG Download',
+    'NYSEG Daily Usage Download'
+) | ForEach-Object {
+    Unregister-ScheduledTask -TaskName $_ -Confirm:$false -ErrorAction SilentlyContinue
+}
 Write-Host "Created '$importTaskName' for the two-step 7:30 AM NYSEG workflow while $currentUser is signed in."
 if ($RunNow) {
     Start-ScheduledTask -TaskName $importTaskName
