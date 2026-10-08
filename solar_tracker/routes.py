@@ -632,6 +632,15 @@ def build_meter_file_reconciliation(interval_file: dict) -> dict:
     file_m02 = sum(float(row.get("Received") or 0.0) for row in daily_rows)
     dates = sorted(str(row.get("Date")) for row in daily_rows if row.get("Date"))
     self_consumed = max(0.0, snapshot["solar_produced_kwh"] - snapshot["m02_kwh"])
+    # The downloaded NYSEG file begins on July 31. These values come from
+    # smart-meter history for the solar-producing part of July 1–30 (July
+    # 10–30; solar was not producing July 1–9).
+    excluded_production = 1420.267
+    excluded_import = 204.0
+    excluded_export = 731.0
+    excluded_self_consumed = max(0.0, excluded_production - excluded_export)
+    tracker_rate = 0.24
+    historic_july_kwh = 1005.0
     return {
         **snapshot,
         "file_start": dates[0] if dates else None,
@@ -645,6 +654,20 @@ def build_meter_file_reconciliation(interval_file: dict) -> dict:
         "self_consumed_kwh": self_consumed,
         "self_consumption_percent": (self_consumed / snapshot["solar_produced_kwh"] * 100)
         if snapshot["solar_produced_kwh"] else 0.0,
+        "excluded_period": {
+            "solar_dates": "July 10–30, 2026",
+            "production_kwh": excluded_production,
+            "import_kwh": excluded_import,
+            "export_kwh": excluded_export,
+            "net_export_kwh": excluded_export - excluded_import,
+            "self_consumed_kwh": excluded_self_consumed,
+            "self_consumed_value": excluded_self_consumed * tracker_rate,
+            "export_value": excluded_export * tracker_rate,
+            "estimated_solar_value": (excluded_self_consumed + excluded_export) * tracker_rate,
+            "tracker_rate": tracker_rate,
+            "historic_july_kwh": historic_july_kwh,
+            "historic_july_value": historic_july_kwh * tracker_rate,
+        },
     }
 
 
