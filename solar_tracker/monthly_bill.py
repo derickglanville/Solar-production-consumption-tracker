@@ -383,6 +383,45 @@ def build_bill_summary_report() -> dict[str, Any]:
         if float(record.get("exported_kwh", 0.0)) > 0
         and record.get("prior_excess_generation_kwh") is None
     )
+    for record in records:
+        imported = _number(record.get("imported_kwh"))
+        smart_import = _number(record.get("smart_meter_import_kwh"))
+        exported = _number(record.get("exported_kwh"))
+        old_meter_import = max(0.0, imported - smart_import)
+        if old_meter_import and smart_import:
+            record["grid_import_tooltip"] = (
+                f"NYSEG billed {imported:,.0f} kWh of grid import: "
+                f"{old_meter_import:,.0f} kWh on the old meter + {smart_import:,.0f} kWh on smart-meter M01."
+            )
+        elif smart_import:
+            record["grid_import_tooltip"] = f"NYSEG billed {smart_import:,.0f} kWh from smart-meter Register 01 (M01) for this period."
+        else:
+            record["grid_import_tooltip"] = f"NYSEG billed {imported:,.0f} kWh of grid import for this pre-smart-meter period."
+        record["solar_export_tooltip"] = (
+            f"NYSEG recorded {exported:,.0f} kWh sent to the grid on smart-meter Register 02 (M02) for this billing period."
+            if exported else "No solar export register was available on this pre-solar statement."
+        )
+        delivery = _number(record.get("delivery_charges"))
+        supply = _number(record.get("supply_charges"))
+        taxes = _number(record.get("taxes"))
+        record["energy_charges_tooltip"] = (
+            f"Energy charges = delivery ${delivery:,.2f} + supply ${supply:,.2f} + taxes/surcharges ${taxes:,.2f} "
+            f"= ${_number(record.get('total_energy_charges')):,.2f}. Miscellaneous and payment-plan amounts are excluded."
+        )
+        if record.get("credited_usage_kwh"):
+            prior = _number(record.get("prior_excess_generation_kwh"))
+            credited = _number(record.get("credited_usage_kwh"))
+            remaining = _number(record.get("remaining_excess_generation_kwh"))
+            record["credit_treatment_tooltip"] = (
+                f"NYSEG applied {credited:,.0f} kWh against billed use. The bill shows {prior:,.0f} kWh prior excess, "
+                f"then {prior - credited:,.0f} kWh before other adjustments, and {remaining:,.0f} kWh shown remaining."
+            )
+        elif exported:
+            record["credit_treatment_tooltip"] = (
+                f"NYSEG recorded {exported:,.0f} kWh of export, but this statement does not itemize a billed-use offset or remaining credit-bank balance."
+            )
+        else:
+            record["credit_treatment_tooltip"] = "Pre-solar bill: no Register 02 export or solar-credit treatment applies."
     return {
         "available": bool(records),
         "file_count": len(all_records),

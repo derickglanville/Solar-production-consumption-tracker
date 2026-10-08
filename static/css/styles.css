@@ -3812,6 +3812,7 @@ body[data-page="dashboard"].dashboard-compact-mode .btn-contract {
 .credit-reconciliation-card { background: linear-gradient(135deg, #f8fcff, #f4fbf7); border: 1px solid #b9dce8; border-radius: 1rem; box-shadow: 0 .6rem 1.5rem rgba(33, 83, 106, .09); padding: 1rem; }
 .bill-auto-process-banner { background: linear-gradient(135deg, #e5f8ec, #f7ffea); border: 1px solid #9ed6ad; border-left: .35rem solid #1b9a62; border-radius: .7rem; color: #235d40; font-size: .88rem; line-height: 1.45; margin-bottom: 1rem; padding: .7rem .8rem; }.bill-auto-process-banner strong { color: #0d7546; }
 .bill-duplicate-explanation { background: #eef7ff; border: 1px solid #bddceb; border-left: .35rem solid #2c8bbd; border-radius: .65rem; color: #315c72; font-size: .82rem; line-height: 1.5; margin-bottom: .85rem; padding: .62rem .72rem; }.bill-duplicate-explanation strong { color: #165a7c; }
+.bill-history-table [title] { cursor: help; text-decoration: underline dotted rgba(35, 89, 115, .5); text-underline-offset: .16rem; }
 .credit-reconciliation-heading { align-items: start; display: flex; gap: 1rem; justify-content: space-between; }
 .credit-reconciliation-status { background: #e3f1fb; border: 1px solid #bdddeb; border-radius: 999px; color: #225d7c; font-size: .72rem; font-weight: 700; padding: .38rem .62rem; white-space: nowrap; }
 .credit-reconciliation-grid { display: grid; gap: .65rem; grid-template-columns: repeat(4, minmax(0, 1fr)); margin: .9rem 0; }
