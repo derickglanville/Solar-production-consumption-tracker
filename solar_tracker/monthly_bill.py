@@ -3,9 +3,11 @@ from __future__ import annotations
 import csv
 import re
 from dataclasses import dataclass, field
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any
+
+from .nyseg_interval_usage import build_nyseg_interval_usage_report
 
 try:
     from pypdf import PdfReader
@@ -337,6 +339,65 @@ def load_monthly_bill_summary(
     )
 
 
+def _build_next_bill_estimate(latest_bill: dict[str, Any], usage_records: list[dict[str, Any]]) -> dict[str, Any]:
+    """Estimate the next new charges from current intervals and the latest solar bill.
+
+    NYSEG's "Amount Due" can include a prior balance and payment agreements, so this
+    intentionally forecasts only the new utility charges attributable to the next period.
+    """
+    if not latest_bill or not latest_bill.get("billing_end_date"):
+        return {"available": False}
+
+    interval_report = build_nyseg_interval_usage_report()
+    if not interval_report.get("available"):
+        return {"available": False}
+
+    period_start = date.fromisoformat(latest_bill["billing_end_date"]) + timedelta(days=1)
+    file_end = date.fromisoformat(interval_report["source_end"])
+    period_days = [
+        row for row in interval_report.get("daily", [])
+        if period_start <= date.fromisoformat(row["date"]) <= file_end
+    ]
+    if not period_days:
+        return {"available": False}
+
+    imported_kwh = sum(_number(row.get("import_kwh")) for row in period_days)
+    exported_kwh = sum(_number(row.get("export_kwh")) for row in period_days)
+    latest_import = _number(latest_bill.get("imported_kwh"))
+    latest_energy_charges = _number(latest_bill.get("total_energy_charges"))
+    latest_miscellaneous = _number(latest_bill.get("miscellaneous_charges"))
+    solar_adjusted_rate = latest_energy_charges / latest_import if latest_import else 0.0
+    projected_energy_charges = imported_kwh * solar_adjusted_rate
+    projected_new_charges = projected_energy_charges + latest_miscellaneous
+
+    # A normal, non-corrected NYSEG bill is usually issued about five days after
+    # the service period; the displayed due date remains "upon receipt".
+    estimated_statement_date = file_end + timedelta(days=5)
+    seasonal_candidates = [
+        row for row in usage_records
+        if date.fromisoformat(row["billing_end_date"]).month == file_end.month
+        and date.fromisoformat(row["billing_end_date"]).year < file_end.year
+    ]
+    seasonal_reference = max(seasonal_candidates, key=lambda row: row["billing_end_date"], default={})
+    return {
+        "available": True,
+        "period_start": period_start.isoformat(),
+        "period_end": file_end.isoformat(),
+        "days": len(period_days),
+        "imported_kwh": imported_kwh,
+        "exported_kwh": exported_kwh,
+        "net_export_kwh": exported_kwh - imported_kwh,
+        "solar_adjusted_rate": solar_adjusted_rate,
+        "projected_energy_charges": projected_energy_charges,
+        "projected_new_charges": projected_new_charges,
+        "estimated_statement_date": estimated_statement_date.isoformat(),
+        "due_date_label": f"Due upon receipt (about {estimated_statement_date.strftime('%b')} {estimated_statement_date.day}, {estimated_statement_date.year})",
+        "seasonal_reference_label": seasonal_reference.get("month_label"),
+        "seasonal_reference_kwh": _number(seasonal_reference.get("usage_kwh")),
+        "seasonal_reference_cost": _number(seasonal_reference.get("cost")),
+    }
+
+
 def build_bill_summary_report() -> dict[str, Any]:
     """Build a presentation-safe analysis from every recognized PDF in Bills.
 
@@ -344,7 +405,8 @@ def build_bill_summary_report() -> dict[str, Any]:
     The complete file list remains available for navigation, while the newest
     statement is the authoritative value used in the history totals.
     """
-    all_records = sorted(load_monthly_bill_summary().billing_records, key=lambda row: row["statement_date"])
+    summary = load_monthly_bill_summary()
+    all_records = sorted(summary.billing_records, key=lambda row: row["statement_date"])
     authoritative_by_period: dict[tuple[str, str], dict[str, Any]] = {}
     for record in all_records:
         key = (record["billing_start_date"], record["billing_end_date"])
@@ -366,6 +428,7 @@ def build_bill_summary_report() -> dict[str, Any]:
                 })
 
     latest = records[-1] if records else {}
+    next_bill_estimate = _build_next_bill_estimate(latest, summary.usage_records)
     credit_events = [record for record in records if record.get("credited_usage_kwh") or record.get("prior_excess_generation_kwh") is not None]
     latest_credit = credit_events[-1] if credit_events else {}
     latest_revision = revisions[-1] if revisions else {}
@@ -464,6 +527,7 @@ def build_bill_summary_report() -> dict[str, Any]:
         "records": all_records,
         "authoritative_records": records,
         "latest": latest,
+        "next_bill_estimate": next_bill_estimate,
         "credit_bank": {
             "prior_kwh": prior_excess,
             "remaining_kwh": reported_remaining,
