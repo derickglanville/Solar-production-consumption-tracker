@@ -405,6 +405,32 @@ def build_bill_summary_report() -> dict[str, Any]:
         supply = _number(record.get("supply_charges"))
         taxes = _number(record.get("taxes"))
         miscellaneous = _number(record.get("miscellaneous_charges"))
+        net_meter_flow = exported - imported
+        if record.get("credited_usage_kwh"):
+            credited = _number(record.get("credited_usage_kwh"))
+            solar_effect = (
+                "Solar meter effect on this statement:\n"
+                f"M01 grid import: {imported:,.0f} kWh\n"
+                f"M02 solar export: {exported:,.0f} kWh\n"
+                f"M02 - M01 net meter flow: {net_meter_flow:+,.0f} kWh\n"
+                "---\n"
+                f"NYSEG applied {credited:,.0f} kWh of prior solar excess against billed M01 use.\n"
+                f"Supply charges after that offset: ${supply:,.2f}\n"
+                "Delivery charges, taxes, and fixed charges still apply."
+            )
+        elif exported:
+            direction = "net exported" if net_meter_flow >= 0 else "net imported"
+            solar_effect = (
+                "Solar meter effect on this statement:\n"
+                f"M01 grid import: {imported:,.0f} kWh\n"
+                f"M02 solar export: {exported:,.0f} kWh\n"
+                f"M02 - M01 net meter flow: {net_meter_flow:+,.0f} kWh ({direction})\n"
+                "---\n"
+                "NYSEG recorded the export, but this bill does not itemize a dollar credit or a billed-use offset.\n"
+                "The statement therefore does not show how M02 changed this bill's charge balance."
+            )
+        else:
+            solar_effect = "Solar meter effect: This pre-solar statement has no M01/M02 export information."
         record["energy_charges_tooltip"] = (
             "NYSEG energy-charge breakdown:\n"
             f"Delivery charges: ${delivery:,.2f}\n"
@@ -413,7 +439,9 @@ def build_bill_summary_report() -> dict[str, Any]:
             "---\n"
             f"Energy charges total: ${_number(record.get('total_energy_charges')):,.2f}\n"
             f"Not included - miscellaneous charges: ${miscellaneous:,.2f}\n"
-            "Not included - budget billing and payment-plan amounts."
+            "Not included - budget billing and payment-plan amounts.\n"
+            "\n"
+            f"{solar_effect}"
         )
         if record.get("credited_usage_kwh"):
             prior = _number(record.get("prior_excess_generation_kwh"))
