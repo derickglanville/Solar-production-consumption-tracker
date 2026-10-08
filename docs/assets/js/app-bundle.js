@@ -28334,13 +28334,14 @@ This is a reconciliation, not an independent measurement, because EDC includes S
     const importButton = document.getElementById("nyseg-file-import");
     const useDownloadButton = document.getElementById("nyseg-file-use-download");
     const runSyncButton = document.getElementById("nyseg-file-run-sync");
+    const processSavedButton = document.getElementById("nyseg-file-process-saved");
     const stopSyncButton = document.getElementById("nyseg-file-stop-sync");
     const backupButton = document.getElementById("nyseg-file-backup");
     const restoreButton = document.getElementById("nyseg-file-restore");
     const advancedControls = document.getElementById("nyseg-file-advanced-controls");
     const controlsToggle = document.getElementById("nyseg-file-toggle-controls");
     const status = document.getElementById("nyseg-file-action-status");
-    if (!importButton && !useDownloadButton && !runSyncButton && !stopSyncButton && !backupButton && !restoreButton) return;
+    if (!importButton && !useDownloadButton && !runSyncButton && !processSavedButton && !stopSyncButton && !backupButton && !restoreButton) return;
     const show = (message, kind = "info") => {
       if (!status) return;
       status.className = `small mt-2 mb-0 text-${kind === "danger" ? "danger" : kind === "success" ? "success" : "muted"}`;
@@ -28355,7 +28356,7 @@ This is a reconciliation, not an independent measurement, because EDC includes S
     };
     if (controlsToggle) controlsToggle.addEventListener("click", () => setAdvancedControls(advancedControls?.hidden));
     if (isStaticSite()) {
-      [importButton, useDownloadButton, runSyncButton, stopSyncButton, backupButton, restoreButton].filter(Boolean).forEach((button) => {
+      [importButton, useDownloadButton, runSyncButton, processSavedButton, stopSyncButton, backupButton, restoreButton].filter(Boolean).forEach((button) => {
         button.disabled = true;
         button.title = "These actions require the private NYSEG CSV in the local tracker.";
       });
@@ -28417,6 +28418,29 @@ This is a reconciliation, not an independent measurement, because EDC includes S
         runSyncButton.textContent = original;
       }
     });
+    if (processSavedButton) processSavedButton.addEventListener("click", async () => {
+      processSavedButton.disabled = true;
+      const original = processSavedButton.textContent;
+      processSavedButton.textContent = "Processing\u2026";
+      try {
+        setAdvancedControls(true);
+        const activity = document.getElementById("nyseg-sync-log-lines");
+        const syncStatus = document.getElementById("nyseg-sync-status");
+        if (activity) activity.textContent = "Starting validation and Firebase update from the saved NYSEG CSV\u2026";
+        if (syncStatus) {
+          syncStatus.className = "small mb-0 text-primary";
+          syncStatus.textContent = "Processing the saved NYSEG CSV: validating M01/M02 and updating Firebase, dashboards, history, email, and housekeeping.";
+        }
+        const response = await fetch("/api/nyseg-daily-sync/process-saved-file", { method: "POST" });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || "The saved NYSEG CSV could not be processed.");
+        show("Saved NYSEG CSV processing started. This page will confirm the successful Firebase update when it finishes.", "success");
+      } catch (error) {
+        show(`Could not process the saved NYSEG CSV: ${error.message || error}`, "danger");
+        processSavedButton.disabled = false;
+        processSavedButton.textContent = original;
+      }
+    });
     if (stopSyncButton) stopSyncButton.addEventListener("click", async () => {
       stopSyncButton.disabled = true;
       try {
@@ -28433,6 +28457,10 @@ This is a reconciliation, not an independent measurement, because EDC includes S
         if (runSyncButton) {
           runSyncButton.disabled = false;
           runSyncButton.textContent = "Manual Run";
+        }
+        if (processSavedButton) {
+          processSavedButton.disabled = false;
+          processSavedButton.textContent = "Process Saved File";
         }
         show("NYSEG sync stopped. You can start a new run when ready.", "success");
       } catch (error) {

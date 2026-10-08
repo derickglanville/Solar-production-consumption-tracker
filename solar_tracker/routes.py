@@ -66,6 +66,7 @@ NYSEG_DAILY_SYNC_LOG_PATH = Path(__file__).resolve().parent.parent / "SunRun Dat
 NYSEG_DAILY_SYNC_LOCK_PATH = NYSEG_DAILY_SYNC_STATUS_PATH.with_suffix(".lock")
 NYSEG_DAILY_SYNC_PROCESS_PATH = NYSEG_DAILY_SYNC_STATUS_PATH.with_name("nyseg-daily-sync-process.json")
 NYSEG_DAILY_SYNC_SCRIPT_PATH = Path(__file__).resolve().parent.parent / "NYSEG Download Script" / "run_nyseg_daily_sync.ps1"
+NYSEG_DAILY_SYNC_WORKFLOW_PATH = Path(__file__).resolve().parent.parent / "NYSEG Download Script" / "run_nyseg_daily_sync.py"
 NYSEG_MANUAL_RUN_SCRIPT_PATH = Path(__file__).resolve().parent.parent / "NYSEG Download Script" / "NYSEG_File_Download_Test.py"
 SUNRUN_LOAD_HISTORY_PATH = Path(__file__).resolve().parent.parent / "JSON" / "Daily_Load_History.json"
 NYSEG_LOAD_HISTORY_PATH = Path(__file__).resolve().parent.parent / "JSON" / "Daily_NYSEG_Load_History.json"
@@ -838,6 +839,37 @@ def nyseg_daily_sync_run_api():
         json.dumps({"pid": process.pid, "started_at": started_at}), encoding="utf-8"
     )
     return jsonify({"started": True})
+
+
+@main_blueprint.route("/api/nyseg-daily-sync/process-saved-file", methods=["POST"])
+def nyseg_daily_sync_process_saved_file_api():
+    """Run the second NYSEG workflow step against the CSV from Manual Run."""
+    if not NYSEG_DAILY_SYNC_WORKFLOW_PATH.is_file():
+        return jsonify({"error": "The NYSEG post-download workflow is unavailable."}), 404
+    clear_stale_nyseg_sync_state()
+    if NYSEG_DAILY_SYNC_LOCK_PATH.is_file() or NYSEG_DAILY_SYNC_PROCESS_PATH.is_file():
+        return jsonify({"error": "NYSEG sync is already running. Review the live activity log below."}), 409
+    started_at = datetime.now().astimezone().isoformat(timespec="seconds")
+    NYSEG_DAILY_SYNC_STATUS_PATH.parent.mkdir(parents=True, exist_ok=True)
+    NYSEG_DAILY_SYNC_STATUS_PATH.write_text(
+        json.dumps({"status": "running", "operation": "process", "stage": "validate", "started_at": started_at}, indent=2),
+        encoding="utf-8",
+    )
+    NYSEG_DAILY_SYNC_LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
+    NYSEG_DAILY_SYNC_LOG_PATH.write_text(
+        f"[{started_at}] Processing the CSV from the last successful NYSEG Manual Run\n"
+        "Step 2/2: Validating M01/M02, updating Firebase and dashboards, recording history, sending email, and completing housekeeping.\n",
+        encoding="utf-8",
+    )
+    process = subprocess.Popen(
+        [sys.executable, str(NYSEG_DAILY_SYNC_WORKFLOW_PATH), "--skip-download", "--log-path", str(NYSEG_DAILY_SYNC_LOG_PATH)],
+        cwd=NYSEG_DAILY_SYNC_WORKFLOW_PATH.parent,
+        creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+    )
+    NYSEG_DAILY_SYNC_PROCESS_PATH.write_text(
+        json.dumps({"pid": process.pid, "started_at": started_at}), encoding="utf-8"
+    )
+    return jsonify({"started": True, "message": "Processing the saved NYSEG CSV."})
 
 
 @main_blueprint.route("/api/nyseg-daily-sync/stop", methods=["POST"])

@@ -28,7 +28,7 @@
   {% if interval_file.available %}
   <div class="nyseg-file-header-side">
     <div class="nyseg-file-actions" data-nyseg-file-actions>
-      <div class="nyseg-file-primary-actions"><button type="button" class="btn btn-sun btn-sm" id="nyseg-file-run-sync">Manual Run</button><span class="small text-muted">Runs the download step only.</span><button type="button" class="btn btn-contract btn-sm" id="nyseg-file-toggle-controls" aria-controls="nyseg-file-advanced-controls" aria-expanded="false">More tools</button></div>
+      <div class="nyseg-file-primary-actions"><button type="button" class="btn btn-sun btn-sm" id="nyseg-file-run-sync">Manual Run</button><button type="button" class="btn btn-contract btn-sm" id="nyseg-file-process-saved">Process Saved File</button><span class="small text-muted">Manual Run downloads; Process Saved File validates, updates Firebase, dashboards, history, email, and housekeeping.</span><button type="button" class="btn btn-contract btn-sm" id="nyseg-file-toggle-controls" aria-controls="nyseg-file-advanced-controls" aria-expanded="false">More tools</button></div>
       <div class="nyseg-file-advanced-actions" id="nyseg-file-advanced-controls" hidden><div class="d-flex flex-wrap justify-content-end gap-2 mt-2"><button type="button" class="btn btn-contract btn-sm" id="nyseg-file-use-download">Use latest NYSEG download</button><button type="button" class="btn btn-contract btn-sm" id="nyseg-file-stop-sync">Stop NYSEG sync</button><button type="button" class="btn btn-sun btn-sm" id="nyseg-file-import">Import latest M01/M02</button><button type="button" class="btn btn-contract btn-sm" id="nyseg-file-backup">Back up M01/M02</button><button type="button" class="btn btn-contract btn-sm" id="nyseg-file-restore">Restore backup</button></div></div>
       <p class="small mt-1 mb-0 text-muted" id="nyseg-file-action-status">The 7:30 AM workflow downloads first, then validates and applies M01/M02 only after a successful download. A backup is saved automatically before reviewed readings are applied.</p>
     </div>
@@ -254,6 +254,7 @@
   const log = document.getElementById("nyseg-sync-log-lines");
   const clear = document.getElementById("nyseg-sync-clear");
   const runSyncButton = document.getElementById("nyseg-file-run-sync");
+  const processSavedButton = document.getElementById("nyseg-file-process-saved");
   if (!status || location.protocol === "file:" || window.SOLAR_STATIC_SITE) {
     if (clear) clear.hidden = true;
     return;
@@ -262,9 +263,10 @@
   const updateStatus = (latest) => {
     if (!latest || !latest.status) return;
     status.className = `small mb-0 ${latest.status === "success" ? "text-success" : latest.status === "failed" ? "text-danger" : "text-primary"}`;
-    if (latest.status === "running") status.textContent = "NYSEG Manual Run is downloading the CSV. New activity is shown below.";
+    if (latest.status === "running") status.textContent = latest.operation === "process" || latest.stage === "validate" ? "Processing the saved NYSEG CSV: validating M01/M02 and updating Firebase, dashboards, history, email, and housekeeping." : "NYSEG Manual Run is downloading the CSV. New activity is shown below.";
     else if (latest.operation === "download" && latest.status === "success") status.textContent = `NYSEG_File_Download_Test.py completed ${latest.completed_at || ""}. M01/M02 import, email, history, and housekeeping were not run.`;
     else if (latest.operation === "download" && latest.status === "failed") status.textContent = `NYSEG_File_Download_Test.py failed: ${latest.error || "Review the activity log below."}`;
+    else if (latest.operation === "process" && latest.status === "success") status.textContent = `Saved NYSEG CSV processed successfully: ${latest.saved_records || 0} Firebase record${Number(latest.saved_records || 0) === 1 ? "" : "s"} saved ${latest.completed_at || ""}. Dashboards, history, and housekeeping are complete.${latest.email_sent ? " Email sent." : " Review the activity log for email status."}`;
     else if (latest.status === "success") status.textContent = `Daily sync: ${latest.saved_records || 0} record${Number(latest.saved_records || 0) === 1 ? "" : "s"} saved ${latest.completed_at || ""}.`;
     else if (latest.status === "failed") status.textContent = `Daily sync failed: ${latest.error || "Review the activity log below."}`;
     else if (latest.status === "idle") status.textContent = "Daily NYSEG sync is scheduled for 7:30 AM while this computer is signed in.";
@@ -272,6 +274,10 @@
     if (runSyncButton && latest.status !== "running") {
       runSyncButton.disabled = false;
       runSyncButton.textContent = "Manual Run";
+    }
+    if (processSavedButton && latest.status !== "running") {
+      processSavedButton.disabled = false;
+      processSavedButton.textContent = "Process Saved File";
     }
   };
   const refreshLog = async () => {

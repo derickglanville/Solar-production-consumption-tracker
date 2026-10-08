@@ -165,7 +165,12 @@ def main(
         return 0
     started_at = datetime.now().astimezone().isoformat(timespec="seconds")
     PROCESS_FILE.write_text(json.dumps({"pid": os.getpid(), "started_at": started_at}), encoding="utf-8")
-    write_status({"status": "running", "started_at": started_at})
+    write_status({
+        "status": "running",
+        "operation": "process" if skip_download else "sync",
+        "stage": "validate" if skip_download else "download",
+        "started_at": started_at,
+    })
     try:
         if skip_download:
             progress("Step 1/2: Using the already downloaded NYSEG CSV…")
@@ -230,6 +235,7 @@ def main(
 
         status = {
             "status": "success",
+            "operation": "process" if skip_download else "sync",
             "started_at": started_at,
             "completed_at": datetime.now().astimezone().isoformat(timespec="seconds"),
             "saved_records": int(result.get("saved", 0)),
