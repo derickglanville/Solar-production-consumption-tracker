@@ -327,6 +327,33 @@ class FirestoreRepository:
             payload={"fields": {key: _encode_firestore_value(value) for key, value in fields.items()}},
         )
 
+    def save_weather_reading(
+        self,
+        entry_date: date,
+        irradiance_peak_wm2: float,
+        weather: str,
+        temperature_high_f: Optional[float],
+        temperature_low_f: Optional[float],
+        source_note: str,
+    ) -> None:
+        """Publish local evening-weather values without replacing production or meters."""
+        now = datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
+        fields = {
+            "entry_date": entry_date.isoformat(),
+            "irradiance_peak_wm2": float(irradiance_peak_wm2),
+            "weather": weather or "Unknown",
+            "temperature_high_f": temperature_high_f,
+            "temperature_low_f": temperature_low_f,
+            "lookup_source": source_note,
+            "updated_at": now,
+        }
+        self._request(
+            "PATCH",
+            f"{ENTRY_COLLECTION}/{entry_date.isoformat()}",
+            params={"updateMask.fieldPaths": list(fields)},
+            payload={"fields": {key: _encode_firestore_value(value) for key, value in fields.items()}},
+        )
+
     def get_config(self) -> AppConfig:
         try:
             document = self._request("GET", f"{CONFIG_COLLECTION}/{CONFIG_DOCUMENT_ID}")
