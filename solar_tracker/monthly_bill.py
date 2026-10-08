@@ -404,9 +404,16 @@ def build_bill_summary_report() -> dict[str, Any]:
         delivery = _number(record.get("delivery_charges"))
         supply = _number(record.get("supply_charges"))
         taxes = _number(record.get("taxes"))
+        miscellaneous = _number(record.get("miscellaneous_charges"))
         record["energy_charges_tooltip"] = (
-            f"Energy charges = delivery ${delivery:,.2f} + supply ${supply:,.2f} + taxes/surcharges ${taxes:,.2f} "
-            f"= ${_number(record.get('total_energy_charges')):,.2f}. Miscellaneous and payment-plan amounts are excluded."
+            "NYSEG energy-charge breakdown:\n"
+            f"Delivery charges: ${delivery:,.2f}\n"
+            f"Supply charges: ${supply:,.2f}\n"
+            f"Taxes and surcharges: ${taxes:,.2f}\n"
+            "---\n"
+            f"Energy charges total: ${_number(record.get('total_energy_charges')):,.2f}\n"
+            f"Not included - miscellaneous charges: ${miscellaneous:,.2f}\n"
+            "Not included - budget billing and payment-plan amounts."
         )
         if record.get("credited_usage_kwh"):
             prior = _number(record.get("prior_excess_generation_kwh"))
