@@ -6,6 +6,16 @@ The solar tracker reads NYSEG’s hourly `Delivered` and `Received` values from:
 
 `Delivered` is the daily M01 increment and `Received` is the daily M02 increment. The application converts those daily increments to cumulative meter readings only after you review and apply the import.
 
+## Download-failure fallback
+
+If the scheduled Playwright download fails, the 7:30 AM workflow checks
+`SunRun Data\NYSEG_Daily_Usage_Data_D.csv`. A fallback is used automatically
+when the file was saved that day, includes the required hourly interval columns,
+and has a complete latest interval day. The file is promoted to the canonical
+CSV path and the workflow continues with M01/M02 validation, Firebase import,
+history, email, and housekeeping. NYSEG can publish interval readings a few
+days late, so a fresh file is allowed to end before the current calendar date.
+
 ## One-time setup
 
 ```powershell

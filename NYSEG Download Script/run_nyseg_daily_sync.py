@@ -8,18 +8,22 @@ from __future__ import annotations
 
 import json
 import argparse
+import csv
 import os
+import shutil
 import smtplib
 import subprocess
 import sys
 import time
-from datetime import datetime
+from datetime import date, datetime
 from email.message import EmailMessage
 from pathlib import Path
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DOWNLOADER = Path(__file__).resolve().parent / "NYSEG_File_Download_Test.py"
+CANONICAL_CSV = PROJECT_ROOT / "SunRun Data" / "NYSEG_Daily_Usage_Data.csv"
+SAME_DAY_FALLBACK_CSV = PROJECT_ROOT / "SunRun Data" / "NYSEG_Daily_Usage_Data_D.csv"
 STATUS_FILE = PROJECT_ROOT / "SunRun Data" / "nyseg-daily-sync-status.json"
 HISTORY_FILE = PROJECT_ROOT / "JSON" / "Daily_NYSEG_Load_History.json"
 EMAIL_SETTINGS_FILE = PROJECT_ROOT / "SunRun Data" / "Script" / "Email_Info.txt"
@@ -32,6 +36,75 @@ PROJECT_LOG_FILE = STATUS_FILE.with_name("nyseg-daily-sync.log")
 def write_status(payload: dict) -> None:
     STATUS_FILE.parent.mkdir(parents=True, exist_ok=True)
     STATUS_FILE.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+
+
+def use_valid_same_day_fallback(progress) -> dict:
+    """Validate and promote the manually saved D CSV after a download failure.
+
+    The application always reads the canonical NYSEG_Daily_Usage_Data.csv path.
+    The D file is accepted only when it was saved today and contains a complete
+    latest interval day. NYSEG may publish interval data a few days behind the
+    calendar, so the usage-date check must not reject a fresh download for that
+    normal lag. The file is then copied atomically to the canonical path.
+    """
+    if not SAME_DAY_FALLBACK_CSV.is_file():
+        raise RuntimeError(f"Fallback file was not found: {SAME_DAY_FALLBACK_CSV.name}")
+    saved_on = datetime.fromtimestamp(SAME_DAY_FALLBACK_CSV.stat().st_mtime).date()
+    if saved_on != date.today():
+        raise RuntimeError(f"Fallback file was saved on {saved_on.isoformat()}, not today.")
+
+    required_columns = {"Date", "Start Time", "End Time", "Delivered", "Received", "Units"}
+    row_count = 0
+    hourly_rows_by_date: dict[date, int] = {}
+    most_recent_date: date | None = None
+    with SAME_DAY_FALLBACK_CSV.open("r", encoding="utf-8-sig", newline="") as handle:
+        reader = csv.DictReader(handle)
+        columns = set(reader.fieldnames or [])
+        missing = sorted(required_columns - columns)
+        if missing:
+            raise RuntimeError(f"Fallback CSV is missing required columns: {', '.join(missing)}")
+        for row in reader:
+            try:
+                row_date = date.fromisoformat((row.get("Date") or "").strip())
+                float(row.get("Delivered") or "0")
+                float(row.get("Received") or "0")
+            except (TypeError, ValueError):
+                continue
+            row_count += 1
+            most_recent_date = max(most_recent_date, row_date) if most_recent_date else row_date
+            hourly_rows_by_date[row_date] = hourly_rows_by_date.get(row_date, 0) + 1
+    if row_count < 24:
+        raise RuntimeError("Fallback CSV does not contain enough valid hourly interval rows.")
+    latest_day_rows = hourly_rows_by_date.get(most_recent_date, 0) if most_recent_date else 0
+    if most_recent_date is None or latest_day_rows < 24:
+        actual = most_recent_date.isoformat() if most_recent_date else "none"
+        raise RuntimeError(
+            f"Fallback CSV does not contain a complete latest interval day. Latest row is {actual}; "
+            f"it contains {latest_day_rows} of 24 hourly rows for that date."
+        )
+
+    if CANONICAL_CSV.is_file():
+        canonical_latest: date | None = None
+        with CANONICAL_CSV.open("r", encoding="utf-8-sig", newline="") as handle:
+            for row in csv.DictReader(handle):
+                try:
+                    canonical_latest = max(canonical_latest, date.fromisoformat((row.get("Date") or "").strip())) if canonical_latest else date.fromisoformat((row.get("Date") or "").strip())
+                except ValueError:
+                    continue
+        if canonical_latest and most_recent_date < canonical_latest:
+            raise RuntimeError(
+                f"Fallback CSV ends {most_recent_date.isoformat()}, older than the canonical CSV ending "
+                f"{canonical_latest.isoformat()}; it was not used to avoid replacing newer readings."
+            )
+
+    temporary = CANONICAL_CSV.with_suffix(".csv.fallback.tmp")
+    shutil.copy2(SAME_DAY_FALLBACK_CSV, temporary)
+    temporary.replace(CANONICAL_CSV)
+    progress(
+        f"Step 1/2 fallback complete: validated {SAME_DAY_FALLBACK_CSV.name} "
+        f"({row_count:,} intervals through {most_recent_date.isoformat()}) and promoted it for M01/M02 import."
+    )
+    return {"source": "same-day fallback", "rows": row_count, "through": most_recent_date.isoformat()}
 
 
 def save_daily_load_history(status: dict) -> None:
@@ -107,6 +180,8 @@ def send_status_email(status: dict, *, test: bool = False) -> None:
     ]
     if succeeded:
         body.append(f"Firebase records saved: {status.get('saved_records', 0)}")
+        if status.get("download_source"):
+            body.append(f"CSV source: {status['download_source']}")
         saved_dates = status.get("saved_dates") or []
         if saved_dates:
             body.append(f"Dates saved: {saved_dates[0]} through {saved_dates[-1]}")
@@ -172,6 +247,7 @@ def main(
         "started_at": started_at,
     })
     try:
+        download_source = "saved CSV" if skip_download else "automated download"
         if skip_download:
             progress("Step 1/2: Using the already downloaded NYSEG CSV…")
         else:
@@ -201,8 +277,15 @@ def main(
                         progress(output)
             if download.wait() != 0:
                 detail = output_lines[-1] if output_lines else "NYSEG downloader exited without diagnostic output."
-                raise RuntimeError(detail)
-            progress("Step 1/2 complete: NYSEG CSV downloaded successfully.")
+                progress(f"Step 1/2 automated download failed: {detail}")
+                progress("Step 1/2 fallback: checking NYSEG_Daily_Usage_Data_D.csv for today's intact hourly data…")
+                try:
+                    fallback = use_valid_same_day_fallback(progress)
+                    download_source = fallback["source"]
+                except Exception as fallback_error:
+                    raise RuntimeError(f"{detail} Fallback file could not be used: {fallback_error}") from fallback_error
+            else:
+                progress("Step 1/2 complete: NYSEG CSV downloaded successfully.")
             write_status({"status": "running", "started_at": started_at, "stage": "validate"})
             PROCESS_FILE.write_text(json.dumps({"pid": os.getpid(), "started_at": started_at}), encoding="utf-8")
 
@@ -240,6 +323,7 @@ def main(
             "completed_at": datetime.now().astimezone().isoformat(timespec="seconds"),
             "saved_records": int(result.get("saved", 0)),
             "saved_dates": result.get("dates", []),
+            "download_source": download_source,
             "download_output": "Completed; see nyseg-daily-sync.log for step-by-step output.",
         }
         add_email_result(status)
