@@ -128,6 +128,12 @@ def _money(text: str, label: str) -> float:
     return _number(match.group(1).replace(",", "")) if match else 0.0
 
 
+def _money_before(text: str, label: str) -> float:
+    """Read a NYSEG amount printed immediately before its account-summary label."""
+    match = re.search(rf"(-?[\d,]+\.\d{{2}})\s*{re.escape(label)}", text, re.IGNORECASE)
+    return _number(match.group(1).replace(",", "")) if match else 0.0
+
+
 def _date_from_bill(value: str) -> str:
     return datetime.strptime(value.strip(), "%B %d, %Y").date().isoformat()
 
@@ -197,9 +203,12 @@ def _parse_nyseg_bill_pdf(path: Path) -> dict[str, Any] | None:
         "taxes": _money(text, "Subtotal Electricity Taxes and Surcharges"),
         "miscellaneous_charges": _money(text, "Total Miscellaneous Charges"),
         "total_energy_charges": total_energy_charges,
-        "amount_due": _money(text, "Amount Due:"),
+        # Newer NYSEG PDFs put the numeric amount beside the payment-due
+        # sentence, while the page header's "Amount Due:" field can extract
+        # without its value.
+        "amount_due": _money(text, "Amount Due:") or _money(text, "Payment due upon receipt."),
         "budget_billing_amount": 0.0,
-        "payment_agreement_amount": 0.0,
+        "payment_agreement_amount": _money_before(text, "Energy payment agreement"),
         "balance_forward": _money(text, "Balance forward"),
         "total_adjustments": _money(text, "Total Adjustments"),
         "supply_rate_per_kwh": _number((re.search(r"price for providing electricity supply.*?\$([\d.]+)/kwh", text, re.IGNORECASE | re.DOTALL) or [None, 0])[1]),
