@@ -54,8 +54,8 @@ BILL_REFERENCE_DATA: dict[str, dict[str, Any]] = {
         "delivery_charges": 40.99, "supply_charges": 0.0, "taxes": 2.58, "miscellaneous_charges": 0.95,
         "total_energy_charges": 43.57, "amount_due": 913.73, "budget_billing_amount": 0.0,
         "payment_agreement_amount": 10.00, "balance_forward": 859.21, "total_adjustments": 0.0, "supply_rate_per_kwh": 0.0,
-        "prior_excess_generation_kwh": 1376.0, "remaining_excess_generation_kwh": 0.0, "credited_usage_kwh": 518.0,
-        "meter_note": "NYSEG offset the 518 kWh of billed use. Its excess-generation table shows 1,376 kWh prior excess and 0 kWh remaining after a corrected prior bill.",
+        "prior_excess_generation_kwh": 634.0, "remaining_excess_generation_kwh": 1376.0, "credited_usage_kwh": 518.0,
+        "meter_note": "NYSEG applied solar generation against the 518 kWh of use. Its excess-generation table shows 634 kWh prior excess, 1,260 kWh generated, and 1,376 kWh remaining.",
     },}
 
 
@@ -216,10 +216,13 @@ def _parse_nyseg_bill_pdf(path: Path) -> dict[str, Any] | None:
         "ingestion_source": "PDF extraction",
     }
     if len(credit_values) == 5:
+        # In text extraction NYSEG prints the row as: remaining balance,
+        # current generation, prior excess, current use, net use billed.
+        # The visual table's columns confirm that order.
         record.update({
-            "prior_excess_generation_kwh": credit_values[0],
+            "prior_excess_generation_kwh": credit_values[2],
             "credited_usage_kwh": credit_values[3],
-            "remaining_excess_generation_kwh": credit_values[4],
+            "remaining_excess_generation_kwh": credit_values[0],
         })
     return record
 
@@ -390,7 +393,7 @@ def _build_next_bill_estimate(latest_bill: dict[str, Any], usage_records: list[d
     prior_excess = _number(latest_bill.get("prior_excess_generation_kwh"))
     credited_usage = _number(latest_bill.get("credited_usage_kwh"))
     posted_credit_bank = _number(latest_bill.get("remaining_excess_generation_kwh"))
-    expected_prior_credit_bank = max(0.0, prior_excess - credited_usage)
+    expected_prior_credit_bank = max(0.0, prior_excess + _number(latest_bill.get("exported_kwh")) - credited_usage)
     current_net_export = max(0.0, exported_kwh - imported_kwh)
     projected_credit_bank = expected_prior_credit_bank + current_net_export
 
@@ -426,6 +429,7 @@ def _build_next_bill_estimate(latest_bill: dict[str, Any], usage_records: list[d
         "---\n"
         "Projected credit-bank working ledger:\n"
         f"Prior excess shown on corrected bill: {prior_excess:,.1f} kWh\n"
+        f"Current M02 generation on corrected bill: +{_number(latest_bill.get('exported_kwh')):,.1f} kWh\n"
         f"Less NYSEG offset against billed M01: -{credited_usage:,.1f} kWh\n"
         f"Expected balance after corrected bill: {expected_prior_credit_bank:,.1f} kWh\n"
         f"Current-period M02 - M01 net export: +{current_net_export:,.1f} kWh\n"
@@ -500,7 +504,7 @@ def build_bill_summary_report() -> dict[str, Any]:
     prior_excess = float(latest_credit.get("prior_excess_generation_kwh", 0.0))
     credited_usage = float(latest_credit.get("credited_usage_kwh", 0.0))
     reported_remaining = float(latest_credit.get("remaining_excess_generation_kwh", 0.0))
-    expected_remaining = max(0.0, prior_excess - credited_usage)
+    expected_remaining = max(0.0, prior_excess + _number(latest_credit.get("exported_kwh")) - credited_usage)
     unitemized_adjustment = max(0.0, expected_remaining - reported_remaining)
     latest_period_net_export = float(latest_credit.get("exported_kwh", 0.0)) - float(latest_credit.get("imported_kwh", 0.0))
     exports_without_itemized_bank = sum(
@@ -604,8 +608,8 @@ def build_bill_summary_report() -> dict[str, Any]:
             credited = _number(record.get("credited_usage_kwh"))
             remaining = _number(record.get("remaining_excess_generation_kwh"))
             record["credit_treatment_tooltip"] = (
-                f"NYSEG applied {credited:,.0f} kWh against billed use. The bill shows {prior:,.0f} kWh prior excess, "
-                f"then {prior - credited:,.0f} kWh before other adjustments, and {remaining:,.0f} kWh shown remaining."
+                f"NYSEG applied {credited:,.0f} kWh against billed use. The bill shows {prior:,.0f} kWh prior excess + "
+                f"{exported:,.0f} kWh current M02 generation - {credited:,.0f} kWh current use = {remaining:,.0f} kWh remaining."
             )
         elif exported:
             record["credit_treatment_tooltip"] = (
@@ -623,6 +627,7 @@ def build_bill_summary_report() -> dict[str, Any]:
         "next_bill_estimate": next_bill_estimate,
         "credit_bank": {
             "prior_kwh": prior_excess,
+            "current_generation_kwh": _number(latest_credit.get("exported_kwh")),
             "remaining_kwh": reported_remaining,
             "billed_use_offset_kwh": credited_usage,
             "expected_remaining_without_adjustments_kwh": expected_remaining,
