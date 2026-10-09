@@ -378,6 +378,12 @@ def _build_next_bill_estimate(latest_bill: dict[str, Any], usage_records: list[d
     projected_taxes = imported_kwh * tax_rate
     projected_energy_charges = projected_delivery + projected_supply + projected_taxes
     projected_new_charges = projected_energy_charges + latest_miscellaneous
+    prior_excess = _number(latest_bill.get("prior_excess_generation_kwh"))
+    credited_usage = _number(latest_bill.get("credited_usage_kwh"))
+    posted_credit_bank = _number(latest_bill.get("remaining_excess_generation_kwh"))
+    expected_prior_credit_bank = max(0.0, prior_excess - credited_usage)
+    current_net_export = max(0.0, exported_kwh - imported_kwh)
+    projected_credit_bank = expected_prior_credit_bank + current_net_export
 
     # A normal, non-corrected NYSEG bill is usually issued about five days after
     # the service period; the displayed due date remains "upon receipt".
@@ -408,6 +414,16 @@ def _build_next_bill_estimate(latest_bill: dict[str, Any], usage_records: list[d
         f"---\nEstimated new charges: ${projected_new_charges:,.2f}\n"
         "Solar assumption: the latest corrected bill applied a solar offset and showed $0.00 supply charges. "
         "NYSEG determines the official credit treatment.\n"
+        "---\n"
+        "Projected credit-bank working ledger:\n"
+        f"Prior excess shown on corrected bill: {prior_excess:,.1f} kWh\n"
+        f"Less NYSEG offset against billed M01: -{credited_usage:,.1f} kWh\n"
+        f"Expected balance after corrected bill: {expected_prior_credit_bank:,.1f} kWh\n"
+        f"Current-period M02 - M01 net export: +{current_net_export:,.1f} kWh\n"
+        f"Projected credit-bank balance: {projected_credit_bank:,.1f} kWh\n"
+        f"NYSEG currently posted: {posted_credit_bank:,.1f} kWh\n"
+        f"Balance to ask NYSEG to explain: {projected_credit_bank - posted_credit_bank:,.1f} kWh\n"
+        "This is the expected kWh ledger, assuming net exported kWh becomes credit; it is not an official NYSEG bank posting.\n"
         f"Estimated statement date: {estimated_statement_date.isoformat()} (five days after the interval period)\n"
         "NYSEG's bills say payment is due upon receipt. Prior balance and payment-plan amounts are excluded."
     )
@@ -422,6 +438,11 @@ def _build_next_bill_estimate(latest_bill: dict[str, Any], usage_records: list[d
         "solar_adjusted_rate": solar_adjusted_rate,
         "projected_energy_charges": projected_energy_charges,
         "projected_new_charges": projected_new_charges,
+        "expected_prior_credit_bank_kwh": expected_prior_credit_bank,
+        "current_net_export_kwh": current_net_export,
+        "projected_credit_bank_kwh": projected_credit_bank,
+        "posted_credit_bank_kwh": posted_credit_bank,
+        "credit_bank_gap_kwh": projected_credit_bank - posted_credit_bank,
         "calculation_tooltip": calculation_tooltip,
         "estimated_statement_date": estimated_statement_date.isoformat(),
         "due_date_label": f"Due upon receipt (about {estimated_statement_date.strftime('%b')} {estimated_statement_date.day}, {estimated_statement_date.year})",
