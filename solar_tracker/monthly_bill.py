@@ -617,6 +617,25 @@ def build_bill_summary_report() -> dict[str, Any]:
             )
         else:
             record["credit_treatment_tooltip"] = "Pre-solar bill: no Register 02 export or solar-credit treatment applies."
+
+    credit_bank_history = []
+    for record in records:
+        remaining = record.get("remaining_excess_generation_kwh")
+        if remaining is None:
+            continue
+        prior = _number(record.get("prior_excess_generation_kwh"))
+        generated = _number(record.get("exported_kwh"))
+        used = _number(record.get("credited_usage_kwh"))
+        credit_bank_history.append({
+            "statement_date": record.get("statement_date"),
+            "billing_start_date": record.get("billing_start_date"),
+            "billing_end_date": record.get("billing_end_date"),
+            "prior_kwh": prior,
+            "generated_kwh": generated,
+            "used_kwh": used,
+            "remaining_kwh": _number(remaining),
+        })
+
     return {
         "available": bool(records),
         "file_count": len(all_records),
@@ -636,6 +655,7 @@ def build_bill_summary_report() -> dict[str, Any]:
             "exports_without_itemized_bank_kwh": exports_without_itemized_bank,
             "statement_date": latest_credit.get("statement_date"),
             "note": latest_credit.get("meter_note", "NYSEG did not itemize a credit-bank balance on the available statements."),
+            "history": credit_bank_history,
         },
         "cost_change": {
             **latest_revision,

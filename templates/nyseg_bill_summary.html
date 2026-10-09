@@ -8,7 +8,19 @@
     <article class="bill-report-metric blue"><span>Reviewed energy charges</span><strong>${{ "%.2f"|format(bill_summary.totals.energy_charges) }}</strong><small>{{ "%.0f"|format(bill_summary.totals.imported_kwh) }} kWh imported</small></article>
     <article class="bill-report-metric green"><span>Solar exported</span><strong>{{ "%.0f"|format(bill_summary.totals.exported_kwh) }} kWh</strong><small>NYSEG Register 02 on post-solar bills</small></article>
     <article class="bill-report-metric gold"><span>Corrected post-solar reduction</span><strong>${{ "%.2f"|format(bill_summary.cost_change.savings) }}</strong><small>{{ "%.0f"|format(bill_summary.cost_change.savings_percent) }}% lower energy charges for the corrected period</small></article>
-    <article class="bill-report-metric purple"><span>Credit bank applied</span><strong>{{ "%.0f"|format(bill_summary.credit_bank.billed_use_offset_kwh) }} kWh</strong><small>{{ "%.0f"|format(bill_summary.credit_bank.prior_kwh) }} prior + {{ "%.0f"|format(bill_summary.credit_bank.current_generation_kwh) }} generated − {{ "%.0f"|format(bill_summary.credit_bank.billed_use_offset_kwh) }} used</small></article>
+    <article class="bill-report-metric credit-bank-total"><span>Official NYSEG credit bank</span><strong>{{ "{:,.0f}".format(bill_summary.credit_bank.remaining_kwh) }} kWh</strong><small>On the {{ bill_summary.credit_bank.statement_date }} statement · available to offset future billed use</small></article>
+  </section>
+  <section class="credit-bank-history-card" aria-label="NYSEG credit-bank history">
+    <div class="credit-bank-history-heading"><div><p class="eyebrow mb-1">Official excess-generation credit bank</p><h2 class="h4 mb-1">{{ "{:,.0f}".format(bill_summary.credit_bank.remaining_kwh) }} kWh available for future NYSEG use</h2><p class="mb-0">This is NYSEG's running excess-generation balance. It builds when M02 generation exceeds the use NYSEG applies during each bill period.</p></div><span>Updated on statement {{ bill_summary.credit_bank.statement_date }}</span></div>
+    <div class="credit-bank-history-ledger">
+      {% for entry in bill_summary.credit_bank.history %}
+      <article title="{{ "{:,.0f}".format(entry.prior_kwh) }} kWh prior + {{ "{:,.0f}".format(entry.generated_kwh) }} kWh current M02 generation − {{ "{:,.0f}".format(entry.used_kwh) }} kWh used = {{ "{:,.0f}".format(entry.remaining_kwh) }} kWh remaining.">
+        <span>{{ entry.billing_start_date }}–{{ entry.billing_end_date }}</span>
+        <div><b>{{ "{:,.0f}".format(entry.prior_kwh) }}</b><i>prior</i><em>+</em><b>{{ "{:,.0f}".format(entry.generated_kwh) }}</b><i>generated</i><em>−</em><b>{{ "{:,.0f}".format(entry.used_kwh) }}</b><i>used</i><em>=</em><strong>{{ "{:,.0f}".format(entry.remaining_kwh) }} kWh</strong></div>
+        <small>NYSEG statement {{ entry.statement_date }}</small>
+      </article>
+      {% endfor %}
+    </div>
   </section>
   <section class="bill-report-grid">
     <article class="tracker-card bill-report-card"><div class="card-body"><p class="eyebrow mb-1">Usage and energy charges over time</p><h2 class="h5">Post-solar grid flow and cost</h2><div id="bill-history-chart" class="bill-history-chart"></div></div></article>
