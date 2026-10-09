@@ -531,6 +531,36 @@ def build_bill_summary_report() -> dict[str, Any]:
         supply = _number(record.get("supply_charges"))
         taxes = _number(record.get("taxes"))
         miscellaneous = _number(record.get("miscellaneous_charges"))
+        carry_over = _number(record.get("balance_forward"))
+        payment_agreement = _number(record.get("payment_agreement_amount"))
+        budget_billing = _number(record.get("budget_billing_amount"))
+        adjustments = _number(record.get("total_adjustments"))
+        amount_due = _number(record.get("amount_due"))
+        new_bill_charges = amount_due - carry_over
+        component_total = _number(record.get("total_energy_charges")) + miscellaneous + payment_agreement + budget_billing + adjustments
+        record["carry_over_balance"] = carry_over
+        record["new_bill_charges"] = new_bill_charges
+        record["new_bill_charges_tooltip"] = (
+            "Current bill charges after the carry-over balance:\n"
+            f"Energy charges: ${_number(record.get('total_energy_charges')):,.2f}\n"
+            f"Miscellaneous charges: ${miscellaneous:,.2f}\n"
+            f"Payment agreement: ${payment_agreement:,.2f}\n"
+            f"Budget billing: ${budget_billing:,.2f}\n"
+            f"Adjustments: ${adjustments:,.2f}\n"
+            "---\n"
+            f"Statement components: ${component_total:,.2f}\n"
+            f"Amount due - carry-over balance: ${amount_due:,.2f} - ${carry_over:,.2f} = ${new_bill_charges:,.2f}"
+        )
+        record["carry_over_balance_tooltip"] = (
+            f"Balance carried from the prior statement: ${carry_over:,.2f}. "
+            "It is separate from the charges created in this billing period."
+        )
+        record["amount_due_tooltip"] = (
+            f"Amount due: ${amount_due:,.2f}\n"
+            f"Carry-over balance: ${carry_over:,.2f}\n"
+            f"New bill charges: ${new_bill_charges:,.2f}\n"
+            f"Calculation: ${carry_over:,.2f} + ${new_bill_charges:,.2f} = ${amount_due:,.2f}"
+        )
         net_meter_flow = exported - imported
         if record.get("credited_usage_kwh"):
             credited = _number(record.get("credited_usage_kwh"))
