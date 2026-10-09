@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Solar Tracker</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/styles.css?v=20261009-bill-summary-popout">
+  <script src="https://cdn.plot.ly/plotly-3.4.0.min.js"></script>
+</head>
+<body data-page="nyseg-usage-file" data-local-snapshot-mode="false">
+  <nav class="navbar navbar-expand-lg tracker-nav">
+    <div class="container">
+      <a class="navbar-brand fw-semibold" href="index.html">Solar Production & Consumption Tracker</a>
+      <div class="navbar-nav ms-auto">
+
+        <div class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="index.html" id="dashboardMenu" role="button" data-bs-toggle="dropdown" aria-expanded="false">Dashboard</a>
+          <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dashboardMenu">
+            <li><a class="dropdown-item" href="index.html">Dashboard overview</a></li>
+            <li><a class="dropdown-item" href="electricity-usage.html">Electricity Usage</a></li>
+            <li><a class="dropdown-item" href="#" aria-disabled="true" title="The private circuit directory is available in the local app only" target="_blank" rel="noopener noreferrer">Circuit Breakers</a></li>
+            <li><a class="dropdown-item" href="light-bulbs.html">Light Bulbs</a></li>
+          </ul>
+        </div>
+        <a class="nav-link" href="entries.html">Daily Entry</a>
+        <a class="nav-link" href="nyseg-net-metering.html">NYSEG Report</a>
+        <a class="nav-link" href="nyseg-usage-file-daily.html">View NYSEG file</a>
+        <a class="nav-link" href="sunrun-production.html">SunRun Data</a>
+        <a class="nav-link" href="appliances.html">Appliances</a>
+        <a class="nav-link" href="contract-summary.html">Contract Summary</a>
+        <a class="nav-link" href="settings.html">Settings</a>
+        <a class="nav-link nav-link-button" href="dictionary.html">Dictionary</a>
+        <a class="nav-link" href="solar_tracker_demo_export.csv">CSV Export</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="py-4">
+    <div class="container">
+
+
+
+
+<section class="bill-report-shell">
+  <div class="bill-report-heading"><div><p class="eyebrow mb-1">All NYSEG bills in the local Bills folder</p><h1 class="h3 mb-1">Electricity cost and solar-credit history</h1><p class="text-muted mb-0">5 PDF files · 4 unique billing periods. Newly saved NYSEG PDFs are extracted automatically when this report opens; corrected statements replace earlier versions in history totals.</p></div><a class="btn btn-contract" href="nyseg-usage-file-daily.html">Close</a></div>
+
+  <div class="bill-auto-process-banner" role="status"><strong>Automatic bill processing is on.</strong> Save a new NYSEG PDF in the local Bills folder, then refresh this report. Its billing dates, M01/M02 usage, charges, and available excess-generation details will be added automatically.</div>
+  <section class="bill-report-metrics">
+    <article class="bill-report-metric blue"><span>Reviewed energy charges</span><strong>$353.49</strong><small>1941 kWh imported</small></article>
+    <article class="bill-report-metric green"><span>Solar exported</span><strong>3460 kWh</strong><small>NYSEG Register 02 on post-solar bills</small></article>
+    <article class="bill-report-metric gold"><span>Corrected post-solar reduction</span><strong>$77.70</strong><small>64% lower energy charges for the corrected period</small></article>
+    <article class="bill-report-metric credit-bank-total"><span>Official NYSEG credit bank</span><strong>2,056 kWh</strong><small>On the 2026-10-08 statement · available to offset future billed use</small></article>
+  </section>
+  <section class="credit-bank-history-card" aria-label="NYSEG credit-bank history">
+    <div class="credit-bank-history-heading"><div><p class="eyebrow mb-1">Official excess-generation credit bank</p><h2 class="h4 mb-1">2,056 kWh available for future NYSEG use</h2><p class="mb-0">This is NYSEG's running excess-generation balance. It builds when M02 generation exceeds the use NYSEG applies during each bill period.</p></div><span>Updated on statement 2026-10-08</span></div>
+    <div class="credit-bank-history-ledger">
+
+      <article title="634 kWh prior + 1,260 kWh current M02 generation − 518 kWh used = 1,376 kWh remaining.">
+        <span>2026-08-06–2026-09-03</span>
+        <div><b>634</b><i>prior</i><em>+</em><b>1,260</b><i>generated</i><em>−</em><b>518</b><i>used</i><em>=</em><strong>1,376 kWh</strong></div>
+        <small>NYSEG statement 2026-09-16</small>
+      </article>
+
+      <article title="1,376 kWh prior + 1,175 kWh current M02 generation − 495 kWh used = 2,056 kWh remaining.">
+        <span>2026-09-04–2026-10-06</span>
+        <div><b>1,376</b><i>prior</i><em>+</em><b>1,175</b><i>generated</i><em>−</em><b>495</b><i>used</i><em>=</em><strong>2,056 kWh</strong></div>
+        <small>NYSEG statement 2026-10-08</small>
+      </article>
+
+    </div>
+  </section>
+  <section class="bill-report-grid">
+    <article class="tracker-card bill-report-card"><div class="card-body"><p class="eyebrow mb-1">Usage and energy charges over time</p><h2 class="h5">Post-solar grid flow and cost</h2><div id="bill-history-chart" class="bill-history-chart"></div></div></article>
+    <article class="tracker-card bill-report-card"><div class="card-body"><p class="eyebrow mb-1">Extra generation credit bank</p><h2 class="h5">How NYSEG applied solar excess</h2><div class="credit-bank-flow"><div><strong>1376 kWh</strong><span>Prior excess</span></div><i>+</i><div><strong>1175 kWh</strong><span>Current M02 generation</span></div><i>−</i><div><strong>495 kWh</strong><span>Used against billed use</span></div><i>=</i><div><strong>2056 kWh</strong><span>Shown remaining</span></div></div><p class="tracker-modal-note mb-0">Automatically extracted from the saved NYSEG PDF. Review the source bill if a corrected statement changes the period.</p></div></article>
+  </section>
+
+  <section class="meter-file-reconciliation-card" aria-label="Bill Summary reconciliation">
+    <div class="credit-reconciliation-heading"><div><p class="eyebrow mb-1">Bill Summary reconciliation</p><h2 class="h5 mb-0">Why the smart meter and NYSEG file totals differ</h2></div><span class="credit-reconciliation-status">Smart meter through 2026-10-08 · NYSEG file through 2026-10-06</span></div>
+    <p class="meter-file-reconciliation-lead">These are different reporting windows. The smart meter is cumulative through October 8; NYSEG's downloaded interval file begins July 31 and currently ends October 5. The difference is not an additional credit-bank balance.</p>
+    <div class="meter-file-reconciliation-grid">
+      <article><span>Solar production since power-on</span><strong>5,079 kWh</strong><small>Reported from solar power-on 2026-07-09 through the October 8 meter snapshot.</small></article>
+      <article><span>Estimated self-consumed solar</span><strong>1,584 kWh · 31.2%</strong><small>5,079 produced − 3,495 sent to the grid on M02.</small></article>
+      <article><span>Actual smart-meter M01 · 2026-10-08</span><strong>1,421 kWh</strong><small>This is the running grid-import register displayed by the smart meter.</small></article>
+      <article><span>Actual smart-meter M02 · 2026-10-08</span><strong>3,495 kWh</strong><small>This is the running grid-export register displayed by the smart meter.</small></article>
+      <article><span>M01 included in this NYSEG download</span><strong>1,155.2 kWh</strong><small>Grid import that NYSEG has published for 2026-07-31 through 2026-10-06.</small></article>
+      <article><span>M02 included in this NYSEG download</span><strong>2,697.2 kWh</strong><small>Grid export that NYSEG has published for 2026-07-31 through 2026-10-06.</small></article>
+      <article class="meter-file-gap"><span>M01 not included in this download yet</span><strong>265.8 kWh</strong><small>The difference between the full smart-meter total and the partial NYSEG file. It includes dates before July 31 and after October 5.</small></article>
+      <article class="meter-file-gap"><span>M02 not included in this download yet</span><strong>797.8 kWh</strong><small>The difference between the full smart-meter total and the partial NYSEG file. It includes dates before July 31 and after October 5.</small></article>
+      <article class="meter-file-financial"><span>Estimated July value not yet visible in NYSEG download</span><strong>≈ $341</strong><small>For July 10–30, 2026: 689 kWh self-consumed (≈ $165) plus 731 kWh exported (≈ $175) at $0.24/kWh.</small></article>
+    </div>
+    <div class="meter-file-reconciliation-note"><strong>What causes the gap:</strong> the NYSEG file excludes the July 1–30 period before its first row, and it has not yet published October 6–8 due to its normal delay. The July estimate above begins July 10 because solar was not producing July 1–9. As a historical comparison, the nearby July 2025 NYSEG read was 1,005 kWh (about $241 at the tracker rate). The 731 kWh July export could first offset the 204 kWh July grid import, leaving about 527 kWh for a future NYSEG credit. This is an estimate, not money lost: fixed charges remain and NYSEG decides when export becomes an official bill credit.</div>
+  </section>
+
+  <section class="credit-reconciliation-card" aria-label="Why the solar credit bank can differ from export">
+    <div class="credit-reconciliation-heading"><div><p class="eyebrow mb-1">Why exported kWh and the bank do not match one-for-one</p><h2 class="h5 mb-0">Bill credit reconciliation</h2></div><span class="credit-reconciliation-status">Official bill values through 2026-10-08</span></div>
+    <div class="credit-reconciliation-grid">
+      <article><span>Latest billed-period flow</span><strong>680 kWh net exported</strong><small>1175 exported - 495 imported. This is meter flow, not a posted dollar credit.</small></article>
+      <article><span>What NYSEG posted</span><strong>495 kWh offset</strong><small>NYSEG applied excess against billed use and reduced the corrected period's supply charge to $0.00. Delivery, tax, and fixed charges remained.</small></article>
+      <article><span>Credit-bank ledger check</span><strong>2056 kWh remaining</strong><small>1376 prior excess + 1175 current M02 generation − 495 billed use = 2056 kWh expected. NYSEG reports the same 2056 kWh balance.</small></article>
+      <article><span>Export awaiting a detailed bank line</span><strong>1025 kWh</strong><small>The meter-transition statement recorded this export but did not itemize an official excess-generation balance. It should not be treated as a cash payment or a one-for-one carryover.</small></article>
+    </div>
+    <p class="credit-reconciliation-note mb-0">Your export is real and visible on Register 02, but NYSEG's statement controls when it becomes a bill offset or a remaining credit-bank balance. The ledger now reconciles when current M02 generation is included: NYSEG shows the balance after adding current generation and applying current billed use.</p>
+  </section>
+<section class="tracker-card"><div class="card-body"><div class="bill-history-heading mb-3"><div><p class="eyebrow mb-1">Monthly bill detail</p><h2 class="h5 mb-0">Every bill file and the authoritative statement for each period</h2></div><aside class="latest-bill-breakdown" aria-label="Current NYSEG bill amount breakdown" title="Amount due: $468.25
+Carry-over balance: $413.73
+New bill charges: $54.52
+Calculation: $413.73 + $54.52 = $468.25"><span>Current NYSEG amount due</span><strong>$468.25</strong><div><b>Carry-over balance</b><em>$413.73</em></div><div><b>New bill charges</b><em>$54.52</em></div><small>Carry-over + new charges = amount due · hover for the full calculation.</small></aside><span class="text-muted small">Hover a heading or value for its source and calculation. Green rows are used in totals.</span></div><div class="bill-duplicate-explanation"><strong>Why some kWh totals repeat:</strong> NYSEG may issue a corrected bill for the same service period. Both PDFs stay visible so you can see the audit trail, but only the green, newest statement is included in the report totals. The September 8 and September 16 rows both cover August 6–September 3; the September 16 correction changed charges and credit treatment, not the 518 kWh import or 1,260 kWh export.</div><div class="table-responsive"><table class="table align-middle bill-history-table"><thead><tr><th title="The statement date printed on the NYSEG PDF. Hover each date to see the source filename.">Statement</th><th title="The service start and end dates printed on the NYSEG PDF. A repeated period means NYSEG issued a corrected statement.">Billing period</th><th title="Electricity NYSEG billed as imported from the grid. It comes from Register 01 (M01), plus any old-meter use during a meter exchange.">Grid import</th><th title="Electricity NYSEG recorded as sent to the grid from Register 02 (M02) during the billing period.">Solar export</th><th title="Delivery charges + supply charges + taxes and surcharges. It excludes payment-plan amounts and miscellaneous charges.">Energy charges</th><th title="How NYSEG treated recorded solar export on this statement: recorded only, applied to billed use, or pre-solar.">Credit treatment</th></tr></thead><tbody><tr class="bill-authoritative"><td title="Statement date from 06_05_26 - 07_01_26.pdf."><strong>2026-07-07</strong><br><small>06_05_26 - 07_01_26.pdf</small></td><td title="NYSEG service dates: 2026-06-05 through 2026-07-01. 27 days.">2026-06-05 to 2026-07-01<br><small>27 days</small></td><td title="NYSEG billed 118 kWh of grid import for this pre-smart-meter period.">118 kWh</td><td class="text-success" title="No solar export register was available on this pre-solar statement.">0 kWh</td><td title="NYSEG energy-charge breakdown:
+Delivery charges: $32.58
+Supply charges: $10.69
+Taxes and surcharges: $2.49
+---
+Energy charges total: $45.76
+Not included - miscellaneous charges: $0.95
+Not included - budget billing and payment-plan amounts.
+
+Solar meter effect: This pre-solar statement has no M01/M02 export information."><strong>$45.76</strong></td><td title="Pre-solar bill: no Register 02 export or solar-credit treatment applies."><span class="text-muted">Pre-solar</span></td></tr><tr class="bill-authoritative"><td title="Statement date from 07_02_26 - 08_05_26.pdf."><strong>2026-09-03</strong><br><small>07_02_26 - 08_05_26.pdf</small></td><td title="NYSEG service dates: 2026-07-02 through 2026-08-05. 35 days.">2026-07-02 to 2026-08-05<br><small>35 days</small></td><td title="NYSEG billed 810 kWh of grid import: 419 kWh on the old meter + 391 kWh on smart-meter M01.">810 kWh</td><td class="text-success" title="NYSEG recorded 1,025 kWh sent to the grid on smart-meter Register 02 (M02) for this billing period.">1025 kWh</td><td title="NYSEG energy-charge breakdown:
+Delivery charges: $112.94
+Supply charges: $96.56
+Taxes and surcharges: $11.09
+---
+Energy charges total: $220.59
+Not included - miscellaneous charges: $0.95
+Not included - budget billing and payment-plan amounts.
+
+Solar meter effect on this statement:
+M01 grid import: 810 kWh
+M02 solar export: 1,025 kWh
+M02 - M01 net meter flow: +215 kWh (net exported)
+---
+NYSEG recorded the export, but this bill does not itemize a dollar credit or a billed-use offset.
+The statement therefore does not show how M02 changed this bill&#39;s charge balance."><strong>$220.59</strong></td><td title="NYSEG recorded 1,025 kWh of export, but this statement does not itemize a billed-use offset or remaining credit-bank balance."><span class="text-primary">Export recorded</span></td></tr><tr class=""><td title="Statement date from 08_06_26 - 09_03_26.pdf."><strong>2026-09-08</strong><br><small>08_06_26 - 09_03_26.pdf</small></td><td title="NYSEG service dates: 2026-08-06 through 2026-09-03. 29 days.">2026-08-06 to 2026-09-03<br><small>29 days · Superseded by 2026-09-16 correction</small></td><td title="">518 kWh</td><td class="text-success" title="">1260 kWh</td><td title=""><strong>$121.27</strong></td><td title=""><span class="text-primary">Export recorded</span></td></tr><tr class="bill-authoritative"><td title="Statement date from 09_16_26 - 09_03_26.pdf."><strong>2026-09-16</strong><br><small>09_16_26 - 09_03_26.pdf</small></td><td title="NYSEG service dates: 2026-08-06 through 2026-09-03. 29 days.">2026-08-06 to 2026-09-03<br><small>29 days · Corrected statement used in totals</small></td><td title="NYSEG billed 518 kWh from smart-meter Register 01 (M01) for this period.">518 kWh</td><td class="text-success" title="NYSEG recorded 1,260 kWh sent to the grid on smart-meter Register 02 (M02) for this billing period.">1260 kWh</td><td title="NYSEG energy-charge breakdown:
+Delivery charges: $40.99
+Supply charges: $0.00
+Taxes and surcharges: $2.58
+---
+Energy charges total: $43.57
+Not included - miscellaneous charges: $0.95
+Not included - budget billing and payment-plan amounts.
+
+Solar meter effect on this statement:
+M01 grid import: 518 kWh
+M02 solar export: 1,260 kWh
+M02 - M01 net meter flow: +742 kWh
+---
+NYSEG applied 518 kWh of prior solar excess against billed M01 use.
+Supply charges after that offset: $0.00
+Delivery charges, taxes, and fixed charges still apply."><strong>$43.57</strong></td><td title="NYSEG applied 518 kWh against billed use. The bill shows 634 kWh prior excess + 1,260 kWh current M02 generation - 518 kWh current use = 1,376 kWh remaining."><span class="text-success">518 kWh offset</span></td></tr><tr class="bill-authoritative"><td title="Statement date from 09_04_26 - 10_06_26.pdf."><strong>2026-10-08</strong><br><small>09_04_26 - 10_06_26.pdf</small></td><td title="NYSEG service dates: 2026-09-04 through 2026-10-06. 33 days.">2026-09-04 to 2026-10-06<br><small>33 days</small></td><td title="NYSEG billed 495 kWh from smart-meter Register 01 (M01) for this period.">495 kWh</td><td class="text-success" title="NYSEG recorded 1,175 kWh sent to the grid on smart-meter Register 02 (M02) for this billing period.">1175 kWh</td><td title="NYSEG energy-charge breakdown:
+Delivery charges: $40.99
+Supply charges: $0.00
+Taxes and surcharges: $2.58
+---
+Energy charges total: $43.57
+Not included - miscellaneous charges: $0.95
+Not included - budget billing and payment-plan amounts.
+
+Solar meter effect on this statement:
+M01 grid import: 495 kWh
+M02 solar export: 1,175 kWh
+M02 - M01 net meter flow: +680 kWh
+---
+NYSEG applied 495 kWh of prior solar excess against billed M01 use.
+Supply charges after that offset: $0.00
+Delivery charges, taxes, and fixed charges still apply."><strong>$43.57</strong></td><td title="NYSEG applied 495 kWh against billed use. The bill shows 1,376 kWh prior excess + 1,175 kWh current M02 generation - 495 kWh current use = 2,056 kWh remaining."><span class="text-success">495 kWh offset</span></td></tr></tbody></table></div></div></section>
+
+</section>
+
+    </div>
+  </main>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="assets/js/site-bootstrap.js?v=20261009-bill-summary-popout"></script>
+  <script src="assets/js/firebase-config.js?v=20261009-bill-summary-popout"></script>
+  <script defer src="assets/js/app-bundle.js?v=20261009-bill-summary-popout"></script>
+  <script>
+(() => { const rows = [{"amount_due": 516.9, "amount_due_tooltip": "Amount due: $516.90\nCarry-over balance: $-1.05\nNew bill charges: $517.95\nCalculation: $-1.05 + $517.95 = $516.90", "average_daily_use_kwh": 4.37037037037037, "balance_forward": -1.05, "billing_end_date": "2026-07-01", "billing_start_date": "2026-06-05", "budget_billing_amount": 507.0, "carry_over_balance": -1.05, "carry_over_balance_tooltip": "Balance carried from the prior statement: $-1.05. It is separate from the charges created in this billing period.", "credit_treatment_tooltip": "Pre-solar bill: no Register 02 export or solar-credit treatment applies.", "current_usage_kwh": 118.0, "days_in_period": 27, "delivery_charges": 32.58, "display_name": "06_05_26 - 07_01_26.pdf", "effective_energy_rate": 0.3877966101694915, "energy_charges_tooltip": "NYSEG energy-charge breakdown:\nDelivery charges: $32.58\nSupply charges: $10.69\nTaxes and surcharges: $2.49\n---\nEnergy charges total: $45.76\nNot included - miscellaneous charges: $0.95\nNot included - budget billing and payment-plan amounts.\n\nSolar meter effect: This pre-solar statement has no M01/M02 export information.", "exported_kwh": 0.0, "grid_import_tooltip": "NYSEG billed 118 kWh of grid import for this pre-smart-meter period.", "imported_kwh": 118.0, "meter_note": "Pre-smart-meter bill; no export register was available.", "miscellaneous_charges": 0.95, "net_direction": "Net import", "net_grid_kwh": 118.0, "new_bill_charges": 517.9499999999999, "new_bill_charges_tooltip": "Current bill charges after the carry-over balance:\nEnergy charges: $45.76\nMiscellaneous charges: $0.95\nPayment agreement: $10.00\nBudget billing: $507.00\nAdjustments: $-1,151.52\n---\nStatement components: $-587.81\nAmount due - carry-over balance: $516.90 - $-1.05 = $517.95", "payment_agreement_amount": 10.0, "smart_meter_import_kwh": 0.0, "solar_export_tooltip": "No solar export register was available on this pre-solar statement.", "source_path": "C:\\Software Developement\\ChatGPT Codex\\Solar Energy - SunRun\\NYSEG Bill\\Bills\\06_05_26 - 07_01_26.pdf", "statement_date": "2026-07-07", "supply_charges": 10.69, "supply_rate_per_kwh": 0.09059322, "taxes": 2.49, "total_adjustments": -1151.52, "total_energy_charges": 45.76}, {"amount_due": 921.82, "amount_due_tooltip": "Amount due: $921.82\nCarry-over balance: $0.00\nNew bill charges: $921.82\nCalculation: $0.00 + $921.82 = $921.82", "average_daily_use_kwh": 23.142857142857142, "balance_forward": 0.0, "billing_end_date": "2026-08-05", "billing_start_date": "2026-07-02", "budget_billing_amount": 0.0, "carry_over_balance": 0.0, "carry_over_balance_tooltip": "Balance carried from the prior statement: $0.00. It is separate from the charges created in this billing period.", "credit_treatment_tooltip": "NYSEG recorded 1,025 kWh of export, but this statement does not itemize a billed-use offset or remaining credit-bank balance.", "current_usage_kwh": 810.0, "days_in_period": 35, "delivery_charges": 112.94, "display_name": "07_02_26 - 08_05_26.pdf", "effective_energy_rate": 0.2723333333333333, "energy_charges_tooltip": "NYSEG energy-charge breakdown:\nDelivery charges: $112.94\nSupply charges: $96.56\nTaxes and surcharges: $11.09\n---\nEnergy charges total: $220.59\nNot included - miscellaneous charges: $0.95\nNot included - budget billing and payment-plan amounts.\n\nSolar meter effect on this statement:\nM01 grid import: 810 kWh\nM02 solar export: 1,025 kWh\nM02 - M01 net meter flow: +215 kWh (net exported)\n---\nNYSEG recorded the export, but this bill does not itemize a dollar credit or a billed-use offset.\nThe statement therefore does not show how M02 changed this bill\u0027s charge balance.", "exported_kwh": 1025.0, "grid_import_tooltip": "NYSEG billed 810 kWh of grid import: 419 kWh on the old meter + 391 kWh on smart-meter M01.", "imported_kwh": 810.0, "meter_note": "Meter-transition month: 419 kWh old-meter use plus 391 kWh smart-meter import; Register 02 recorded 1,025 kWh exported.", "miscellaneous_charges": 0.95, "net_direction": "Net export", "net_grid_kwh": -215.0, "new_bill_charges": 921.82, "new_bill_charges_tooltip": "Current bill charges after the carry-over balance:\nEnergy charges: $220.59\nMiscellaneous charges: $0.95\nPayment agreement: $10.00\nBudget billing: $0.00\nAdjustments: $690.28\n---\nStatement components: $921.82\nAmount due - carry-over balance: $921.82 - $0.00 = $921.82", "payment_agreement_amount": 10.0, "smart_meter_import_kwh": 391.0, "solar_export_tooltip": "NYSEG recorded 1,025 kWh sent to the grid on smart-meter Register 02 (M02) for this billing period.", "source_path": "C:\\Software Developement\\ChatGPT Codex\\Solar Energy - SunRun\\NYSEG Bill\\Bills\\07_02_26 - 08_05_26.pdf", "statement_date": "2026-09-03", "supply_charges": 96.56, "supply_rate_per_kwh": 0.11920988, "taxes": 11.09, "total_adjustments": 690.28, "total_energy_charges": 220.59}, {"amount_due": 913.73, "amount_due_tooltip": "Amount due: $913.73\nCarry-over balance: $859.21\nNew bill charges: $54.52\nCalculation: $859.21 + $54.52 = $913.73", "average_daily_use_kwh": 17.862068965517242, "balance_forward": 859.21, "billing_end_date": "2026-09-03", "billing_start_date": "2026-08-06", "budget_billing_amount": 0.0, "carry_over_balance": 859.21, "carry_over_balance_tooltip": "Balance carried from the prior statement: $859.21. It is separate from the charges created in this billing period.", "credit_treatment_tooltip": "NYSEG applied 518 kWh against billed use. The bill shows 634 kWh prior excess + 1,260 kWh current M02 generation - 518 kWh current use = 1,376 kWh remaining.", "credited_usage_kwh": 518.0, "current_usage_kwh": 518.0, "days_in_period": 29, "delivery_charges": 40.99, "display_name": "09_16_26 - 09_03_26.pdf", "effective_energy_rate": 0.08411196911196911, "energy_charges_tooltip": "NYSEG energy-charge breakdown:\nDelivery charges: $40.99\nSupply charges: $0.00\nTaxes and surcharges: $2.58\n---\nEnergy charges total: $43.57\nNot included - miscellaneous charges: $0.95\nNot included - budget billing and payment-plan amounts.\n\nSolar meter effect on this statement:\nM01 grid import: 518 kWh\nM02 solar export: 1,260 kWh\nM02 - M01 net meter flow: +742 kWh\n---\nNYSEG applied 518 kWh of prior solar excess against billed M01 use.\nSupply charges after that offset: $0.00\nDelivery charges, taxes, and fixed charges still apply.", "exported_kwh": 1260.0, "grid_import_tooltip": "NYSEG billed 518 kWh from smart-meter Register 01 (M01) for this period.", "imported_kwh": 518.0, "meter_note": "NYSEG applied solar generation against the 518 kWh of use. Its excess-generation table shows 634 kWh prior excess, 1,260 kWh generated, and 1,376 kWh remaining.", "miscellaneous_charges": 0.95, "net_direction": "Net export", "net_grid_kwh": -742.0, "new_bill_charges": 54.51999999999998, "new_bill_charges_tooltip": "Current bill charges after the carry-over balance:\nEnergy charges: $43.57\nMiscellaneous charges: $0.95\nPayment agreement: $10.00\nBudget billing: $0.00\nAdjustments: $0.00\n---\nStatement components: $54.52\nAmount due - carry-over balance: $913.73 - $859.21 = $54.52", "payment_agreement_amount": 10.0, "prior_excess_generation_kwh": 634.0, "remaining_excess_generation_kwh": 1376.0, "smart_meter_import_kwh": 518.0, "solar_export_tooltip": "NYSEG recorded 1,260 kWh sent to the grid on smart-meter Register 02 (M02) for this billing period.", "source_path": "C:\\Software Developement\\ChatGPT Codex\\Solar Energy - SunRun\\NYSEG Bill\\Bills\\09_16_26 - 09_03_26.pdf", "statement_date": "2026-09-16", "supply_charges": 0.0, "supply_rate_per_kwh": 0.0, "taxes": 2.58, "total_adjustments": 0.0, "total_energy_charges": 43.57}, {"amount_due": 468.25, "amount_due_tooltip": "Amount due: $468.25\nCarry-over balance: $413.73\nNew bill charges: $54.52\nCalculation: $413.73 + $54.52 = $468.25", "average_daily_use_kwh": 15.0, "balance_forward": 413.73, "billing_end_date": "2026-10-06", "billing_start_date": "2026-09-04", "budget_billing_amount": 0.0, "carry_over_balance": 413.73, "carry_over_balance_tooltip": "Balance carried from the prior statement: $413.73. It is separate from the charges created in this billing period.", "credit_treatment_tooltip": "NYSEG applied 495 kWh against billed use. The bill shows 1,376 kWh prior excess + 1,175 kWh current M02 generation - 495 kWh current use = 2,056 kWh remaining.", "credited_usage_kwh": 495.0, "current_usage_kwh": 495.0, "days_in_period": 33, "delivery_charges": 40.99, "display_name": "09_04_26 - 10_06_26.pdf", "effective_energy_rate": 0.08802020202020203, "energy_charges_tooltip": "NYSEG energy-charge breakdown:\nDelivery charges: $40.99\nSupply charges: $0.00\nTaxes and surcharges: $2.58\n---\nEnergy charges total: $43.57\nNot included - miscellaneous charges: $0.95\nNot included - budget billing and payment-plan amounts.\n\nSolar meter effect on this statement:\nM01 grid import: 495 kWh\nM02 solar export: 1,175 kWh\nM02 - M01 net meter flow: +680 kWh\n---\nNYSEG applied 495 kWh of prior solar excess against billed M01 use.\nSupply charges after that offset: $0.00\nDelivery charges, taxes, and fixed charges still apply.", "exported_kwh": 1175.0, "grid_import_tooltip": "NYSEG billed 495 kWh from smart-meter Register 01 (M01) for this period.", "imported_kwh": 495.0, "ingestion_source": "PDF extraction", "meter_note": "Automatically extracted from the saved NYSEG PDF. Review the source bill if a corrected statement changes the period.", "miscellaneous_charges": 0.95, "net_direction": "Net export", "net_grid_kwh": -680.0, "new_bill_charges": 54.51999999999998, "new_bill_charges_tooltip": "Current bill charges after the carry-over balance:\nEnergy charges: $43.57\nMiscellaneous charges: $0.95\nPayment agreement: $10.00\nBudget billing: $0.00\nAdjustments: $0.00\n---\nStatement components: $54.52\nAmount due - carry-over balance: $468.25 - $413.73 = $54.52", "payment_agreement_amount": 10.0, "prior_excess_generation_kwh": 1376.0, "remaining_excess_generation_kwh": 2056.0, "smart_meter_import_kwh": 495.0, "solar_export_tooltip": "NYSEG recorded 1,175 kWh sent to the grid on smart-meter Register 02 (M02) for this billing period.", "source_path": "C:\\Software Developement\\ChatGPT Codex\\Solar Energy - SunRun\\NYSEG Bill\\Bills\\09_04_26 - 10_06_26.pdf", "statement_date": "2026-10-08", "supply_charges": 0.0, "supply_rate_per_kwh": 0.0, "taxes": 2.58, "total_adjustments": 0.0, "total_energy_charges": 43.57}]; const el = document.getElementById('bill-history-chart'); if (!el || typeof Plotly === 'undefined') return; Plotly.newPlot(el, [{x: rows.map(r => r.billing_end_date), y: rows.map(r => r.imported_kwh), name: 'Grid import', type: 'bar', marker: {color: '#3185ad'}}, {x: rows.map(r => r.billing_end_date), y: rows.map(r => r.exported_kwh), name: 'Solar export', type: 'bar', marker: {color: '#18a26b'}}, {x: rows.map(r => r.billing_end_date), y: rows.map(r => r.total_energy_charges), name: 'Energy charges', type: 'scatter', mode: 'lines+markers', yaxis: 'y2', line: {color: '#cf8316', width: 3}}], {barmode: 'group', margin: {l: 52, r: 52, t: 20, b: 48}, legend: {orientation: 'h', y: 1.14}, xaxis: {title: 'Billing period ending'}, yaxis: {title: 'kWh', rangemode: 'tozero'}, yaxis2: {title: 'Dollars', overlaying: 'y', side: 'right', tickprefix: '$', rangemode: 'tozero'}, paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)'}, {responsive: true, displayModeBar: false}); })();
+</script>
+</body>
+</html>

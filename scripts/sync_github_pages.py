@@ -17,7 +17,7 @@ from solar_tracker.routes import build_bootstrap_data
 
 
 DOCS = ROOT / "docs"
-ASSET_VERSION = "20261008-bill-reconciliation-highlight"
+ASSET_VERSION = "20261009-bill-summary-popout"
 
 ROUTE_REPLACEMENTS = {
     'href="/"': 'href="index.html"',
@@ -25,6 +25,7 @@ ROUTE_REPLACEMENTS = {
     'href="/nyseg-net-metering"': 'href="nyseg-net-metering.html"',
     'href="/nyseg-usage-file/daily"': 'href="nyseg-usage-file-daily.html"',
     'href="/nyseg-usage-file"': 'href="nyseg-usage-file.html"',
+    'href="/nyseg-bill-summary"': 'href="nyseg-bill-summary.html"',
     'href="/nyseg-reconciliation"': 'href="nyseg-net-metering.html"',
     'href="/sunrun-production"': 'href="sunrun-production.html"',
     'href="/appliances"': 'href="appliances.html"',
@@ -180,6 +181,7 @@ def main() -> None:
         "nyseg-net-metering.html": "/nyseg-net-metering",
         "nyseg-usage-file.html": "/nyseg-usage-file",
         "nyseg-usage-file-daily.html": "/nyseg-usage-file/daily",
+        "nyseg-bill-summary.html": "/nyseg-bill-summary",
         "sunrun-production.html": "/sunrun-production",
         "appliances.html": "/appliances",
         "light-bulbs.html": "/light-bulbs",
