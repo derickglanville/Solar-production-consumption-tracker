@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 <section class="bill-report-shell">
-  <div class="bill-report-heading"><div><p class="eyebrow mb-1">All NYSEG bills in the local Bills folder</p><h1 class="h3 mb-1">Electricity cost and solar-credit history</h1><p class="text-muted mb-0">{{ bill_summary.file_count }} PDF files · {{ bill_summary.period_count }} unique billing periods. Newly saved NYSEG PDFs are extracted automatically when this report opens; corrected statements replace earlier versions in history totals.</p></div><a class="btn btn-contract" href="{{ url_for('main.nyseg_usage_file') }}">Close</a></div>
+  <div class="bill-report-heading"><div><p class="eyebrow mb-1">All NYSEG bills in the local Bills folder</p><h1 class="h3 mb-1">Electricity cost and solar-credit history</h1><p class="text-muted mb-0">{{ bill_summary.file_count }} PDF files · {{ bill_summary.period_count }} unique billing periods. Newly saved NYSEG PDFs are extracted automatically when this report opens; corrected statements replace earlier versions in history totals.</p></div><div class="d-flex gap-2"><a class="btn btn-contract" href="{{ url_for('main.nyseg_monthly_bill_viewer') }}">Latest Bill</a><a class="btn btn-contract" href="{{ url_for('main.nyseg_usage_file') }}">Close</a></div></div>
   {% if bill_summary.available %}
   <div class="bill-auto-process-banner" role="status"><strong>Automatic bill processing is on.</strong> Save a new NYSEG PDF in the local Bills folder, then refresh this report. Its billing dates, M01/M02 usage, charges, and available excess-generation details will be added automatically.</div>
   <section class="bill-report-metrics">

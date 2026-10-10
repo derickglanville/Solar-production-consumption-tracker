@@ -15,6 +15,17 @@
           <h2 class="h5 mb-0">Bill Summary</h2>
           <a class="btn btn-contract btn-sm" href="{{ pdf_url }}" target="_blank" rel="noopener noreferrer">Open PDF</a>
         </div>
+        {% if available_bills %}
+        <form method="get" class="mb-3">
+          <label class="form-label small fw-semibold" for="nyseg-bill-select">Choose a NYSEG bill</label>
+          <select class="form-select" id="nyseg-bill-select" name="bill" onchange="this.form.submit()">
+            {% for available_bill in available_bills %}
+            <option value="{{ available_bill.display_name }}" {% if available_bill.display_name == bill.display_name %}selected{% endif %}>{{ available_bill.statement_date }} · {{ available_bill.billing_start_date }} to {{ available_bill.billing_end_date }} · {{ available_bill.display_name }}</option>
+            {% endfor %}
+          </select>
+          <noscript><button type="submit" class="btn btn-contract btn-sm mt-2">Open selected bill</button></noscript>
+        </form>
+        {% endif %}
         {% if bill.available %}
         <div class="info-grid mb-3">
           <div><span>Statement Date</span><strong>{{ bill.statement_date }}</strong></div>

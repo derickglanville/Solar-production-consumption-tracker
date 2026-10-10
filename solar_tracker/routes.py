@@ -28,7 +28,7 @@ from .energy_references import (
 )
 from .firestore import AppConfig, DailySolarEntry, FirestoreRepository
 from .historical_usage import historical_usage_to_dict, load_historical_usage_summary
-from .monthly_bill import build_bill_summary_report, build_net_metering_reconciliation, build_net_metering_report, load_monthly_bill_summary, monthly_bill_to_dict
+from .monthly_bill import DEFAULT_BILLS_DIR, build_bill_summary_report, build_net_metering_reconciliation, build_net_metering_report, load_monthly_bill_summary, monthly_bill_to_dict
 from .nyseg_interval_usage import (
     DEFAULT_INTERVAL_USAGE_PATH,
     build_nyseg_interval_usage_report,
@@ -1421,7 +1421,11 @@ def nyseg_bill_viewer():
 
 @main_blueprint.route("/documents/nyseg-monthly-bill/file")
 def nyseg_monthly_bill_document():
-    bill = load_monthly_bill_summary()
+    requested_name = request.args.get("bill", "").strip()
+    selected_path = DEFAULT_BILLS_DIR / Path(requested_name).name if requested_name else None
+    if requested_name and (Path(requested_name).name != requested_name or not selected_path.exists() or selected_path.suffix.lower() != ".pdf"):
+        return Response("The requested NYSEG bill PDF is not available.", status=404)
+    bill = load_monthly_bill_summary(pdf_path=selected_path) if selected_path else load_monthly_bill_summary()
     if not bill.available or not Path(bill.source_path).exists():
         return Response("No NYSEG bill PDF is available.", status=404)
     return send_file(bill.source_path, as_attachment=False, mimetype="application/pdf")
@@ -1429,12 +1433,20 @@ def nyseg_monthly_bill_document():
 
 @main_blueprint.route("/documents/nyseg-monthly-bill/view")
 def nyseg_monthly_bill_viewer():
+    requested_name = request.args.get("bill", "").strip()
+    selected_path = DEFAULT_BILLS_DIR / Path(requested_name).name if requested_name else None
+    if requested_name and (Path(requested_name).name != requested_name or not selected_path.exists() or selected_path.suffix.lower() != ".pdf"):
+        return Response("The requested NYSEG bill PDF is not available.", status=404)
+    bill_summary = load_monthly_bill_summary(pdf_path=selected_path) if selected_path else load_monthly_bill_summary()
+    available_bills = load_monthly_bill_summary().billing_records
+    pdf_url = url_for("main.nyseg_monthly_bill_document", bill=bill_summary.display_name) if bill_summary.available else url_for("main.nyseg_monthly_bill_document")
     return render_template(
         "document_viewer_pdf.html",
         page_name="document-viewer",
         bootstrap_data=build_bootstrap_data(),
         title="NYSEG Monthly Bill Reference",
         subtitle="Monthly bill reference integrated for billing context alongside solar production and usage analysis.",
-        pdf_url="/documents/nyseg-monthly-bill/file",
-        bill=monthly_bill_to_dict(load_monthly_bill_summary()),
+        pdf_url=pdf_url,
+        bill=monthly_bill_to_dict(bill_summary),
+        available_bills=available_bills,
     )
