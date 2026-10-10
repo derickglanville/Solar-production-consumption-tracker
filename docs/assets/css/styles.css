@@ -3836,6 +3836,7 @@ body[data-page="dashboard"].dashboard-compact-mode .btn-contract {
 @media (max-width: 600px) { .bill-summary-open { opacity: 1; pointer-events: auto; transform: none; }.bill-modal-grid { grid-template-columns: 1fr; } }
 
 /* NYSEG command center: a vivid, compact presentation for the downloaded utility file. */
+.bill-selector { background: linear-gradient(135deg, #edf8fc, #f8fdf8); border: 1px solid #b9dbe8; border-radius: .75rem; display: grid; gap: .55rem; padding: .7rem; }.bill-selector label { color: #174f6b; font-size: .78rem; font-weight: 800; margin-bottom: .08rem; }.bill-selector small { color: #5d7b89; display: block; font-size: .7rem; line-height: 1.35; }.bill-selector select { border-color: #80b7ce; color: #174f6b; font-size: .82rem; }.bill-selector .btn { justify-self: start; }
 .nyseg-file-header {
   gap: 1.05rem;
   grid-template-columns: minmax(360px, .95fr) minmax(620px, 1.45fr);
