@@ -3697,6 +3697,7 @@ body[data-page="dashboard"].dashboard-compact-mode .btn-contract {
 .nyseg-file-table thead th { background: #f4f8fa; box-shadow: 0 1px 0 rgba(63, 94, 112, 0.2); line-height: 1.15; max-width: 6.5rem; position: sticky; top: 0; white-space: normal; z-index: 2; }
 .nyseg-file-table th[title] { cursor: help; }
 .nyseg-file-table .nyseg-interval-count { min-width: 3.8rem; padding-left: 0.35rem; padding-right: 0.35rem; width: 3.8rem; }
+.nyseg-file-table .nyseg-key-column { background-color: rgba(218, 246, 230, .42); border-left: 2px solid #42a66e; border-right: 2px solid #42a66e; }.nyseg-file-table thead .nyseg-key-column { background: linear-gradient(180deg, #dbf6e6, #c8edda); border-top: 2px solid #42a66e; color: #14613d; }.nyseg-file-table tbody tr:last-child .nyseg-key-column { border-bottom: 2px solid #42a66e; }
 .nyseg-file-chart-card { border-color: #c7dce2; }
 .nyseg-file-comparison-chart { min-height: 290px; width: 100%; }
 .nyseg-file-header { align-items: stretch; display: grid; gap: 1.2rem; grid-template-columns: minmax(0, 1fr) minmax(390px, 55%); }
