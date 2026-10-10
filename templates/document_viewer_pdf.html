@@ -2,9 +2,10 @@
 
 {% block content %}
 <section class="hero-panel mb-4">
-  <p class="eyebrow mb-2">Document Viewer</p>
-  <h1 class="hero-title mb-2">{{ title }}</h1>
-  <p class="text-muted mb-0">{{ subtitle }}</p>
+  <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+    <div><p class="eyebrow mb-2">Document Viewer</p><h1 class="hero-title mb-2">{{ title }}</h1><p class="text-muted mb-0">{{ subtitle }}</p></div>
+    <a class="btn btn-contract" href="{{ url_for('main.nyseg_bill_summary') }}">Close viewer</a>
+  </div>
 </section>
 
 <section class="row g-3 mb-4">
