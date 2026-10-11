@@ -47,6 +47,10 @@ def load_nyseg_interval_file_rows(path: Path | None = None) -> dict[str, Any]:
             except ValueError:
                 start_label, end_label = start_raw, end_raw
             values = {field: row.get(field, "") for field in fields}
+            try:
+                values["day_of_week"] = date.fromisoformat(values["Date"]).strftime("%a")
+            except ValueError:
+                values["day_of_week"] = "—"
             values["m02_m01_diff"] = _number(values["Received"]) - _number(values["Delivered"])
             rows.append({**values, "start_label": start_label, "end_label": end_label})
     daily: dict[str, dict[str, Any]] = {}
@@ -63,6 +67,10 @@ def load_nyseg_interval_file_rows(path: Path | None = None) -> dict[str, Any]:
     for day_key in sorted(daily):
         summary = daily[day_key]
         summary["Weather"] = sum(summary["Weather"]) / len(summary["Weather"]) if summary["Weather"] else 0.0
+        try:
+            summary["day_of_week"] = date.fromisoformat(summary["Date"]).strftime("%a")
+        except ValueError:
+            summary["day_of_week"] = "—"
         summary["m02_m01_diff"] = summary["Received"] - summary["Delivered"]
         running_m01_kwh += summary["Delivered"]
         running_m02_kwh += summary["Received"]
