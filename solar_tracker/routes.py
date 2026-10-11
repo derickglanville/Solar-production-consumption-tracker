@@ -697,6 +697,21 @@ def nyseg_usage_file():
     for row in [*interval_file.get("daily_rows", []), *interval_file.get("rows", [])]:
         row["sunrun_power_kwh"] = sunrun_by_date.get(row["Date"], {}).get("production_kwh")
         row["weather_condition"] = weather_by_date.get(row["Date"], "Unknown")
+
+    # EDC is the daily estimated consumption: solar production + M01 import −
+    # M02 export.  Its running total follows the same oldest-to-newest order
+    # used by the running NYSEG M01 and M02 values.
+    running_edc = 0.0
+    for row in reversed(interval_file.get("daily_rows", [])):
+        production = row.get("sunrun_power_kwh")
+        if production is None:
+            row["edc_kwh"] = None
+            row["running_edc_kwh"] = None
+            continue
+        edc_kwh = float(production) + float(row["Delivered"]) - float(row["Received"])
+        running_edc += edc_kwh
+        row["edc_kwh"] = edc_kwh
+        row["running_edc_kwh"] = running_edc
     electric_rate = AppConfig().current_electric_rate
     chart_rows = [
         {

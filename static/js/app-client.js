@@ -685,6 +685,7 @@ function normalizeEntry(entry) {
     sunrise_time: entry.sunrise_time || "",
     sunset_time: entry.sunset_time || "",
     notes: entry.notes || "",
+    nyseg_usage_note: entry.nyseg_usage_note || "",
     notes_manual: Boolean(entry.notes_manual),
     estimated: Boolean(entry.estimated),
     lookup_source: entry.lookup_source || "",
