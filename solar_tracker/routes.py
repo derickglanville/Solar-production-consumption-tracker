@@ -680,23 +680,40 @@ def nyseg_usage_file():
     sunrun_by_date = load_sunrun_daily_production().get("by_date", {})
     entry_weather, _ = load_reconciliation_entries()
     weather_by_date = {
-        entry.entry_date.isoformat(): str(entry.weather or "Unknown").strip()
+        entry.entry_date.isoformat(): {
+            "condition": str(entry.weather or "Unknown").strip(),
+            "high_f": entry.temperature_high_f,
+            "low_f": entry.temperature_low_f,
+        }
         for entry in entry_weather
     }
-    # The legacy weather archive contains the completed-day condition when the
-    # Firebase Daily Entry still says "Unknown".
+    # The legacy weather archive fills in completed-day weather where the
+    # Firebase Daily Entry still has an unknown condition or no high/low.
     try:
         legacy_weather = json.loads(LEGACY_WEATHER_HISTORY_PATH.read_text(encoding="utf-8"))
         for item in legacy_weather.get("entries", []):
             day = str(item.get("date") or "")
+            if not day:
+                continue
+            details = weather_by_date.setdefault(day, {"condition": "Unknown", "high_f": None, "low_f": None})
             condition = str(item.get("weather") or "").strip()
-            if day and condition and weather_by_date.get(day, "Unknown") in {"", "Unknown"}:
-                weather_by_date[day] = condition
+            if condition and details["condition"] in {"", "Unknown"}:
+                details["condition"] = condition
+            if details["high_f"] is None:
+                details["high_f"] = item.get("high_f")
+            if details["low_f"] is None:
+                details["low_f"] = item.get("low_f")
     except (OSError, ValueError, AttributeError):
         pass
     for row in [*interval_file.get("daily_rows", []), *interval_file.get("rows", [])]:
         row["sunrun_power_kwh"] = sunrun_by_date.get(row["Date"], {}).get("production_kwh")
-        row["weather_condition"] = weather_by_date.get(row["Date"], "Unknown")
+        weather = weather_by_date.get(row["Date"], {"condition": "Unknown", "high_f": None, "low_f": None})
+        row["weather_condition"] = weather["condition"]
+        row["weather_high_f"] = weather["high_f"]
+        row["weather_low_f"] = weather["low_f"]
+        # NYSEG's supplied Net is Delivered − Received, the same measure as
+        # M01 − M02.  The grid uses this explicit name for the visible column.
+        row["m01_m02_diff"] = -float(row["m02_m01_diff"])
 
     # EDC is the daily estimated consumption: solar production + M01 import −
     # M02 export.  Its running total follows the same oldest-to-newest order
