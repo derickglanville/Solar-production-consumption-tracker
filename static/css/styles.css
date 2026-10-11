@@ -3976,3 +3976,11 @@ body[data-page="dashboard"].dashboard-compact-mode .btn-contract {
 .nyseg-file-notes { padding: 0.18rem !important; }
 .nyseg-note-input { min-width: 13rem; min-height: 3.8rem; overflow-y: auto; resize: vertical; white-space: pre-wrap; }
 .chart-popout-body .nyseg-note-input { min-width: 20rem; max-height: 12rem; }
+/* Compact spreadsheet treatment for the dense NYSEG daily grid. */
+.nyseg-file-table { font-size: 0.8rem; line-height: 1.05; }
+.nyseg-file-table > :not(caption) > * > * { padding: 0.2rem 0.32rem; vertical-align: middle; }
+.nyseg-file-table thead th { padding-bottom: 0.28rem; padding-top: 0.28rem; }
+.nyseg-file-table .nyseg-weather-condition { font-size: 0.6rem; line-height: 1; margin-top: 0.08rem; }
+.nyseg-file-table .nyseg-file-notes { min-width: 15rem; padding: 0.12rem !important; }
+.nyseg-file-table .nyseg-note-input { height: 2.2rem; min-height: 2.2rem; max-height: 2.2rem; min-width: 14.5rem; overflow-y: auto; padding: 0.22rem 0.38rem; resize: none; }
+.chart-popout-body .nyseg-file-table .nyseg-note-input { min-width: 20rem; }
