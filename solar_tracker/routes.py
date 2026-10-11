@@ -61,6 +61,7 @@ WEATHER_OPTIONS = [
 LOCAL_DASHBOARD_URL = "http://127.0.0.1:8765/"
 LOCAL_JSON_DIRECTORY = Path(__file__).resolve().parent.parent / "JSON"
 LOCAL_APPLICATION_SNAPSHOT_PATH = LOCAL_JSON_DIRECTORY / "application_data_current.json"
+LEGACY_WEATHER_HISTORY_PATH = LOCAL_JSON_DIRECTORY / "Solar_Daily_History.json"
 NYSEG_DAILY_SYNC_STATUS_PATH = Path(__file__).resolve().parent.parent / "SunRun Data" / "nyseg-daily-sync-status.json"
 NYSEG_DAILY_SYNC_LOG_PATH = Path(__file__).resolve().parent.parent / "SunRun Data" / "nyseg-daily-sync.log"
 NYSEG_DAILY_SYNC_LOCK_PATH = NYSEG_DAILY_SYNC_STATUS_PATH.with_suffix(".lock")
@@ -682,6 +683,17 @@ def nyseg_usage_file():
         entry.entry_date.isoformat(): str(entry.weather or "Unknown").strip()
         for entry in entry_weather
     }
+    # The legacy weather archive contains the completed-day condition when the
+    # Firebase Daily Entry still says "Unknown".
+    try:
+        legacy_weather = json.loads(LEGACY_WEATHER_HISTORY_PATH.read_text(encoding="utf-8"))
+        for item in legacy_weather.get("entries", []):
+            day = str(item.get("date") or "")
+            condition = str(item.get("weather") or "").strip()
+            if day and condition and weather_by_date.get(day, "Unknown") in {"", "Unknown"}:
+                weather_by_date[day] = condition
+    except (OSError, ValueError, AttributeError):
+        pass
     for row in [*interval_file.get("daily_rows", []), *interval_file.get("rows", [])]:
         row["sunrun_power_kwh"] = sunrun_by_date.get(row["Date"], {}).get("production_kwh")
         row["weather_condition"] = weather_by_date.get(row["Date"], "Unknown")

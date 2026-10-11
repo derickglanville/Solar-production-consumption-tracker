@@ -3974,5 +3974,5 @@ body[data-page="dashboard"].dashboard-compact-mode .btn-contract {
 
 .nyseg-weather-condition { color: #55717f; display: block; font-size: 0.68rem; font-weight: 700; line-height: 1.1; white-space: nowrap; }
 .nyseg-file-notes { padding: 0.18rem !important; }
-.nyseg-note-input { min-width: 13rem; }
-.chart-popout-body .nyseg-note-input { min-width: 20rem; }
+.nyseg-note-input { min-width: 13rem; min-height: 3.8rem; overflow-y: auto; resize: vertical; white-space: pre-wrap; }
+.chart-popout-body .nyseg-note-input { min-width: 20rem; max-height: 12rem; }

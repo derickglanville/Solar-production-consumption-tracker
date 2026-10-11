@@ -155,7 +155,6 @@ async function renderDashboardUnified(entries, config, firebaseStatus) {
 const entryCollectionName = "solar_daily_entries";
 const configCollectionName = "solar_tracker_config";
 const configDocumentId = "primary";
-const nysegUsageNotesCollection = "nyseg_usage_notes";
 // The NYSEG CSV is the sole source for cumulative M01/M02 values. Dates after
 // this server-confirmed endpoint stay pending until the next reviewed import.
 let validatedNysegThrough = "";
@@ -5695,29 +5694,34 @@ async function saveNysegMeterBackup(db, entries, updates = null) {
 async function setupNysegUsageNotes(db) {
   const inputs = [...document.querySelectorAll(".nyseg-note-input[data-nyseg-note-date]")];
   if (!inputs.length) return;
-  const notesByDate = new Map();
+  let entriesByDate = new Map();
   try {
-    const snapshot = await getDocs(collection(db, nysegUsageNotesCollection));
-    snapshot.forEach((record) => notesByDate.set(record.id, String(record.data()?.note || "")));
+    const state = await loadFirestoreState(db);
+    entriesByDate = new Map((state.entries || []).map((entry) => [entry.entry_date, entry]));
   } catch (error) {
     console.warn("Could not load NYSEG row notes.", error);
   }
   inputs.forEach((input) => {
     const entryDate = input.dataset.nysegNoteDate;
-    input.value = notesByDate.get(entryDate) || "";
+    input.value = String(entriesByDate.get(entryDate)?.nyseg_usage_note || "");
     input.addEventListener("change", async () => {
-      const original = input.value;
+      const note = input.value.trim();
       input.disabled = true;
+      input.classList.remove("is-invalid");
       try {
-        await setDoc(doc(db, nysegUsageNotesCollection, entryDate), {
+        // This is a dedicated field on the matching Firebase date record. It
+        // never reads or changes the Daily Entry's general Notes field.
+        await setDoc(doc(db, entryCollectionName, entryDate), {
           entry_date: entryDate,
-          note: original.trim(),
+          nyseg_usage_note: note,
           updated_at: new Date().toISOString()
         }, { merge: true });
+        input.value = note;
         input.classList.add("is-valid");
         window.setTimeout(() => input.classList.remove("is-valid"), 1200);
       } catch (error) {
         input.classList.add("is-invalid");
+        input.title = `Could not save: ${error.message || error}`;
         console.error("Could not save NYSEG row note.", error);
       } finally {
         input.disabled = false;

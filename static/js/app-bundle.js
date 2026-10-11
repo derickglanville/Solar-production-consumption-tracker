@@ -24021,7 +24021,6 @@ This typically indicates that your device does not have a healthy Internet conne
   var entryCollectionName = "solar_daily_entries";
   var configCollectionName = "solar_tracker_config";
   var configDocumentId = "primary";
-  var nysegUsageNotesCollection = "nyseg_usage_notes";
   var validatedNysegThrough = "";
   var meterSimulationMonitorStartMinute = 0;
   var meterSimulationMonitorEndMinute = 23 * 60 + 59;
@@ -28334,29 +28333,32 @@ This is a reconciliation, not an independent measurement, because EDC includes S
   async function setupNysegUsageNotes(db) {
     const inputs = [...document.querySelectorAll(".nyseg-note-input[data-nyseg-note-date]")];
     if (!inputs.length) return;
-    const notesByDate = /* @__PURE__ */ new Map();
+    let entriesByDate = /* @__PURE__ */ new Map();
     try {
-      const snapshot = await getDocs(collection(db, nysegUsageNotesCollection));
-      snapshot.forEach((record) => notesByDate.set(record.id, String(record.data()?.note || "")));
+      const state = await loadFirestoreState(db);
+      entriesByDate = new Map((state.entries || []).map((entry) => [entry.entry_date, entry]));
     } catch (error) {
       console.warn("Could not load NYSEG row notes.", error);
     }
     inputs.forEach((input) => {
       const entryDate = input.dataset.nysegNoteDate;
-      input.value = notesByDate.get(entryDate) || "";
+      input.value = String(entriesByDate.get(entryDate)?.nyseg_usage_note || "");
       input.addEventListener("change", async () => {
-        const original = input.value;
+        const note = input.value.trim();
         input.disabled = true;
+        input.classList.remove("is-invalid");
         try {
-          await setDoc2(doc(db, nysegUsageNotesCollection, entryDate), {
+          await setDoc2(doc(db, entryCollectionName, entryDate), {
             entry_date: entryDate,
-            note: original.trim(),
+            nyseg_usage_note: note,
             updated_at: (/* @__PURE__ */ new Date()).toISOString()
           }, { merge: true });
+          input.value = note;
           input.classList.add("is-valid");
           window.setTimeout(() => input.classList.remove("is-valid"), 1200);
         } catch (error) {
           input.classList.add("is-invalid");
+          input.title = `Could not save: ${error.message || error}`;
           console.error("Could not save NYSEG row note.", error);
         } finally {
           input.disabled = false;
