@@ -5692,6 +5692,29 @@ async function saveNysegMeterBackup(db, entries, updates = null) {
   return { recordedAt, count: rows.length };
 }
 
+function setupNysegUsageRowSelection() {
+  const rows = [...document.querySelectorAll(".nyseg-file-row")];
+  rows.forEach((row) => {
+    if (row.dataset.selectionBound === "true") return;
+    row.dataset.selectionBound = "true";
+    const toggle = () => {
+      const selected = !row.classList.contains("nyseg-row-selected");
+      row.classList.toggle("nyseg-row-selected", selected);
+      row.setAttribute("aria-selected", String(selected));
+    };
+    row.addEventListener("click", (event) => {
+      if (event.target.closest("input, textarea, button, a, select, label")) return;
+      toggle();
+    });
+    row.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        toggle();
+      }
+    });
+  });
+}
+
 async function setupNysegUsageNotes(db) {
   const inputs = [...document.querySelectorAll(".nyseg-note-input[data-nyseg-note-date]")];
   if (!inputs.length) return;
@@ -6065,6 +6088,7 @@ async function bootPage() {
     return;
   }
   if (getPageName() === "nyseg-usage-file") {
+    setupNysegUsageRowSelection();
     await Promise.all([setupNysegUsageFileActions(context.db), setupNysegUsageNotes(context.db)]);
     return;
   }
