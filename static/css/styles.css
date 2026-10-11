@@ -3963,3 +3963,11 @@ body[data-page="dashboard"].dashboard-compact-mode .btn-contract {
   border-top: 1px solid #a7c1cb;
   border-bottom: 2px solid #7fa6b5;
 }
+
+
+.nyseg-file-grid-content { width: 100%; }
+.nyseg-file-notes { min-width: 13rem; max-width: 18rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chart-popout-body .nyseg-file-grid-content { display: flex; flex: 1 1 auto; flex-direction: column; min-height: 0; }
+.chart-popout-body .nyseg-file-grid-content > p { flex: 0 0 auto; padding-right: 5rem; }
+.chart-popout-body .nyseg-file-table-wrap { flex: 1 1 auto; max-height: none; }
+.chart-popout-body .nyseg-file-notes { max-width: 28rem; white-space: normal; }
