@@ -31,6 +31,105 @@ LOCK_FILE = STATUS_FILE.with_suffix(".lock")
 PROCESS_FILE = STATUS_FILE.with_name("nyseg-daily-sync-process.json")
 EMAIL_ENABLED_MARKER = STATUS_FILE.with_name("nyseg-daily-sync-email-enabled")
 PROJECT_LOG_FILE = STATUS_FILE.with_name("nyseg-daily-sync.log")
+LEGACY_PORTAL_HISTORY_FILE = PROJECT_ROOT / "JSON" / "Solar_Daily_History.json"
+# The recorded on-site smart-meter snapshot is the fixed point that connects
+# NYSEG's delayed interval history to the legacy portal's cumulative registers.
+LEGACY_PORTAL_METER_SNAPSHOT = {
+    "date": "2026-10-08",
+    "m01": 1421.0,
+    "m02": 3495.0,
+}
+LEGACY_PORTAL_METER_SOURCE_PREFIX = "NYSEG interval CSV backfill"
+
+
+def sync_legacy_portal_meter_history(progress) -> dict:
+    """Backfill the legacy portal's daily M01/M02 history from the NYSEG CSV.
+
+    NYSEG supplies daily Delivered/Received *flow* values.  The legacy portal
+    stores cumulative registers, so the known October 8 smart-meter reading is
+    used to establish the pre-file baseline.  This preserves the exact NYSEG
+    daily changes and lets later published interval days extend naturally.
+    """
+    project_root_text = str(PROJECT_ROOT)
+    if project_root_text not in sys.path:
+        sys.path.insert(0, project_root_text)
+    script_directory = PROJECT_ROOT / "SunRun Data" / "Script"
+    script_directory_text = str(script_directory)
+    if script_directory_text not in sys.path:
+        sys.path.insert(0, script_directory_text)
+
+    from solar_tracker.nyseg_interval_usage import build_nyseg_interval_usage_report
+    from sunrun_json import load_history, recalculate_all, save_history
+
+    report = build_nyseg_interval_usage_report()
+    daily_rows = list(reversed(report.get("daily", [])))
+    if not report.get("available") or not daily_rows:
+        raise RuntimeError("The NYSEG interval CSV is unavailable for the legacy portal update.")
+
+    snapshot_date = LEGACY_PORTAL_METER_SNAPSHOT["date"]
+    snapshot_index = next((index for index, row in enumerate(daily_rows) if row["date"] == snapshot_date), None)
+    if snapshot_index is None:
+        raise RuntimeError(
+            f"The NYSEG interval CSV does not include the {snapshot_date} smart-meter anchor date."
+        )
+
+    cumulative_m01 = sum(float(row["import_kwh"]) for row in daily_rows[: snapshot_index + 1])
+    cumulative_m02 = sum(float(row["export_kwh"]) for row in daily_rows[: snapshot_index + 1])
+    baseline_m01 = LEGACY_PORTAL_METER_SNAPSHOT["m01"] - cumulative_m01
+    baseline_m02 = LEGACY_PORTAL_METER_SNAPSHOT["m02"] - cumulative_m02
+
+    data = load_history(LEGACY_PORTAL_HISTORY_FILE)
+    by_date = {entry["date"]: entry for entry in data.get("entries", [])}
+    first_date = date.fromisoformat(daily_rows[0]["date"])
+    transition_date = (first_date.fromordinal(first_date.toordinal() - 1)).isoformat()
+    transition = by_date.setdefault(transition_date, {"date": transition_date})
+    transition.setdefault("source", {})
+    if not transition.get("meter01_grid_import") and not transition.get("meter02_grid_export"):
+        transition["meter01_grid_import"] = round(baseline_m01, 3)
+        transition["meter02_grid_export"] = round(baseline_m02, 3)
+        transition["source"]["meter"] = (
+            f"{LEGACY_PORTAL_METER_SOURCE_PREFIX}: pre-file baseline calculated from "
+            f"the {snapshot_date} smart-meter snapshot."
+        )
+
+    running_m01 = baseline_m01
+    running_m02 = baseline_m02
+    updated_dates: list[str] = []
+    skipped_manual_dates: list[str] = []
+    for row in daily_rows:
+        running_m01 += float(row["import_kwh"])
+        running_m02 += float(row["export_kwh"])
+        entry = by_date.setdefault(row["date"], {"date": row["date"]})
+        entry.setdefault("source", {})
+        meter_source = str(entry["source"].get("meter", ""))
+        has_values = entry.get("meter01_grid_import") is not None and entry.get("meter02_grid_export") is not None
+        if has_values and not meter_source.startswith(LEGACY_PORTAL_METER_SOURCE_PREFIX):
+            skipped_manual_dates.append(row["date"])
+            continue
+        entry["meter01_grid_import"] = round(running_m01, 3)
+        entry["meter02_grid_export"] = round(running_m02, 3)
+        entry["source"]["meter"] = (
+            f"{LEGACY_PORTAL_METER_SOURCE_PREFIX}: NYSEG Delivered/Received daily totals; "
+            f"cumulative registers anchored to the {snapshot_date} smart-meter snapshot."
+        )
+        updated_dates.append(row["date"])
+
+    data["entries"] = list(by_date.values())
+    recalculate_all(data)
+    save_history(data, LEGACY_PORTAL_HISTORY_FILE)
+    progress(
+        f"Legacy portal history complete: {len(updated_dates)} daily M01/M02 records updated "
+        f"from {daily_rows[0]['date']} through {daily_rows[-1]['date']}."
+    )
+    if skipped_manual_dates:
+        progress(f"Legacy portal history kept {len(skipped_manual_dates)} manually entered M01/M02 records unchanged.")
+    return {
+        "updated_records": len(updated_dates),
+        "source_start": daily_rows[0]["date"],
+        "source_end": daily_rows[-1]["date"],
+        "anchor_date": snapshot_date,
+        "manual_records_preserved": len(skipped_manual_dates),
+    }
 
 
 def write_status(payload: dict) -> None:
@@ -310,7 +409,7 @@ def main(
             sys.path.insert(0, project_root_text)
         from app import create_app
 
-        progress("Step 2/2: Validating and saving new NYSEG M01/M02 readings to Firebase…")
+        progress("Step 2/3: Validating and saving new NYSEG M01/M02 readings to Firebase…")
         response = create_app().test_client().post("/api/nyseg-meter-intervals/apply")
         result = response.get_json() or {}
         if response.status_code >= 400:
@@ -326,9 +425,16 @@ def main(
             "download_source": download_source,
             "download_output": "Completed; see nyseg-daily-sync.log for step-by-step output.",
         }
+        progress("Step 3/3: Updating the legacy Sunrun Energy Portal meter history…")
+        legacy_portal_history = sync_legacy_portal_meter_history(progress)
+        status["legacy_portal_history"] = legacy_portal_history
         add_email_result(status)
         save_daily_load_history(status)
-        progress(f"Step 2/2 complete: {status['saved_records']} Firebase records saved; history and email housekeeping finished.")
+        progress(
+            f"Step 3/3 complete: {status['saved_records']} Firebase records saved; "
+            f"{legacy_portal_history['updated_records']} legacy portal meter records refreshed; "
+            "history and email housekeeping finished."
+        )
         return 0
     except Exception as error:
         status = {
@@ -365,5 +471,17 @@ if __name__ == "__main__":
     parser.add_argument("--download-only", action="store_true", help="Download the CSV only; do not import M01/M02, send email, or update history.")
     parser.add_argument("--download-script", type=Path, help="Downloader to run before import; defaults to NYSEG_File_Download_Test.py.")
     parser.add_argument("--download-no-arguments", action="store_true", help="Run the selected downloader exactly as python SCRIPT, with no extra options.")
+    parser.add_argument("--sync-legacy-portal-history", action="store_true", help="Backfill only the legacy Sunrun Energy Portal M01/M02 history from the saved NYSEG CSV.")
     args = parser.parse_args()
-    raise SystemExit(main(args.test_email, args.log_path, args.download_script, args.skip_download, args.download_only, args.download_no_arguments))
+    if args.sync_legacy_portal_history:
+        result = sync_legacy_portal_meter_history(print)
+        print(json.dumps(result, indent=2))
+        raise SystemExit(0)
+    raise SystemExit(main(
+        test_email=args.test_email,
+        log_path=args.log_path,
+        download_script=args.download_script,
+        skip_download=args.skip_download,
+        download_only=args.download_only,
+        download_no_arguments=args.download_no_arguments,
+    ))
