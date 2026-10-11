@@ -3995,3 +3995,12 @@ body[data-page="dashboard"].dashboard-compact-mode .btn-contract {
 /* Daily meter-flow direction: M01 import above M02 export is yellow; net export is green. */
 .nyseg-file-table tbody tr.nyseg-import-row:not(.nyseg-row-selected) > * { background: #fff1ae !important; }
 .nyseg-file-table tbody tr.nyseg-export-row:not(.nyseg-row-selected) > * { background: #edf9f0 !important; }
+
+/* Bold group boundaries distinguish solar, grid import, grid export, and EDC. */
+.nyseg-file-table .nyseg-power-group { border-left: 3px solid #ad7b18 !important; border-right: 3px solid #ad7b18 !important; }
+.nyseg-file-table .nyseg-m01-group-start { border-left: 3px solid #2878a8 !important; }
+.nyseg-file-table .nyseg-m01-group-end { border-right: 3px solid #2878a8 !important; }
+.nyseg-file-table .nyseg-m02-group-start { border-left: 3px solid #16825d !important; }
+.nyseg-file-table .nyseg-m02-group-end { border-right: 3px solid #16825d !important; }
+.nyseg-file-table .nyseg-edc-group-start { border-left: 3px solid #7255a5 !important; }
+.nyseg-file-table .nyseg-edc-group-end { border-right: 3px solid #7255a5 !important; }
