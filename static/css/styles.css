@@ -3971,3 +3971,8 @@ body[data-page="dashboard"].dashboard-compact-mode .btn-contract {
 .chart-popout-body .nyseg-file-grid-content > p { flex: 0 0 auto; padding-right: 5rem; }
 .chart-popout-body .nyseg-file-table-wrap { flex: 1 1 auto; max-height: none; }
 .chart-popout-body .nyseg-file-notes { max-width: 28rem; white-space: normal; }
+
+.nyseg-weather-condition { color: #55717f; display: block; font-size: 0.68rem; font-weight: 700; line-height: 1.1; white-space: nowrap; }
+.nyseg-file-notes { padding: 0.18rem !important; }
+.nyseg-note-input { min-width: 13rem; }
+.chart-popout-body .nyseg-note-input { min-width: 20rem; }

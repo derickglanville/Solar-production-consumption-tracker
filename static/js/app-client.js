@@ -155,6 +155,7 @@ async function renderDashboardUnified(entries, config, firebaseStatus) {
 const entryCollectionName = "solar_daily_entries";
 const configCollectionName = "solar_tracker_config";
 const configDocumentId = "primary";
+const nysegUsageNotesCollection = "nyseg_usage_notes";
 // The NYSEG CSV is the sole source for cumulative M01/M02 values. Dates after
 // this server-confirmed endpoint stay pending until the next reviewed import.
 let validatedNysegThrough = "";
@@ -5691,6 +5692,40 @@ async function saveNysegMeterBackup(db, entries, updates = null) {
   return { recordedAt, count: rows.length };
 }
 
+async function setupNysegUsageNotes(db) {
+  const inputs = [...document.querySelectorAll(".nyseg-note-input[data-nyseg-note-date]")];
+  if (!inputs.length) return;
+  const notesByDate = new Map();
+  try {
+    const snapshot = await getDocs(collection(db, nysegUsageNotesCollection));
+    snapshot.forEach((record) => notesByDate.set(record.id, String(record.data()?.note || "")));
+  } catch (error) {
+    console.warn("Could not load NYSEG row notes.", error);
+  }
+  inputs.forEach((input) => {
+    const entryDate = input.dataset.nysegNoteDate;
+    input.value = notesByDate.get(entryDate) || "";
+    input.addEventListener("change", async () => {
+      const original = input.value;
+      input.disabled = true;
+      try {
+        await setDoc(doc(db, nysegUsageNotesCollection, entryDate), {
+          entry_date: entryDate,
+          note: original.trim(),
+          updated_at: new Date().toISOString()
+        }, { merge: true });
+        input.classList.add("is-valid");
+        window.setTimeout(() => input.classList.remove("is-valid"), 1200);
+      } catch (error) {
+        input.classList.add("is-invalid");
+        console.error("Could not save NYSEG row note.", error);
+      } finally {
+        input.disabled = false;
+      }
+    });
+  });
+}
+
 async function setupNysegUsageFileActions(db) {
   const importButton = document.getElementById("nyseg-file-import");
   const useDownloadButton = document.getElementById("nyseg-file-use-download");
@@ -6025,7 +6060,7 @@ async function bootPage() {
     return;
   }
   if (getPageName() === "nyseg-usage-file") {
-    await setupNysegUsageFileActions(context.db);
+    await Promise.all([setupNysegUsageFileActions(context.db), setupNysegUsageNotes(context.db)]);
     return;
   }
   if (getPageName() === "settings") {

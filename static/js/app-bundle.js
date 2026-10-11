@@ -24021,6 +24021,7 @@ This typically indicates that your device does not have a healthy Internet conne
   var entryCollectionName = "solar_daily_entries";
   var configCollectionName = "solar_tracker_config";
   var configDocumentId = "primary";
+  var nysegUsageNotesCollection = "nyseg_usage_notes";
   var validatedNysegThrough = "";
   var meterSimulationMonitorStartMinute = 0;
   var meterSimulationMonitorEndMinute = 23 * 60 + 59;
@@ -28330,6 +28331,39 @@ This is a reconciliation, not an independent measurement, because EDC includes S
     }, { merge: true });
     return { recordedAt, count: rows.length };
   }
+  async function setupNysegUsageNotes(db) {
+    const inputs = [...document.querySelectorAll(".nyseg-note-input[data-nyseg-note-date]")];
+    if (!inputs.length) return;
+    const notesByDate = /* @__PURE__ */ new Map();
+    try {
+      const snapshot = await getDocs(collection(db, nysegUsageNotesCollection));
+      snapshot.forEach((record) => notesByDate.set(record.id, String(record.data()?.note || "")));
+    } catch (error) {
+      console.warn("Could not load NYSEG row notes.", error);
+    }
+    inputs.forEach((input) => {
+      const entryDate = input.dataset.nysegNoteDate;
+      input.value = notesByDate.get(entryDate) || "";
+      input.addEventListener("change", async () => {
+        const original = input.value;
+        input.disabled = true;
+        try {
+          await setDoc2(doc(db, nysegUsageNotesCollection, entryDate), {
+            entry_date: entryDate,
+            note: original.trim(),
+            updated_at: (/* @__PURE__ */ new Date()).toISOString()
+          }, { merge: true });
+          input.classList.add("is-valid");
+          window.setTimeout(() => input.classList.remove("is-valid"), 1200);
+        } catch (error) {
+          input.classList.add("is-invalid");
+          console.error("Could not save NYSEG row note.", error);
+        } finally {
+          input.disabled = false;
+        }
+      });
+    });
+  }
   async function setupNysegUsageFileActions(db) {
     const importButton = document.getElementById("nyseg-file-import");
     const useDownloadButton = document.getElementById("nyseg-file-use-download");
@@ -28693,7 +28727,7 @@ This is a reconciliation, not an independent measurement, because EDC includes S
       return;
     }
     if (getPageName() === "nyseg-usage-file") {
-      await setupNysegUsageFileActions(context.db);
+      await Promise.all([setupNysegUsageFileActions(context.db), setupNysegUsageNotes(context.db)]);
       return;
     }
     if (getPageName() === "settings") {

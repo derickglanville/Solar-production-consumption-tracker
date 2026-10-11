@@ -677,14 +677,14 @@ def nyseg_usage_file():
     interval_file = load_nyseg_interval_file_rows()
     grouped = request.path.endswith("/daily")
     sunrun_by_date = load_sunrun_daily_production().get("by_date", {})
-    entry_notes, _ = load_reconciliation_entries()
-    notes_by_date = {
-        entry.entry_date.isoformat(): str(entry.notes or "").strip()
-        for entry in entry_notes
+    entry_weather, _ = load_reconciliation_entries()
+    weather_by_date = {
+        entry.entry_date.isoformat(): str(entry.weather or "Unknown").strip()
+        for entry in entry_weather
     }
     for row in [*interval_file.get("daily_rows", []), *interval_file.get("rows", [])]:
         row["sunrun_power_kwh"] = sunrun_by_date.get(row["Date"], {}).get("production_kwh")
-        row["notes"] = notes_by_date.get(row["Date"], "")
+        row["weather_condition"] = weather_by_date.get(row["Date"], "Unknown")
     electric_rate = AppConfig().current_electric_rate
     chart_rows = [
         {
