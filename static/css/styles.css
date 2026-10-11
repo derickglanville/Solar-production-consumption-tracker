@@ -3991,3 +3991,7 @@ body[data-page="dashboard"].dashboard-compact-mode .btn-contract {
 .nyseg-file-table tbody tr.nyseg-row-selected:hover > * { background: #ffe681 !important; }
 
 .nyseg-file-table th:first-child, .nyseg-file-table td:first-child { min-width: 7.2rem; white-space: nowrap; }
+
+/* Daily meter-flow direction: M01 import above M02 export is yellow; net export is green. */
+.nyseg-file-table tbody tr.nyseg-import-row:not(.nyseg-row-selected) > * { background: #fff1ae !important; }
+.nyseg-file-table tbody tr.nyseg-export-row:not(.nyseg-row-selected) > * { background: #edf9f0 !important; }
