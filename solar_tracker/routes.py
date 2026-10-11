@@ -730,6 +730,10 @@ def nyseg_usage_file():
         row["edc_kwh"] = edc_kwh
         row["running_edc_kwh"] = running_edc
     electric_rate = AppConfig().current_electric_rate
+    running_net_cost = 0.0
+    for row in reversed(interval_file.get("daily_rows", [])):
+        running_net_cost += (float(row["Delivered"]) - float(row["Received"])) * electric_rate
+        row["running_net_cost"] = running_net_cost
     chart_rows = [
         {
             "date": row["Date"],
