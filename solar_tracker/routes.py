@@ -121,14 +121,25 @@ def load_nyseg_recent_runs() -> dict:
     try:
         rows = json.loads(NYSEG_LOAD_HISTORY_PATH.read_text(encoding="utf-8")).get("records", [])
     except (OSError, ValueError, AttributeError):
-        status = load_nyseg_daily_sync_status()
-        rows = ([{
-            "date": (status.get("completed_at") or status.get("started_at") or "")[:10],
-            "status": "Success" if status.get("status") == "success" else "Failed",
-            "saved_records": int(status.get("saved_records", 0)),
-            "email_sent": bool(status.get("email_sent")),
-            "message": status.get("error") or "",
-        }] if status else [])
+        rows = []
+
+    # A Manual Run intentionally stops after downloading the CSV.  It does
+    # not create a full-sync history record, but it is still a useful recent
+    # outcome and must not leave the earlier automated failure looking like
+    # the most recent result.
+    status = load_nyseg_daily_sync_status()
+    if status.get("operation") == "download" and status.get("status") in {"success", "failed"}:
+        completed_at = status.get("completed_at") or status.get("started_at") or ""
+        if not any(item.get("completed_at") == completed_at for item in rows):
+            rows.append({
+                "date": completed_at[:10],
+                "completed_at": completed_at,
+                "status": "Success" if status.get("status") == "success" else "Failed",
+                "operation": "download",
+                "saved_records": 0,
+                "email_sent": False,
+                "message": status.get("error") or "Manual CSV download completed; processing is pending.",
+            })
     recent = sorted(rows, key=lambda row: row.get("completed_at", row.get("date", "")), reverse=True)[:5]
     recent = [
         {**row, "run_time": format_run_time(row.get("completed_at") or row.get("started_at"))}
