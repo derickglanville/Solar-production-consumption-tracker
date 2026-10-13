@@ -61,8 +61,8 @@
 </section>
 {% if interval_file.available and chart_rows %}
 <section class="nyseg-analytics-grid mb-4">
-  <div class="card tracker-card nyseg-file-chart-card"><div class="card-body"><div><p class="eyebrow mb-1">Daily energy comparison</p><h2 class="h5 mb-1">SunRun production, NYSEG meter flow, and EDC</h2><p class="text-muted small mb-3">EDC = production + Delivered / M01 - Received / M02. Each point is one day.</p></div><div class="chart-popout-frame" data-chart-popout-label="Daily energy comparison"><button type="button" class="btn btn-contract btn-sm chart-popout-button" data-chart-popout>Pop Out</button><div id="nyseg-file-comparison-chart" class="nyseg-file-comparison-chart" aria-label="Daily energy comparison chart"></div></div></div></div>
-  <div class="card tracker-card nyseg-file-chart-card"><div class="card-body"><div><p class="eyebrow mb-1">Daily estimated cost</p><h2 class="h5 mb-1">NYSEG import and export value</h2><p class="text-muted small mb-3">Uses the configured &dollar;{{ "%.2f"|format(electric_rate) }}/kWh rate. Net cost is import cost less export value.</p></div><div class="chart-popout-frame" data-chart-popout-label="Daily NYSEG estimated cost"><button type="button" class="btn btn-contract btn-sm chart-popout-button" data-chart-popout>Pop Out</button><div id="nyseg-file-cost-chart" class="nyseg-file-comparison-chart" aria-label="Daily NYSEG estimated cost chart"></div></div></div></div>
+  <div class="card tracker-card nyseg-file-chart-card nyseg-story-chart-card"><div class="card-body"><div><p class="eyebrow mb-1">Daily energy comparison</p><h2 class="h5 mb-1">Solar production, meter flow, and estimated home demand</h2><p class="text-muted small mb-2">Follow the story: solar production, what NYSEG delivered (M01), what it received (M02), and estimated daily consumption (EDC).</p></div><div class="nyseg-chart-controls" aria-label="Daily chart controls"><label>Range <select id="nyseg-daily-chart-range"><option value="14">Last 14 days</option><option value="30" selected>Last 30 days</option><option value="60">Last 60 days</option><option value="all">All available days</option></select></label><label>Style <select id="nyseg-daily-chart-style"><option value="area" selected>Vivid area</option><option value="line">Line + markers</option><option value="bar">Grouped bars</option></select></label></div><div id="nyseg-energy-story" class="nyseg-chart-story" aria-live="polite"></div><div class="chart-popout-frame" data-chart-popout-label="Daily energy comparison"><button type="button" class="btn btn-contract btn-sm chart-popout-button" data-chart-popout>Pop Out</button><div id="nyseg-file-comparison-chart" class="nyseg-file-comparison-chart" aria-label="Daily energy comparison chart"></div></div></div></div>
+  <div class="card tracker-card nyseg-file-chart-card nyseg-story-chart-card"><div class="card-body"><div><p class="eyebrow mb-1">Daily estimated cost</p><h2 class="h5 mb-1">NYSEG import, export value, and net bill effect</h2><p class="text-muted small mb-2">Uses the configured &dollar;{{ "%.2f"|format(electric_rate) }}/kWh rate. A negative net cost means exported energy is reducing estimated energy charges.</p></div><div class="nyseg-chart-controls" aria-label="Daily cost chart controls"><label>Range <select id="nyseg-cost-chart-range"><option value="14">Last 14 days</option><option value="30" selected>Last 30 days</option><option value="60">Last 60 days</option><option value="all">All available days</option></select></label><label>Style <select id="nyseg-cost-chart-style"><option value="area" selected>Vivid area</option><option value="line">Line + markers</option><option value="bar">Grouped bars</option></select></label></div><div id="nyseg-cost-story" class="nyseg-chart-story" aria-live="polite"></div><div class="chart-popout-frame" data-chart-popout-label="Daily NYSEG estimated cost"><button type="button" class="btn btn-contract btn-sm chart-popout-button" data-chart-popout>Pop Out</button><div id="nyseg-file-cost-chart" class="nyseg-file-comparison-chart" aria-label="Daily NYSEG estimated cost chart"></div></div></div></div>
   <div class="card tracker-card nyseg-file-chart-card nyseg-hourly-chart-card"><div class="card-body"><div><p class="eyebrow mb-1">Hourly NYSEG interval profile</p><h2 class="h5 mb-1">Import and export by hour</h2><p class="text-muted small mb-2">Totals hourly intervals across the selected dates from the downloaded NYSEG file.</p></div><div class="chart-popout-frame" data-chart-popout-label="Hourly NYSEG import and export"><button type="button" class="btn btn-contract btn-sm chart-popout-button" data-chart-popout>Pop Out</button><div data-chart-popout-content class="nyseg-hourly-chart-content"><div class="nyseg-hourly-date-controls" aria-label="Hourly chart date range"><label>Start <input id="nyseg-hourly-start-date" type="date"></label><label>End <input id="nyseg-hourly-end-date" type="date"></label><label>View <select id="nyseg-hourly-chart-style"><option value="bar">Grouped bars</option><option value="line">Line graph</option><option value="area">Stacked area</option></select></label><div class="nyseg-hourly-range-actions"><button type="button" class="btn btn-contract btn-sm" id="nyseg-hourly-previous" aria-label="Show the previous NYSEG date range">Previous</button><button type="button" class="btn btn-contract btn-sm" id="nyseg-hourly-next" aria-label="Show the next NYSEG date range">Next</button></div><div class="nyseg-hourly-replay-actions" aria-label="Daily M01 and M02 replay controls"><button type="button" class="btn btn-contract btn-sm" id="nyseg-hourly-replay">Play all days</button><button type="button" class="btn btn-contract btn-sm" id="nyseg-hourly-replay-restart">Restart</button><button type="button" class="btn btn-contract btn-sm" id="nyseg-hourly-replay-slower" aria-label="Slow down replay">Slower</button><button type="button" class="btn btn-contract btn-sm" id="nyseg-hourly-replay-faster" aria-label="Speed up replay">Faster</button></div><span id="nyseg-hourly-range-summary"></span><span class="nyseg-hourly-replay-status" id="nyseg-hourly-replay-status" aria-live="polite"></span></div><div id="nyseg-file-hourly-chart" class="nyseg-file-comparison-chart" aria-label="Hourly NYSEG import and export chart"></div></div></div></div></div>
 </section>
 {% endif %}
@@ -94,63 +94,48 @@
 {% if interval_file.available and chart_rows %}<script>
 (() => {
   const chart = document.getElementById("nyseg-file-comparison-chart");
-  // The table stays newest-first, while charts read naturally from the
-  // oldest day on the left to the newest day on the right.
-  const rows = {{ chart_rows|tojson }}.slice().reverse();
-  if (!chart || typeof Plotly === "undefined") return;
-  const trace = (name, field, color) => ({
-    x: rows.map((row) => row.date),
-    y: rows.map((row) => row[field]),
-    name,
-    type: "scatter",
-    mode: "lines+markers",
-    line: { color, width: 2.5 },
-    marker: { color, size: 5 },
-    connectgaps: false,
-    hovertemplate: "%{x}<br>" + name + ": %{y:.2f} kWh<extra></extra>",
-  });
-  Plotly.newPlot(chart, [
-    trace("SunRun production", "production_kwh", "#b88016"),
-    trace("Delivered / M01", "delivered_kwh", "#2878a8"),
-    trace("Received / M02", "received_kwh", "#17825f"),
-    trace("EDC", "edc_kwh", "#7653a5"),
-  ], {
-    margin: { l: 52, r: 18, t: 12, b: 48 },
-    height: 290,
-    hovermode: "x unified",
-    legend: { orientation: "h", y: 1.13, x: 0 },
-    xaxis: { title: "Date", type: "date", tickformat: "%b %-d", showgrid: false },
-    yaxis: { title: "kWh", rangemode: "tozero", gridcolor: "#dce8ee" },
-    paper_bgcolor: "rgba(0,0,0,0)",
-    plot_bgcolor: "rgba(0,0,0,0)",
-  }, { responsive: true, displayModeBar: false });
-
   const costChart = document.getElementById("nyseg-file-cost-chart");
-  if (!costChart) return;
-  const costTrace = (name, field, color) => ({
-    x: rows.map((row) => row.date),
-    y: rows.map((row) => row[field]),
-    name,
-    type: "scatter",
-    mode: "lines+markers",
-    line: { color, width: 2.5 },
-    marker: { color, size: 5 },
-    hovertemplate: "%{x}<br>" + name + ": $%{y:.2f}<extra></extra>",
+  const rows = {{ chart_rows|tojson }}.slice().reverse();
+  if (!chart || !costChart || typeof Plotly === "undefined") return;
+  const energyRange = document.getElementById("nyseg-daily-chart-range");
+  const energyStyle = document.getElementById("nyseg-daily-chart-style");
+  const costRange = document.getElementById("nyseg-cost-chart-range");
+  const costStyle = document.getElementById("nyseg-cost-chart-style");
+  const energyStory = document.getElementById("nyseg-energy-story");
+  const costStory = document.getElementById("nyseg-cost-story");
+  const sum = (items, field) => items.reduce((total, row) => total + Number(row[field] || 0), 0);
+  const selectedRows = (control) => control && control.value !== "all" ? rows.slice(-Number(control.value)) : rows;
+  const number = (value) => Number(value || 0).toLocaleString(undefined, { maximumFractionDigits: 1 });
+  const money = (value) => `${Number(value || 0) < 0 ? "−" : ""}$${Math.abs(Number(value || 0)).toFixed(2)}`;
+  const baseLayout = (title, unit, height = 318) => ({
+    margin: { l: 55, r: 18, t: 18, b: 48 }, height, hovermode: "x unified",
+    legend: { orientation: "h", y: 1.16, x: 0, font: { size: 11 } },
+    xaxis: { title: "Date", type: "date", tickformat: "%b %-d", showgrid: true, gridcolor: "#b5ccd8", gridwidth: 1.5, linecolor: "#52798d", linewidth: 2, zeroline: false },
+    yaxis: { title: unit, rangemode: "tozero", showgrid: true, gridcolor: "#b5ccd8", gridwidth: 1.5, linecolor: "#52798d", linewidth: 2, zeroline: true, zerolinecolor: "#638194", zerolinewidth: 2 },
+    paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(248,252,253,.82)",
+    font: { color: "#244456", family: "Inter, system-ui, sans-serif" }, title: { text: title, font: { size: 13, color: "#1a516c" }, x: 0, xanchor: "left" }
   });
-  Plotly.newPlot(costChart, [
-    costTrace("Import cost", "import_cost", "#c7671a"),
-    costTrace("Export value", "export_credit", "#17825f"),
-    costTrace("Net cost", "net_cost", "#345d7d"),
-  ], {
-    margin: { l: 55, r: 18, t: 12, b: 48 },
-    height: 290,
-    hovermode: "x unified",
-    legend: { orientation: "h", y: 1.13, x: 0 },
-    xaxis: { title: "Date", type: "date", tickformat: "%b %-d", showgrid: false },
-    yaxis: { title: "Dollars", tickprefix: "$", gridcolor: "#dce8ee", zeroline: true },
-    paper_bgcolor: "rgba(0,0,0,0)",
-    plot_bgcolor: "rgba(0,0,0,0)",
-  }, { responsive: true, displayModeBar: false });
+  const renderEnergyChart = () => {
+    const selected = selectedRows(energyRange); const style = energyStyle.value;
+    const fields = [["SunRun solar", "production_kwh", "#e09a18"], ["M01 delivered", "delivered_kwh", "#2788c3"], ["M02 received", "received_kwh", "#10a56c"], ["Estimated home demand", "edc_kwh", "#7a55c7"]];
+    const traces = fields.map(([name, field, color]) => ({ x: selected.map(r => r.date), y: selected.map(r => r[field]), name, type: style === "bar" ? "bar" : "scatter", mode: style === "bar" ? undefined : "lines+markers", line: { color, width: 3 }, marker: { color, size: 6 }, fill: style === "area" ? "tozeroy" : "none", fillcolor: style === "area" ? `${color}28` : undefined, opacity: style === "bar" ? .86 : 1, hovertemplate: `%{x}<br>${name}: %{y:.2f} kWh<extra></extra>` }));
+    Plotly.react(chart, traces, { ...baseLayout("Daily energy flow", "kWh"), barmode: "group", bargap: .18 }, { responsive: true, displayModeBar: false });
+    const solar = sum(selected, "production_kwh"), delivered = sum(selected, "delivered_kwh"), received = sum(selected, "received_kwh"), edc = sum(selected, "edc_kwh"), netExport = received - delivered;
+    energyStory.innerHTML = `<span><b>${number(solar)} kWh</b> solar produced</span><span><b>${number(edc)} kWh</b> estimated home demand</span><span class="${netExport >= 0 ? "is-credit" : "is-charge"}"><b>${number(Math.abs(netExport))} kWh</b> net ${netExport >= 0 ? "exported" : "imported"}</span>`;
+  };
+  const renderCostChart = () => {
+    const selected = selectedRows(costRange); const style = costStyle.value;
+    const fields = [["Import cost", "import_cost", "#ef5b5b"], ["Export value", "export_credit", "#12a66d"], ["Net energy cost", "net_cost", "#325f8d"]];
+    const traces = fields.map(([name, field, color]) => ({ x: selected.map(r => r.date), y: selected.map(r => r[field]), name, type: style === "bar" ? "bar" : "scatter", mode: style === "bar" ? undefined : "lines+markers", line: { color, width: 3 }, marker: { color, size: 6 }, fill: style === "area" && field === "net_cost" ? "tozeroy" : "none", fillcolor: style === "area" && field === "net_cost" ? "rgba(50,95,141,.18)" : undefined, opacity: style === "bar" ? .86 : 1, hovertemplate: `%{x}<br>${name}: $%{y:.2f}<extra></extra>` }));
+    Plotly.react(costChart, traces, { ...baseLayout("Estimated daily NYSEG energy effect", "Dollars"), yaxis: { ...baseLayout("", "Dollars").yaxis, tickprefix: "$", rangemode: "normal" }, barmode: "group", bargap: .18 }, { responsive: true, displayModeBar: false });
+    const imports = sum(selected, "import_cost"), exports = sum(selected, "export_credit"), net = sum(selected, "net_cost");
+    costStory.innerHTML = `<span><b>${money(imports)}</b> estimated import value</span><span><b>${money(exports)}</b> export value</span><span class="${net <= 0 ? "is-credit" : "is-charge"}"><b>${money(net)}</b> estimated bill effect</span>`;
+  };
+  const renderDailyCharts = () => { renderEnergyChart(); renderCostChart(); };
+  [energyRange, energyStyle].forEach(control => control.addEventListener("change", renderEnergyChart));
+  [costRange, costStyle].forEach(control => control.addEventListener("change", renderCostChart));
+  [chart, costChart].forEach(node => node.addEventListener("chartpopoutclosed", renderDailyCharts));
+  renderDailyCharts();
 
   const hourlyChart = document.getElementById("nyseg-file-hourly-chart");
   const hourlyStart = document.getElementById("nyseg-hourly-start-date");

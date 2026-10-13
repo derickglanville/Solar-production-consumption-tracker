@@ -2821,6 +2821,10 @@ function closeChartPopout() {
   requestAnimationFrame(() => {
     resizePlotlyWithin(chartNode);
     setTimeout(() => resizePlotlyWithin(chartNode), 80);
+    setTimeout(() => {
+      chartNode.dispatchEvent(new CustomEvent("chartpopoutclosed"));
+      resizePlotlyWithin(chartNode);
+    }, 140);
   });
   activeChartPopout = null;
 }

@@ -4005,3 +4005,17 @@ body[data-page="dashboard"].dashboard-compact-mode .btn-contract {
 .nyseg-file-table .nyseg-m02-group-end { border-right: 3px solid #16825d !important; }
 .nyseg-file-table .nyseg-edc-group-start { border-left: 3px solid #7255a5 !important; }
 .nyseg-file-table .nyseg-edc-group-end { border-right: 3px solid #7255a5 !important; }
+
+
+/* NYSEG daily chart storytelling controls */
+.nyseg-story-chart-card { background: linear-gradient(145deg, #ffffff 0%, #f1fbff 100%); }
+.nyseg-chart-controls { align-items: center; background: linear-gradient(90deg, rgba(216,242,250,.82), rgba(240,251,244,.92)); border: 1px solid #b8d9e6; border-radius: .65rem; display: flex; flex-wrap: wrap; gap: .45rem .8rem; margin: .55rem 0 .65rem; padding: .45rem .6rem; }
+.nyseg-chart-controls label { align-items: center; color: #285a70; display: flex; font-size: .73rem; font-weight: 800; gap: .35rem; letter-spacing: .02em; text-transform: uppercase; }
+.nyseg-chart-controls select { background: #fff; border: 1px solid #91bdcf; border-radius: .4rem; color: #164b63; font: inherit; font-weight: 700; padding: .25rem .38rem; text-transform: none; }
+.nyseg-chart-story { display: grid; gap: .45rem; grid-template-columns: repeat(3, minmax(0, 1fr)); margin-bottom: .6rem; }
+.nyseg-chart-story span { background: rgba(255,255,255,.86); border-left: 4px solid #3e8fb5; border-radius: .4rem; box-shadow: 0 .2rem .55rem rgba(40,91,112,.08); color: #42606e; font-size: .71rem; line-height: 1.28; padding: .38rem .45rem; }
+.nyseg-chart-story b { color: #173f54; display: block; font-size: .88rem; }
+.nyseg-chart-story .is-credit { border-left-color: #1da36b; }.nyseg-chart-story .is-credit b { color: #117549; }
+.nyseg-chart-story .is-charge { border-left-color: #df7047; }.nyseg-chart-story .is-charge b { color: #af4728; }
+.nyseg-file-comparison-chart .plotly .gridlayer path { stroke-width: 1.5px !important; }
+@media (max-width: 700px) { .nyseg-chart-story { grid-template-columns: 1fr; } .nyseg-chart-controls { align-items: stretch; } .nyseg-chart-controls label { justify-content: space-between; width: 100%; } }
