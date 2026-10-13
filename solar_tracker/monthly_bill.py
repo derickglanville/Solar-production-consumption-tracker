@@ -626,6 +626,7 @@ def build_bill_summary_report() -> dict[str, Any]:
         prior = _number(record.get("prior_excess_generation_kwh"))
         generated = _number(record.get("exported_kwh"))
         used = _number(record.get("credited_usage_kwh"))
+        days = int(record.get("days_in_period") or 0)
         credit_bank_history.append({
             "statement_date": record.get("statement_date"),
             "billing_start_date": record.get("billing_start_date"),
@@ -634,6 +635,9 @@ def build_bill_summary_report() -> dict[str, Any]:
             "generated_kwh": generated,
             "used_kwh": used,
             "remaining_kwh": _number(remaining),
+            "days_in_period": days,
+            "net_change_kwh": _number(remaining) - prior,
+            "average_daily_change_kwh": ((_number(remaining) - prior) / days) if days else None,
         })
 
     return {
