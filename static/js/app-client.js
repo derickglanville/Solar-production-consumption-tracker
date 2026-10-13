@@ -5707,6 +5707,9 @@ function setupNysegUsageRowSelection() {
       toggle();
     });
     row.addEventListener("keydown", (event) => {
+      // Key events from a Notes textarea bubble to the row.  Do not treat
+      // Space or Enter as row-selection shortcuts while the user is typing.
+      if (event.target.closest("input, textarea, button, a, select, label")) return;
       if (event.key === "Enter" || event.key === " ") {
         event.preventDefault();
         toggle();

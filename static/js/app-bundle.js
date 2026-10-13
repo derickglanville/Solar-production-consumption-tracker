@@ -28346,6 +28346,7 @@ This is a reconciliation, not an independent measurement, because EDC includes S
         toggle();
       });
       row.addEventListener("keydown", (event) => {
+        if (event.target.closest("input, textarea, button, a, select, label")) return;
         if (event.key === "Enter" || event.key === " ") {
           event.preventDefault();
           toggle();
