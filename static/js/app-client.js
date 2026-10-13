@@ -2822,7 +2822,10 @@ function closeChartPopout() {
     resizePlotlyWithin(chartNode);
     setTimeout(() => resizePlotlyWithin(chartNode), 80);
     setTimeout(() => {
-      chartNode.dispatchEvent(new CustomEvent("chartpopoutclosed"));
+      const restoredCharts = chartNode.matches(".dashboard-chart, .nyseg-file-comparison-chart")
+        ? [chartNode]
+        : [...chartNode.querySelectorAll(".dashboard-chart, .nyseg-file-comparison-chart")];
+      restoredCharts.forEach((node) => node.dispatchEvent(new CustomEvent("chartpopoutclosed")));
       resizePlotlyWithin(chartNode);
     }, 140);
   });
