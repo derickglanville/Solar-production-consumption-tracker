@@ -69,6 +69,7 @@ NYSEG_DAILY_SYNC_PROCESS_PATH = NYSEG_DAILY_SYNC_STATUS_PATH.with_name("nyseg-da
 NYSEG_DAILY_SYNC_SCRIPT_PATH = Path(__file__).resolve().parent.parent / "NYSEG Download Script" / "run_nyseg_daily_sync.ps1"
 NYSEG_DAILY_SYNC_WORKFLOW_PATH = Path(__file__).resolve().parent.parent / "NYSEG Download Script" / "run_nyseg_daily_sync.py"
 NYSEG_MANUAL_RUN_SCRIPT_PATH = Path(__file__).resolve().parent.parent / "NYSEG Download Script" / "NYSEG_File_Download_Test.py"
+SUNRUN_DAILY_TASK_NAME = "Sunrun Daily Download and Copy"
 SUNRUN_LOAD_HISTORY_PATH = Path(__file__).resolve().parent.parent / "JSON" / "Daily_Load_History.json"
 NYSEG_LOAD_HISTORY_PATH = Path(__file__).resolve().parent.parent / "JSON" / "Daily_NYSEG_Load_History.json"
 NYSEG_MANUAL_DOWNLOAD_DIRECTORY = Path.home() / "Downloads"
@@ -963,6 +964,28 @@ def nyseg_daily_sync_run_api():
         json.dumps({"pid": process.pid, "started_at": started_at}), encoding="utf-8"
     )
     return jsonify({"started": True})
+
+
+@main_blueprint.route("/api/sunrun-daily-run/run", methods=["POST"])
+def sunrun_daily_run_api():
+    """Start the same Windows task used by the daily SunRun schedule."""
+    try:
+        result = subprocess.run(
+            ["schtasks", "/Run", "/TN", SUNRUN_DAILY_TASK_NAME],
+            capture_output=True,
+            text=True,
+            timeout=20,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired) as error:
+        return jsonify({"error": f"Could not start the SunRun workflow: {error}"}), 500
+    if result.returncode != 0:
+        detail = (result.stderr or result.stdout or "Task Scheduler did not start the SunRun workflow.").strip()
+        return jsonify({"error": detail}), 409
+    return jsonify({
+        "started": True,
+        "message": "SunRun daily download started. Refresh this page after it finishes to see the result.",
+    })
 
 
 @main_blueprint.route("/api/nyseg-daily-sync/process-saved-file", methods=["POST"])
