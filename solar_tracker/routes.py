@@ -71,6 +71,8 @@ NYSEG_DAILY_SYNC_WORKFLOW_PATH = Path(__file__).resolve().parent.parent / "NYSEG
 NYSEG_MANUAL_RUN_SCRIPT_PATH = Path(__file__).resolve().parent.parent / "NYSEG Download Script" / "NYSEG_File_Download_Test.py"
 SUNRUN_DAILY_TASK_NAME = "Sunrun Daily Download and Copy"
 SUNRUN_LOAD_HISTORY_PATH = Path(__file__).resolve().parent.parent / "JSON" / "Daily_Load_History.json"
+SUNRUN_DAILY_LOG_PATH = Path(__file__).resolve().parent.parent / "SunRun Data" / "Script" / "automation_logs" / "sunrun_workflow_{}.log"
+SUNRUN_MANUAL_RUN_STATUS_PATH = Path(__file__).resolve().parent.parent / "SunRun Data" / "sunrun-manual-run-status.json"
 NYSEG_LOAD_HISTORY_PATH = Path(__file__).resolve().parent.parent / "JSON" / "Daily_NYSEG_Load_History.json"
 NYSEG_MANUAL_DOWNLOAD_DIRECTORY = Path.home() / "Downloads"
 CIRCUIT_BREAKER_DIRECTORY_PATH = (
@@ -909,6 +911,60 @@ def nyseg_daily_sync_log_api():
     return response
 
 
+def _log_tail(path: Path, empty_message: str) -> list:
+    try:
+        raw = path.read_bytes()
+        encoding = "utf-16" if raw.startswith((b"\xff\xfe", b"\xfe\xff")) else "utf-8-sig"
+        return raw.decode(encoding, errors="replace").splitlines()[-80:]
+    except OSError:
+        return [empty_message]
+
+
+@main_blueprint.route("/api/daily-sync-activity")
+def daily_sync_activity_api():
+    """Return the live log for the process currently using the shared activity pane."""
+    try:
+        manual_run = json.loads(SUNRUN_MANUAL_RUN_STATUS_PATH.read_text(encoding="utf-8"))
+    except (OSError, ValueError, TypeError):
+        manual_run = {}
+
+    started_at = str(manual_run.get("started_at") or "")
+    if started_at:
+        log_path = Path(str(SUNRUN_DAILY_LOG_PATH).format(started_at[:10]))
+        try:
+            history = json.loads(SUNRUN_LOAD_HISTORY_PATH.read_text(encoding="utf-8")).get("records", [])
+        except (OSError, ValueError, AttributeError):
+            history = []
+        completed = next(
+            (row for row in reversed(history) if str(row.get("started_at") or "") >= started_at[:19]),
+            None,
+        )
+        payload = {
+            "process": "SunRun daily production",
+            "running": completed is None,
+            "completed": completed is not None,
+            "status": completed.get("status") if completed else "Running",
+            "lines": _log_tail(log_path, "SunRun workflow is starting; waiting for activity output."),
+        }
+        if completed is not None:
+            try:
+                SUNRUN_MANUAL_RUN_STATUS_PATH.unlink()
+            except FileNotFoundError:
+                pass
+        response = jsonify(payload)
+        response.headers["Cache-Control"] = "no-store"
+        return response
+
+    response = jsonify({
+        "process": "NYSEG daily sync",
+        "running": NYSEG_DAILY_SYNC_LOCK_PATH.is_file() or NYSEG_DAILY_SYNC_PROCESS_PATH.is_file(),
+        "completed": False,
+        "lines": _log_tail(NYSEG_DAILY_SYNC_LOG_PATH, "No NYSEG sync activity has been recorded yet."),
+    })
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
+
 @main_blueprint.route("/nyseg-daily-sync-log")
 def nyseg_daily_sync_log_view():
     try:
@@ -982,6 +1038,9 @@ def sunrun_daily_run_api():
     if result.returncode != 0:
         detail = (result.stderr or result.stdout or "Task Scheduler did not start the SunRun workflow.").strip()
         return jsonify({"error": detail}), 409
+    started_at = datetime.now().astimezone().isoformat(timespec="seconds")
+    SUNRUN_MANUAL_RUN_STATUS_PATH.parent.mkdir(parents=True, exist_ok=True)
+    SUNRUN_MANUAL_RUN_STATUS_PATH.write_text(json.dumps({"started_at": started_at}), encoding="utf-8")
     return jsonify({
         "started": True,
         "message": "SunRun daily download started. Refresh this page after it finishes to see the result.",
