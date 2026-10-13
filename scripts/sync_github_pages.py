@@ -17,7 +17,7 @@ from solar_tracker.routes import build_bootstrap_data
 
 
 DOCS = ROOT / "docs"
-ASSET_VERSION = "20261009-bill-summary-popout"
+ASSET_VERSION = "20261013-mobile-chart-update"
 
 ROUTE_REPLACEMENTS = {
     'href="/"': 'href="index.html"',

@@ -24416,6 +24416,7 @@ This typically indicates that your device does not have a healthy Internet conne
       sunrise_time: entry.sunrise_time || "",
       sunset_time: entry.sunset_time || "",
       notes: entry.notes || "",
+      nyseg_usage_note: entry.nyseg_usage_note || "",
       notes_manual: Boolean(entry.notes_manual),
       estimated: Boolean(entry.estimated),
       lookup_source: entry.lookup_source || "",
@@ -26045,6 +26046,11 @@ This typically indicates that your device does not have a healthy Internet conne
     requestAnimationFrame(() => {
       resizePlotlyWithin(chartNode);
       setTimeout(() => resizePlotlyWithin(chartNode), 80);
+      setTimeout(() => {
+        const restoredCharts = chartNode.matches(".dashboard-chart, .nyseg-file-comparison-chart") ? [chartNode] : [...chartNode.querySelectorAll(".dashboard-chart, .nyseg-file-comparison-chart")];
+        restoredCharts.forEach((node) => node.dispatchEvent(new CustomEvent("chartpopoutclosed")));
+        resizePlotlyWithin(chartNode);
+      }, 140);
     });
     activeChartPopout = null;
   }
@@ -28330,6 +28336,65 @@ This is a reconciliation, not an independent measurement, because EDC includes S
     }, { merge: true });
     return { recordedAt, count: rows.length };
   }
+  function setupNysegUsageRowSelection() {
+    const rows = [...document.querySelectorAll(".nyseg-file-row")];
+    rows.forEach((row) => {
+      if (row.dataset.selectionBound === "true") return;
+      row.dataset.selectionBound = "true";
+      const toggle = () => {
+        const selected = !row.classList.contains("nyseg-row-selected");
+        row.classList.toggle("nyseg-row-selected", selected);
+        row.setAttribute("aria-selected", String(selected));
+      };
+      row.addEventListener("click", (event) => {
+        if (event.target.closest("input, textarea, button, a, select, label")) return;
+        toggle();
+      });
+      row.addEventListener("keydown", (event) => {
+        if (event.target.closest("input, textarea, button, a, select, label")) return;
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          toggle();
+        }
+      });
+    });
+  }
+  async function setupNysegUsageNotes(db) {
+    const inputs = [...document.querySelectorAll(".nyseg-note-input[data-nyseg-note-date]")];
+    if (!inputs.length) return;
+    let entriesByDate = /* @__PURE__ */ new Map();
+    try {
+      const state = await loadFirestoreState(db);
+      entriesByDate = new Map((state.entries || []).map((entry) => [entry.entry_date, entry]));
+    } catch (error) {
+      console.warn("Could not load NYSEG row notes.", error);
+    }
+    inputs.forEach((input) => {
+      const entryDate = input.dataset.nysegNoteDate;
+      input.value = String(entriesByDate.get(entryDate)?.nyseg_usage_note || "");
+      input.addEventListener("change", async () => {
+        const note = input.value.trim();
+        input.disabled = true;
+        input.classList.remove("is-invalid");
+        try {
+          await setDoc2(doc(db, entryCollectionName, entryDate), {
+            entry_date: entryDate,
+            nyseg_usage_note: note,
+            updated_at: (/* @__PURE__ */ new Date()).toISOString()
+          }, { merge: true });
+          input.value = note;
+          input.classList.add("is-valid");
+          window.setTimeout(() => input.classList.remove("is-valid"), 1200);
+        } catch (error) {
+          input.classList.add("is-invalid");
+          input.title = `Could not save: ${error.message || error}`;
+          console.error("Could not save NYSEG row note.", error);
+        } finally {
+          input.disabled = false;
+        }
+      });
+    });
+  }
   async function setupNysegUsageFileActions(db) {
     const importButton = document.getElementById("nyseg-file-import");
     const useDownloadButton = document.getElementById("nyseg-file-use-download");
@@ -28693,7 +28758,8 @@ This is a reconciliation, not an independent measurement, because EDC includes S
       return;
     }
     if (getPageName() === "nyseg-usage-file") {
-      await setupNysegUsageFileActions(context.db);
+      setupNysegUsageRowSelection();
+      await Promise.all([setupNysegUsageFileActions(context.db), setupNysegUsageNotes(context.db)]);
       return;
     }
     if (getPageName() === "settings") {
