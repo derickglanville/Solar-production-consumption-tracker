@@ -1366,37 +1366,40 @@ def nyseg_meter_intervals_apply_api():
 
     source_start = date.fromisoformat(report["source_start"])
     source_end = date.fromisoformat(report["source_end"])
-    repository = FirestoreRepository()
-    entries = repository.list_entries()
-    candidates = [
-        entry for entry in entries
-        if source_start <= entry.entry_date <= source_end
-        and entry.meter_01_import_reading >= 0
-        and entry.meter_02_export_reading >= 0
-    ]
-    if not candidates:
-        return jsonify({"error": "No cumulative M01/M02 anchor is available."}), 409
+    try:
+        repository = FirestoreRepository()
+        entries = repository.list_entries()
+        candidates = [
+            entry for entry in entries
+            if source_start <= entry.entry_date <= source_end
+            and entry.meter_01_import_reading >= 0
+            and entry.meter_02_export_reading >= 0
+        ]
+        if not candidates:
+            return jsonify({"error": "No cumulative M01/M02 anchor is available."}), 409
 
-    anchor = max(candidates, key=lambda item: item.entry_date)
-    existing_dates = {entry.entry_date for entry in candidates}
-    running_m01 = anchor.meter_01_import_reading
-    running_m02 = anchor.meter_02_export_reading
-    saved_dates = []
-    for row in reversed(report.get("daily", [])):
-        row_date = date.fromisoformat(row["date"])
-        if row_date <= anchor.entry_date:
-            continue
-        running_m01 += row["import_kwh"]
-        running_m02 += row["export_kwh"]
-        if row_date in existing_dates:
-            continue
-        repository.save_utility_meter_reading(
-            row_date,
-            round(running_m01, 1),
-            round(running_m02, 1),
-            "M01/M02 created from reviewed NYSEG hourly Delivered/Received intervals.",
-        )
-        saved_dates.append(row["date"])
+        anchor = max(candidates, key=lambda item: item.entry_date)
+        existing_dates = {entry.entry_date for entry in candidates}
+        running_m01 = anchor.meter_01_import_reading
+        running_m02 = anchor.meter_02_export_reading
+        saved_dates = []
+        for row in reversed(report.get("daily", [])):
+            row_date = date.fromisoformat(row["date"])
+            if row_date <= anchor.entry_date:
+                continue
+            running_m01 += row["import_kwh"]
+            running_m02 += row["export_kwh"]
+            if row_date in existing_dates:
+                continue
+            repository.save_utility_meter_reading(
+                row_date,
+                round(running_m01, 1),
+                round(running_m02, 1),
+                "M01/M02 created from reviewed NYSEG hourly Delivered/Received intervals.",
+            )
+            saved_dates.append(row["date"])
+    except Exception as error:
+        return jsonify({"error": f"Firebase M01/M02 import could not complete: {error}"}), 502
     return jsonify({"saved": len(saved_dates), "dates": saved_dates})
 
 @main_blueprint.route("/api/sunrun-production")
