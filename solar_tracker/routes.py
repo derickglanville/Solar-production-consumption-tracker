@@ -1383,6 +1383,7 @@ def nyseg_meter_intervals_apply_api():
         running_m01 = anchor.meter_01_import_reading
         running_m02 = anchor.meter_02_export_reading
         saved_dates = []
+        saved_readings = []
         for row in reversed(report.get("daily", [])):
             row_date = date.fromisoformat(row["date"])
             if row_date <= anchor.entry_date:
@@ -1398,9 +1399,19 @@ def nyseg_meter_intervals_apply_api():
                 "M01/M02 created from reviewed NYSEG hourly Delivered/Received intervals.",
             )
             saved_dates.append(row["date"])
+            saved_readings.append({
+                "date": row["date"],
+                "m01": round(running_m01, 1),
+                "m02": round(running_m02, 1),
+            })
     except Exception as error:
         return jsonify({"error": f"Firebase M01/M02 import could not complete: {error}"}), 502
-    return jsonify({"saved": len(saved_dates), "dates": saved_dates})
+    return jsonify({
+        "saved": len(saved_dates),
+        "dates": saved_dates,
+        "readings": saved_readings,
+        "anchor_date": anchor.entry_date.isoformat(),
+    })
 
 @main_blueprint.route("/api/sunrun-production")
 def sunrun_production_api():

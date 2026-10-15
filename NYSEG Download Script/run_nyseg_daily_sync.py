@@ -415,13 +415,29 @@ def main(
         if response.status_code >= 400:
             raise RuntimeError(result.get("error", "NYSEG Firebase import failed."))
 
+        saved_readings = result.get("readings") or []
+        saved_count = int(result.get("saved", 0))
+        if saved_readings:
+            progress(f"Step 2/3 complete: {saved_count} new Firebase M01/M02 record{'s' if saved_count != 1 else ''} added.")
+            for reading in saved_readings:
+                progress(
+                    f"  New reading {reading.get('date')}: "
+                    f"M01 {float(reading.get('m01', 0)):,.1f} · "
+                    f"M02 {float(reading.get('m02', 0)):,.1f}"
+                )
+        else:
+            progress(
+                "Step 2/3 complete: 0 new Firebase records added; "
+                f"all NYSEG dates through {result.get('anchor_date', 'the current anchor')} are already recorded."
+            )
         status = {
             "status": "success",
             "operation": "process" if skip_download else "sync",
             "started_at": started_at,
             "completed_at": datetime.now().astimezone().isoformat(timespec="seconds"),
-            "saved_records": int(result.get("saved", 0)),
+            "saved_records": saved_count,
             "saved_dates": result.get("dates", []),
+            "saved_readings": saved_readings,
             "download_source": download_source,
             "download_output": "Completed; see nyseg-daily-sync.log for step-by-step output.",
         }
