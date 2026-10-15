@@ -4023,3 +4023,6 @@ body[data-page="dashboard"].dashboard-compact-mode .btn-contract {
 .nyseg-chart-popout-content { display: flex; flex-direction: column; min-height: 0; }
 .chart-popout-body .nyseg-chart-popout-content { flex: 1 1 auto; height: 100%; width: 100%; }
 .chart-popout-body .nyseg-chart-popout-content .nyseg-file-comparison-chart { flex: 1 1 auto; min-height: 360px; }
+
+.nyseg-file-table th:has(.nyseg-column-sort) { vertical-align: top; }
+.nyseg-column-sort { background: #fff; border: 1px solid #85b4c7; border-radius: .3rem; color: #225b72; display: block; font-size: .62rem; font-weight: 700; margin: .22rem auto 0; max-width: 6.2rem; padding: .1rem .18rem; }
