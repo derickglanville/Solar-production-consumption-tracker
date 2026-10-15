@@ -4024,6 +4024,6 @@ body[data-page="dashboard"].dashboard-compact-mode .btn-contract {
 .chart-popout-body .nyseg-chart-popout-content { flex: 1 1 auto; height: 100%; width: 100%; }
 .chart-popout-body .nyseg-chart-popout-content .nyseg-file-comparison-chart { flex: 1 1 auto; min-height: 360px; }
 
-.nyseg-file-table th:has(.nyseg-column-sort) { white-space: nowrap; }
-.nyseg-file-table th:has(.nyseg-column-sort) > span { vertical-align: middle; }
-.nyseg-column-sort { background: #fff; border: 1px solid #85b4c7; border-radius: .25rem; color: #225b72; display: inline-block; font-size: .56rem; font-weight: 700; height: 1.25rem; line-height: 1; margin: 0 0 0 .16rem; min-width: 3rem; padding: 0 .08rem; vertical-align: middle; width: 3rem; }
+.nyseg-file-table th:has(.nyseg-column-sort) { padding-right: 2.55rem !important; position: sticky; white-space: normal; }
+.nyseg-file-table th:has(.nyseg-column-sort) > span { display: block; }
+.nyseg-column-sort { background: #fff; border: 1px solid #85b4c7; border-radius: .25rem; color: #225b72; font-size: .56rem; font-weight: 700; height: 1.25rem; line-height: 1; margin: 0; min-width: 2.35rem; padding: 0 .04rem; position: absolute; right: .16rem; top: .22rem; width: 2.35rem; }
