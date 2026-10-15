@@ -108,6 +108,7 @@ def load_sunrun_all_runs() -> list:
         rows = json.loads(SUNRUN_LOAD_HISTORY_PATH.read_text(encoding="utf-8")).get("records", [])
     except (OSError, ValueError, AttributeError):
         rows = []
+    current_by_date = load_sunrun_daily_production().get("by_date", {})
     ordered = sorted(rows, key=lambda row: row.get("started_at", ""))
     previous_total = 0
     decorated = []
@@ -115,10 +116,20 @@ def load_sunrun_all_runs() -> list:
         total = int(row.get("json_entries") or 0)
         added = max(0, total - previous_total) if previous_total else 0
         previous_total = max(previous_total, total)
+        production_date = row.get("production_date")
+        current = current_by_date.get(production_date, {})
+        snapshot_kwh = row.get("production_kwh")
+        current_kwh = current.get("production_kwh")
+        corrected = (
+            current_kwh is not None and snapshot_kwh is not None
+            and abs(float(current_kwh) - float(snapshot_kwh)) > 0.05
+        )
         decorated.append({
             **row,
             "new_records": added,
             "run_time": format_run_time(row.get("finished_at") or row.get("started_at")),
+            "current_production_kwh": current_kwh,
+            "production_corrected": corrected,
         })
     return list(reversed(decorated))
 
@@ -990,10 +1001,16 @@ def sunrun_daily_load_log_view():
         log_text = log_path.read_text(encoding="utf-8", errors="replace") if log_path else "No SunRun workflow activity has been recorded yet."
     except OSError:
         log_text = "No detailed log file is available for the latest SunRun run."
+    source_rows = [
+        row for row in load_sunrun_daily_production().get("rows", [])
+        if row.get("available")
+    ][-14:]
+    source_rows.reverse()
     return render_template(
         "sunrun_daily_load_log.html",
         runs=runs,
         latest=latest,
+        source_rows=source_rows,
         log_text=log_text,
         page_name="nyseg-usage-file",
         bootstrap_data=build_bootstrap_data(),
