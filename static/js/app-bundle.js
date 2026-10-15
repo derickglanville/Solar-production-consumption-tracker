@@ -28359,6 +28359,37 @@ This is a reconciliation, not an independent measurement, because EDC includes S
       });
     });
   }
+  function setupNysegUsageColumnSorts() {
+    const controls = [...document.querySelectorAll(".nyseg-column-sort[data-nyseg-sort]")];
+    if (!controls.length) return;
+    const table = controls[0].closest("table");
+    const body = table?.querySelector("tbody");
+    if (!body) return;
+    const originalRows = [...body.querySelectorAll(".nyseg-file-row")];
+    originalRows.forEach((row, index) => {
+      row.dataset.nysegOriginalOrder = String(index);
+    });
+    controls.forEach((control) => {
+      if (control.dataset.sortBound === "true") return;
+      control.dataset.sortBound = "true";
+      control.addEventListener("change", () => {
+        controls.filter((other) => other !== control).forEach((other) => {
+          other.value = "normal";
+        });
+        const field2 = `nyseg${control.dataset.nysegSort[0].toUpperCase()}${control.dataset.nysegSort.slice(1)}`;
+        const rows = [...body.querySelectorAll(".nyseg-file-row")];
+        rows.sort((left, right) => {
+          if (control.value === "normal") return Number(left.dataset.nysegOriginalOrder) - Number(right.dataset.nysegOriginalOrder);
+          const leftValue = Number(left.dataset[field2]);
+          const rightValue = Number(right.dataset[field2]);
+          const safeLeft = Number.isFinite(leftValue) ? leftValue : -Infinity;
+          const safeRight = Number.isFinite(rightValue) ? rightValue : -Infinity;
+          return control.value === "asc" ? safeLeft - safeRight : safeRight - safeLeft;
+        });
+        rows.forEach((row) => body.appendChild(row));
+      });
+    });
+  }
   async function setupNysegUsageNotes(db) {
     const inputs = [...document.querySelectorAll(".nyseg-note-input[data-nyseg-note-date]")];
     if (!inputs.length) return;
@@ -28759,6 +28790,7 @@ This is a reconciliation, not an independent measurement, because EDC includes S
     }
     if (getPageName() === "nyseg-usage-file") {
       setupNysegUsageRowSelection();
+      setupNysegUsageColumnSorts();
       await Promise.all([setupNysegUsageFileActions(context.db), setupNysegUsageNotes(context.db)]);
       return;
     }

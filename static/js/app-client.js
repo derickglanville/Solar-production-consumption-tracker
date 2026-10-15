@@ -6126,6 +6126,7 @@ async function bootPage() {
   }
   if (getPageName() === "nyseg-usage-file") {
     setupNysegUsageRowSelection();
+    setupNysegUsageColumnSorts();
     await Promise.all([setupNysegUsageFileActions(context.db), setupNysegUsageNotes(context.db)]);
     return;
   }
