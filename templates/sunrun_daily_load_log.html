@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card tracker-card mb-4"><div class="card-body">
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3"><div><p class="eyebrow mb-1">SunRun automation</p><h1 class="h3 mb-0">Daily production load log</h1></div><a class="btn btn-contract btn-sm" href="{{ url_for('main.nyseg_usage') }}">Back to NYSEG usage</a></div>
+  <p class="text-muted small mb-0">This in-app log does not depend on the separate SunRun portal service. Each run shows the production date and kWh loaded from SunRun.</p>
+</div></section>
+<section class="card tracker-card mb-4"><div class="card-body"><h2 class="h5">Production records added or refreshed</h2><div class="table-responsive"><table class="table align-middle"><thead><tr><th>Run</th><th>Status</th><th>Production record</th><th>Generated</th><th>New records</th><th>Total records</th><th>Email</th></tr></thead><tbody>{% for run in runs %}<tr><td><strong>{{ run.date }}</strong><small class="d-block text-muted">{{ run.run_time }}</small></td><td class="{{ 'text-success' if run.status == 'Success' else 'text-danger' }}">{{ run.status }}</td><td>{{ run.production_date or 'No production record' }}</td><td><strong>{{ '%.1f'|format(run.production_kwh or 0) }} kWh</strong></td><td>{{ run.new_records }} added</td><td>{{ run.json_entries or 0 }}</td><td class="{{ 'text-success' if run.email_sent else 'text-danger' }}">{{ 'Sent' if run.email_sent else 'Not sent' }}</td></tr>{% else %}<tr><td colspan="7" class="text-muted">No SunRun runs are recorded yet.</td></tr>{% endfor %}</tbody></table></div></div></section>
+<section class="card tracker-card"><div class="card-body"><h2 class="h5">Latest workflow details{% if latest.date %}: {{ latest.date }}{% endif %}</h2><pre class="nyseg-sync-log-full mb-0">{{ log_text }}</pre></div></section>
+{% endblock %}

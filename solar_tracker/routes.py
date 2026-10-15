@@ -102,17 +102,30 @@ def load_nyseg_daily_sync_status() -> dict:
         return {}
 
 
-def load_sunrun_recent_runs() -> dict:
-    """Read concise status rows written by the local 8:30 AM SunRun workflow."""
+def load_sunrun_all_runs() -> list:
+    """Read SunRun workflow history and calculate records added by each run."""
     try:
         rows = json.loads(SUNRUN_LOAD_HISTORY_PATH.read_text(encoding="utf-8")).get("records", [])
     except (OSError, ValueError, AttributeError):
         rows = []
-    recent = sorted(rows, key=lambda row: row.get("started_at", ""), reverse=True)[:5]
-    recent = [
-        {**row, "run_time": format_run_time(row.get("finished_at") or row.get("started_at"))}
-        for row in recent
-    ]
+    ordered = sorted(rows, key=lambda row: row.get("started_at", ""))
+    previous_total = 0
+    decorated = []
+    for row in ordered:
+        total = int(row.get("json_entries") or 0)
+        added = max(0, total - previous_total) if previous_total else 0
+        previous_total = max(previous_total, total)
+        decorated.append({
+            **row,
+            "new_records": added,
+            "run_time": format_run_time(row.get("finished_at") or row.get("started_at")),
+        })
+    return list(reversed(decorated))
+
+
+def load_sunrun_recent_runs() -> dict:
+    """Read concise status rows written by the local 7:40 AM SunRun workflow."""
+    recent = load_sunrun_all_runs()[:5]
     return {
         "recent": recent,
         "successful": sum(1 for row in recent if row.get("status") == "Success"),
@@ -963,6 +976,28 @@ def daily_sync_activity_api():
     })
     response.headers["Cache-Control"] = "no-store"
     return response
+
+
+@main_blueprint.route("/sunrun-daily-load-log")
+def sunrun_daily_load_log_view():
+    runs = load_sunrun_all_runs()
+    latest = runs[0] if runs else {}
+    log_date = latest.get("date")
+    log_path = SUNRUN_DAILY_LOG_PATH.with_name(
+        SUNRUN_DAILY_LOG_PATH.name.format(log_date)
+    ) if log_date else None
+    try:
+        log_text = log_path.read_text(encoding="utf-8", errors="replace") if log_path else "No SunRun workflow activity has been recorded yet."
+    except OSError:
+        log_text = "No detailed log file is available for the latest SunRun run."
+    return render_template(
+        "sunrun_daily_load_log.html",
+        runs=runs,
+        latest=latest,
+        log_text=log_text,
+        page_name="nyseg-usage-file",
+        bootstrap_data=build_bootstrap_data(),
+    )
 
 
 @main_blueprint.route("/nyseg-daily-sync-log")
