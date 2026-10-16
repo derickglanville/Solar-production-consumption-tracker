@@ -25754,7 +25754,7 @@ This typically indicates that your device does not have a healthy Internet conne
               <div class="dashboard-hero-actions">
                 <button type="button" class="btn btn-contract btn-sm" data-dashboard-view-toggle aria-pressed="false">Field Mode</button>
                 <button type="button" class="btn btn-contract btn-sm" data-bs-toggle="modal" data-bs-target="#dashboardIntroModal">About</button>
-                <button type="button" class="btn btn-sun btn-sm" onclick="window.location.assign(window.location.pathname + '?refresh=' + Date.now())" title="Re-read the SunRun CSV and refresh live Firebase data">Force Load Data</button>
+                <button type="button" class="btn btn-sun btn-sm" onclick="window.location.assign(window.location.pathname + '?refresh=' + Date.now())" title="Reload this dashboard from Firebase Firestore">Refresh Firebase</button>
                 <a class="btn btn-sun btn-sm" href="${isStaticSite() ? "#" : "/nyseg-usage-file/daily"}"${isStaticSite() ? ' aria-disabled="true" title="The NYSEG file is available in the local app only"' : ""}>View NYSEG and Sunrun Files</a>
                 <a class="btn btn-contract btn-sm" href="${isStaticSite() ? "light-bulbs.html" : "/light-bulbs"}">Light Bulbs</a>
                 <a class="btn btn-contract btn-sm" href="${isStaticSite() ? "electricity-usage.html" : "/electricity-usage"}">Electricity Usage</a>
@@ -28234,11 +28234,13 @@ This is a reconciliation, not an independent measurement, because EDC includes S
     try {
       const state = await loadFirestoreState(db);
       const fileThroughDate = getDashboardFileThroughDate();
+      const latestEntryDate = (state.entries || []).map((entry) => entry.entry_date).filter(Boolean).sort().at(-1) || "no saved date";
+      const connectionLabel = state.connection === "rest" ? "HTTPS live read" : "Live Firestore";
       await renderDashboardUnified(
         state.entries,
         state.config,
         buildStatus(
-          fileThroughDate ? `Dashboard calculations use matching SunRun and NYSEG downloaded-file data through ${fileThroughDate}. The two most recent reporting days are excluded until both files publish final data.` : "Dashboard is waiting for matching SunRun and NYSEG downloaded-file data before calculating metrics.",
+          `Firebase connected via ${connectionLabel}. Loaded ${(state.entries || []).length} daily record${(state.entries || []).length === 1 ? "" : "s"} through ${latestEntryDate}. ${fileThroughDate ? `Dashboard calculations use matching SunRun and NYSEG downloaded-file data through ${fileThroughDate}. The two most recent reporting days are excluded until both files publish final data.` : "Dashboard is waiting for matching SunRun and NYSEG downloaded-file data before calculating metrics."}`,
           fileThroughDate ? "success" : "warning",
           !fileThroughDate
         )

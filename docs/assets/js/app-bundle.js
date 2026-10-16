@@ -25754,7 +25754,7 @@ This typically indicates that your device does not have a healthy Internet conne
               <div class="dashboard-hero-actions">
                 <button type="button" class="btn btn-contract btn-sm" data-dashboard-view-toggle aria-pressed="false">Field Mode</button>
                 <button type="button" class="btn btn-contract btn-sm" data-bs-toggle="modal" data-bs-target="#dashboardIntroModal">About</button>
-                <button type="button" class="btn btn-sun btn-sm" onclick="window.location.assign(window.location.pathname + '?refresh=' + Date.now())" title="Re-read the SunRun CSV and refresh live Firebase data">Force Load Data</button>
+                <button type="button" class="btn btn-sun btn-sm" onclick="window.location.assign(window.location.pathname + '?refresh=' + Date.now())" title="Reload this dashboard from Firebase Firestore">Refresh Firebase</button>
                 <a class="btn btn-sun btn-sm" href="${isStaticSite() ? "#" : "/nyseg-usage-file/daily"}"${isStaticSite() ? ' aria-disabled="true" title="The NYSEG file is available in the local app only"' : ""}>View NYSEG and Sunrun Files</a>
                 <a class="btn btn-contract btn-sm" href="${isStaticSite() ? "light-bulbs.html" : "/light-bulbs"}">Light Bulbs</a>
                 <a class="btn btn-contract btn-sm" href="${isStaticSite() ? "electricity-usage.html" : "/electricity-usage"}">Electricity Usage</a>
@@ -28234,11 +28234,13 @@ This is a reconciliation, not an independent measurement, because EDC includes S
     try {
       const state = await loadFirestoreState(db);
       const fileThroughDate = getDashboardFileThroughDate();
+      const latestEntryDate = (state.entries || []).map((entry) => entry.entry_date).filter(Boolean).sort().at(-1) || "no saved date";
+      const connectionLabel = state.connection === "rest" ? "HTTPS live read" : "Live Firestore";
       await renderDashboardUnified(
         state.entries,
         state.config,
         buildStatus(
-          fileThroughDate ? `Dashboard calculations use matching SunRun and NYSEG downloaded-file data through ${fileThroughDate}. The two most recent reporting days are excluded until both files publish final data.` : "Dashboard is waiting for matching SunRun and NYSEG downloaded-file data before calculating metrics.",
+          `Firebase connected via ${connectionLabel}. Loaded ${(state.entries || []).length} daily record${(state.entries || []).length === 1 ? "" : "s"} through ${latestEntryDate}. ${fileThroughDate ? `Dashboard calculations use matching SunRun and NYSEG downloaded-file data through ${fileThroughDate}. The two most recent reporting days are excluded until both files publish final data.` : "Dashboard is waiting for matching SunRun and NYSEG downloaded-file data before calculating metrics."}`,
           fileThroughDate ? "success" : "warning",
           !fileThroughDate
         )
@@ -28356,6 +28358,37 @@ This is a reconciliation, not an independent measurement, because EDC includes S
           event.preventDefault();
           toggle();
         }
+      });
+    });
+  }
+  function setupNysegUsageColumnSorts() {
+    const controls = [...document.querySelectorAll(".nyseg-column-sort[data-nyseg-sort]")];
+    if (!controls.length) return;
+    const table = controls[0].closest("table");
+    const body = table?.querySelector("tbody");
+    if (!body) return;
+    const originalRows = [...body.querySelectorAll(".nyseg-file-row")];
+    originalRows.forEach((row, index) => {
+      row.dataset.nysegOriginalOrder = String(index);
+    });
+    controls.forEach((control) => {
+      if (control.dataset.sortBound === "true") return;
+      control.dataset.sortBound = "true";
+      control.addEventListener("change", () => {
+        controls.filter((other) => other !== control).forEach((other) => {
+          other.value = "normal";
+        });
+        const field2 = `nyseg${control.dataset.nysegSort[0].toUpperCase()}${control.dataset.nysegSort.slice(1)}`;
+        const rows = [...body.querySelectorAll(".nyseg-file-row")];
+        rows.sort((left, right) => {
+          if (control.value === "normal") return Number(left.dataset.nysegOriginalOrder) - Number(right.dataset.nysegOriginalOrder);
+          const leftValue = Number(left.dataset[field2]);
+          const rightValue = Number(right.dataset[field2]);
+          const safeLeft = Number.isFinite(leftValue) ? leftValue : -Infinity;
+          const safeRight = Number.isFinite(rightValue) ? rightValue : -Infinity;
+          return control.value === "asc" ? safeLeft - safeRight : safeRight - safeLeft;
+        });
+        rows.forEach((row) => body.appendChild(row));
       });
     });
   }
@@ -28759,6 +28792,7 @@ This is a reconciliation, not an independent measurement, because EDC includes S
     }
     if (getPageName() === "nyseg-usage-file") {
       setupNysegUsageRowSelection();
+      setupNysegUsageColumnSorts();
       await Promise.all([setupNysegUsageFileActions(context.db), setupNysegUsageNotes(context.db)]);
       return;
     }
