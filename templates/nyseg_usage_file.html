@@ -123,7 +123,7 @@
     const selected = selectedRows(energyRange); const style = energyStyle.value;
     const fields = [["SunRun solar", "production_kwh", "#e09a18"], ["M01 delivered", "delivered_kwh", "#2788c3"], ["M02 received", "received_kwh", "#10a56c"], ["Estimated home demand", "edc_kwh", "#7a55c7"]];
     const traces = fields.map(([name, field, color]) => ({ x: selected.map(r => r.date), y: selected.map(r => r[field]), name, type: style === "bar" ? "bar" : "scatter", mode: style === "bar" ? undefined : "lines+markers", line: { color, width: 3 }, marker: { color, size: 6 }, fill: style === "area" ? "tozeroy" : "none", fillcolor: style === "area" ? `${color}28` : undefined, opacity: style === "bar" ? .86 : 1, hovertemplate: `%{x}<br>${name}: %{y:.2f} kWh<extra></extra>` }));
-    Plotly.react(chart, traces, { ...baseLayout("Daily energy flow", "kWh"), barmode: "group", bargap: .18 }, { responsive: true, displayModeBar: false });
+    Plotly.react(chart, traces, { ...baseLayout("Daily energy flow", "kWh", Math.max(260, chart.clientHeight || 318)), barmode: "group", bargap: .18 }, { responsive: true, displayModeBar: false });
     const solar = sum(selected, "production_kwh"), delivered = sum(selected, "delivered_kwh"), received = sum(selected, "received_kwh"), edc = sum(selected, "edc_kwh"), netExport = received - delivered;
     energyStory.innerHTML = `<span><b>${number(solar)} kWh</b> solar produced</span><span><b>${number(edc)} kWh</b> estimated home demand</span><span class="${netExport >= 0 ? "is-credit" : "is-charge"}"><b>${number(Math.abs(netExport))} kWh</b> net ${netExport >= 0 ? "exported" : "imported"}</span>`;
   };
@@ -131,7 +131,8 @@
     const selected = selectedRows(costRange); const style = costStyle.value;
     const fields = [["Import cost", "import_cost", "#ef5b5b"], ["Export value", "export_credit", "#12a66d"], ["Net energy cost", "net_cost", "#325f8d"]];
     const traces = fields.map(([name, field, color]) => ({ x: selected.map(r => r.date), y: selected.map(r => r[field]), name, type: style === "bar" ? "bar" : "scatter", mode: style === "bar" ? undefined : "lines+markers", line: { color, width: 3 }, marker: { color, size: 6 }, fill: style === "area" && field === "net_cost" ? "tozeroy" : "none", fillcolor: style === "area" && field === "net_cost" ? "rgba(50,95,141,.18)" : undefined, opacity: style === "bar" ? .86 : 1, hovertemplate: `%{x}<br>${name}: $%{y:.2f}<extra></extra>` }));
-    Plotly.react(costChart, traces, { ...baseLayout("Estimated daily NYSEG energy effect", "Dollars"), yaxis: { ...baseLayout("", "Dollars").yaxis, tickprefix: "$", rangemode: "normal" }, barmode: "group", bargap: .18 }, { responsive: true, displayModeBar: false });
+    const chartHeight = Math.max(260, costChart.clientHeight || 318);
+    Plotly.react(costChart, traces, { ...baseLayout("Estimated daily NYSEG energy effect", "Dollars", chartHeight), yaxis: { ...baseLayout("", "Dollars", chartHeight).yaxis, tickprefix: "$", rangemode: "normal" }, barmode: "group", bargap: .18 }, { responsive: true, displayModeBar: false });
     const imports = sum(selected, "import_cost"), exports = sum(selected, "export_credit"), net = sum(selected, "net_cost");
     costStory.innerHTML = `<span><b>${money(imports)}</b> estimated import value</span><span><b>${money(exports)}</b> export value</span><span class="${net <= 0 ? "is-credit" : "is-charge"}"><b>${money(net)}</b> estimated bill effect</span>`;
   };
@@ -186,7 +187,7 @@
           { ...common, y: imports, name: "Import / M01", type: "scatter", line: { color: "#2b82af", width: 2.6 }, marker: { color: "#2b82af", size: 5 }, fill: style === "area" ? "tozeroy" : "none", fillcolor: style === "area" ? "rgba(43,130,175,.22)" : undefined, stackgroup: style === "area" ? "energy" : undefined, hovertemplate: "%{x}<br>Import: %{y:.2f} kWh<extra></extra>" },
           { ...common, y: exports, name: "Export / M02", type: "scatter", line: { color: "#1da56c", width: 2.6 }, marker: { color: "#1da56c", size: 5 }, fill: style === "area" ? "tonexty" : "none", fillcolor: style === "area" ? "rgba(29,165,108,.25)" : undefined, stackgroup: style === "area" ? "energy" : undefined, hovertemplate: "%{x}<br>Export: %{y:.2f} kWh<extra></extra>" }
         ];
-    Plotly.react(hourlyChart, traces, { barmode: "group", margin: { l: 48, r: 14, t: 12, b: 48 }, height: 290, legend: { orientation: "h", y: 1.13, x: 0 }, xaxis: { title: "Hour of day", tickangle: -35, showgrid: false }, yaxis: { title: "kWh", rangemode: "tozero", gridcolor: "#dce8ee" }, paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)" }, { responsive: true, displayModeBar: false });
+    Plotly.react(hourlyChart, traces, { barmode: "group", margin: { l: 48, r: 14, t: 32, b: 48 }, height: Math.max(260, hourlyChart.clientHeight || 290), legend: { orientation: "h", y: 1.04, yanchor: "bottom", x: 0 }, xaxis: { title: "Hour of day", tickangle: -35, showgrid: false }, yaxis: { title: "kWh", rangemode: "tozero", gridcolor: "#dce8ee" }, paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)" }, { responsive: true, displayModeBar: false });
   };
   const updateReplayStatus = (message = "") => {
     if (!hourlyReplayStatus) return;

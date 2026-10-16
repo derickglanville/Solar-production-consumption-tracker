@@ -3938,6 +3938,11 @@ body[data-page="dashboard"].dashboard-compact-mode .btn-contract {
 .nyseg-file-chart-card { border-radius: 1rem; box-shadow: 0 .55rem 1.35rem rgba(31, 83, 106, .09); overflow: hidden; }
 .nyseg-analytics-grid { display: grid; gap: 1rem; grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .nyseg-analytics-grid .nyseg-file-chart-card { min-width: 0; }.nyseg-analytics-grid .card-body { padding: 1rem; }
+.nyseg-analytics-grid .nyseg-file-chart-card { display: flex; }
+.nyseg-analytics-grid .nyseg-file-chart-card > .card-body { display: flex; flex-direction: column; min-height: 0; width: 100%; }
+.nyseg-analytics-grid .chart-popout-frame { display: flex; flex: 1 1 auto; min-height: 0; }
+.nyseg-analytics-grid [data-chart-popout-content] { display: flex; flex: 1 1 auto; flex-direction: column; min-height: 0; }
+.nyseg-analytics-grid .nyseg-file-comparison-chart { flex: 1 1 auto; height: auto !important; min-height: 260px; }
 .nyseg-hourly-chart-card { background: linear-gradient(145deg, #f7fffb, #edf8f2); border-color: #b8dcc7; }
 .nyseg-hourly-chart-content { display: flex; flex-direction: column; gap: .55rem; min-height: 0; }
 .nyseg-hourly-chart-content .nyseg-file-comparison-chart { flex: 1 1 auto; }
