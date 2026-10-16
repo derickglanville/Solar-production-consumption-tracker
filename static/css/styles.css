@@ -3967,6 +3967,9 @@ body[data-page="dashboard"].dashboard-compact-mode .btn-contract {
 
 
 .nyseg-file-grid-content { width: 100%; }
+.nyseg-firebase-live-status { align-items: center; background: #edf7fb; border: 1px solid #b7d9e5; border-radius: .65rem; color: #315f72; display: flex; flex-wrap: wrap; font-size: .75rem; gap: .45rem .7rem; justify-content: space-between; line-height: 1.35; margin-bottom: .65rem; padding: .45rem .6rem; }
+.nyseg-firebase-live-status span { flex: 1 1 15rem; }
+.nyseg-firebase-live-status .btn { flex: 0 0 auto; }
 .nyseg-file-notes { min-width: 13rem; max-width: 18rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .chart-popout-body .nyseg-file-grid-content { display: flex; flex: 1 1 auto; flex-direction: column; min-height: 0; }
 .chart-popout-body .nyseg-file-grid-content > p { flex: 0 0 auto; padding-right: 5rem; }

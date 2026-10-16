@@ -28361,6 +28361,33 @@ This is a reconciliation, not an independent measurement, because EDC includes S
       });
     });
   }
+  function setupNysegFirebaseConnectionStatus(db) {
+    const status = document.getElementById("nyseg-firebase-status");
+    const refreshButton = document.getElementById("nyseg-refresh-firebase");
+    if (!status || !refreshButton) return;
+    const refresh = async () => {
+      refreshButton.disabled = true;
+      refreshButton.textContent = "Refreshing\u2026";
+      status.className = "text-muted";
+      status.textContent = "Checking Firebase connection\u2026";
+      try {
+        const state = await loadFirestoreState(db);
+        const entries = state.entries || [];
+        const latestDate = entries.map((entry) => entry.entry_date).filter(Boolean).sort().at(-1) || "no saved date";
+        const connection = state.connection === "rest" ? "HTTPS live read" : "Live Firestore";
+        status.className = "text-success";
+        status.textContent = `Firebase connected via ${connection}: ${entries.length} daily records through ${latestDate}. Downloaded-file totals and sync activity are published snapshots from the local tracker.`;
+      } catch (error) {
+        status.className = "text-danger";
+        status.textContent = "Firebase is unavailable. This page is showing its published downloaded-file snapshot.";
+      } finally {
+        refreshButton.disabled = false;
+        refreshButton.textContent = "Refresh Firebase";
+      }
+    };
+    refreshButton.addEventListener("click", refresh);
+    refresh();
+  }
   function setupNysegUsageColumnSorts() {
     const controls = [...document.querySelectorAll(".nyseg-column-sort[data-nyseg-sort]")];
     if (!controls.length) return;
@@ -28793,6 +28820,7 @@ This is a reconciliation, not an independent measurement, because EDC includes S
     if (getPageName() === "nyseg-usage-file") {
       setupNysegUsageRowSelection();
       setupNysegUsageColumnSorts();
+      setupNysegFirebaseConnectionStatus(context.db);
       await Promise.all([setupNysegUsageFileActions(context.db), setupNysegUsageNotes(context.db)]);
       return;
     }
