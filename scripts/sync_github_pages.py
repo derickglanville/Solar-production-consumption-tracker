@@ -17,7 +17,7 @@ from solar_tracker.routes import build_bootstrap_data
 
 
 DOCS = ROOT / "docs"
-ASSET_VERSION = "20261016-nyseg-firebase-status"
+ASSET_VERSION = "20261016-chart-label-spacing"
 
 ROUTE_REPLACEMENTS = {
     'href="/"': 'href="index.html"',
