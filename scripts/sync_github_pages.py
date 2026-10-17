@@ -17,7 +17,7 @@ from solar_tracker.routes import build_bootstrap_data
 
 
 DOCS = ROOT / "docs"
-ASSET_VERSION = "20261017-nyseg-sunrun-nav"
+ASSET_VERSION = "20261017-nyseg-grid-decimals"
 
 ROUTE_REPLACEMENTS = {
     'href="/"': 'href="index.html"',
