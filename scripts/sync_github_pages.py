@@ -17,7 +17,7 @@ from solar_tracker.routes import build_bootstrap_data
 
 
 DOCS = ROOT / "docs"
-ASSET_VERSION = "20261017-nyseg-grid-decimals"
+ASSET_VERSION = "20261017-nyseg-daily-startup"
 
 ROUTE_REPLACEMENTS = {
     'href="/"': 'href="index.html"',
@@ -177,7 +177,7 @@ def main() -> None:
     sync_assets()
     write_static_bootstrap()
     static_pages = {
-        "index.html": "/nyseg-usage-file",
+        "index.html": "/nyseg-usage-file/daily",
         "dashboard.html": "/dashboard",
         "entries.html": "/entries",
         "nyseg-net-metering.html": "/nyseg-net-metering",
