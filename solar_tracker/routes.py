@@ -587,6 +587,12 @@ def render_dashboard(entries, config, firebase_status):
 
 
 @main_blueprint.route("/")
+def startup():
+    """Open the NYSEG file view first; the dashboard remains available from its menu."""
+    return redirect(url_for("main.nyseg_usage_file"))
+
+
+@main_blueprint.route("/dashboard")
 def dashboard():
     entries = build_sample_entries()
     config = AppConfig()

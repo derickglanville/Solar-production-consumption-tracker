@@ -17,10 +17,11 @@ from solar_tracker.routes import build_bootstrap_data
 
 
 DOCS = ROOT / "docs"
-ASSET_VERSION = "20261016-chart-alignment"
+ASSET_VERSION = "20261017-nyseg-startup"
 
 ROUTE_REPLACEMENTS = {
     'href="/"': 'href="index.html"',
+    'href="/dashboard"': 'href="dashboard.html"',
     'href="/entries"': 'href="entries.html"',
     'href="/nyseg-net-metering"': 'href="nyseg-net-metering.html"',
     'href="/nyseg-usage-file/daily"': 'href="nyseg-usage-file-daily.html"',
@@ -176,7 +177,8 @@ def main() -> None:
     sync_assets()
     write_static_bootstrap()
     static_pages = {
-        "index.html": "/",
+        "index.html": "/nyseg-usage-file",
+        "dashboard.html": "/dashboard",
         "entries.html": "/entries",
         "nyseg-net-metering.html": "/nyseg-net-metering",
         "nyseg-usage-file.html": "/nyseg-usage-file",

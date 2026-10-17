@@ -1,0 +1,1264 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Solar Tracker</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/styles.css?v=20261017-nyseg-startup">
+  <script src="https://cdn.plot.ly/plotly-3.4.0.min.js"></script>
+</head>
+<body data-page="dashboard" data-local-snapshot-mode="false">
+  <nav class="navbar navbar-expand-lg tracker-nav">
+    <div class="container">
+      <a class="navbar-brand fw-semibold" href="dashboard.html">Solar Production & Consumption Tracker</a>
+      <div class="navbar-nav ms-auto">
+
+        <button
+          type="button"
+          class="nav-link nav-link-button local-dashboard-nav-link"
+          data-validated-local-dashboard
+          data-target-url="http://127.0.0.1:8765/"
+          title="Validate and open the local dashboard on port 8765"
+        >Open Local Dashboard</button>
+
+        <div class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="dashboard.html" id="dashboardMenu" role="button" data-bs-toggle="dropdown" aria-expanded="false">Dashboard</a>
+          <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dashboardMenu">
+            <li><a class="dropdown-item" href="dashboard.html">Dashboard overview</a></li>
+            <li><a class="dropdown-item" href="electricity-usage.html">Electricity Usage</a></li>
+            <li><a class="dropdown-item" href="#" aria-disabled="true" title="The private circuit directory is available in the local app only" target="_blank" rel="noopener noreferrer">Circuit Breakers</a></li>
+            <li><a class="dropdown-item" href="light-bulbs.html">Light Bulbs</a></li>
+          </ul>
+        </div>
+        <a class="nav-link" href="entries.html">Daily Entry</a>
+        <a class="nav-link" href="nyseg-usage-file-daily.html">View NYSEG file</a>
+        <a class="nav-link" href="sunrun-production.html">SunRun Data</a>
+        <a class="nav-link" href="appliances.html">Appliances</a>
+        <a class="nav-link" href="contract-summary.html">Contract Summary</a>
+        <a class="nav-link" href="settings.html">Settings</a>
+        <a class="nav-link nav-link-button" href="dictionary.html">Dictionary</a>
+        <a class="nav-link" href="solar_tracker_demo_export.csv">CSV Export</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="py-4">
+    <div class="container">
+
+
+
+
+<div id="dashboard-root">
+  <div class="dashboard-editorial-shell">
+  <aside class="dashboard-side-panel">
+    <div class="dashboard-side-frame">
+      <img src="/static/images/solar-home-side.png" alt="Residential home with rooftop solar panels">
+      <div class="dashboard-side-overlay">
+        <span class="dashboard-side-kicker">Residential Solar</span>
+        <strong>Rooftop system performance</strong>
+        <p>Track home-scale generation, smart meter export, and daily guarantee momentum with a clearer visual frame.</p>
+      </div>
+    </div>
+  </aside>
+
+  <div class="dashboard-main-column">
+
+    <section class="mb-4">
+      <div class="status-banner ">
+        <div>
+          <p class="status-title mb-1">
+
+            Connecting to Firebase
+
+          </p>
+          <p class="mb-0">Loading live Firebase data in the browser. Startup data is shown until the connection completes.</p>
+        </div>
+
+        <span class="status-pill">Using startup data</span>
+
+      </div>
+    </section>
+
+
+    <section class="hero-panel mb-4">
+      <div class="dashboard-hero-layout">
+        <div class="dashboard-hero-copy">
+          <p class="eyebrow mb-2">Sunrun + NYSEG + Irradiance + Weather</p>
+          <h1 class="hero-title mb-2">Solar performance and guarantee tracking</h1>
+          <div class="dashboard-hero-actions">
+            <button
+              type="button"
+              class="btn btn-contract btn-sm"
+              data-dashboard-view-toggle
+              aria-pressed="false"
+            >Field Mode</button>
+            <button
+              type="button"
+              class="btn btn-contract btn-sm"
+              data-bs-toggle="modal"
+              data-bs-target="#dashboardIntroModal"
+            >About</button>
+            <button
+              type="button"
+              class="btn btn-sun btn-sm"
+              onclick="window.location.assign(window.location.pathname + '?refresh=' + Date.now())"
+              title="Re-read the SunRun CSV and refresh live Firebase data"
+            >Force Load Data</button>
+            <a class="btn btn-sun btn-sm" href="nyseg-usage-file-daily.html">View NYSEG and Sunrun Files</a>
+          </div>
+        </div>
+        <div class="stat-callout dashboard-projection-callout">
+          <div class="d-flex justify-content-between align-items-start gap-2">
+            <span class="small-label mb-0">Annual Projection</span>
+            <button
+              type="button"
+              class="metric-info-button"
+              data-bs-toggle="modal"
+              data-bs-target="#annualProjectionModal"
+              aria-label="Explain annual projection calculation"
+            >?</button>
+          </div>
+          <div class="callout-value">24,702 kWh</div>
+          <div class="projection-difference text-success">
+            Ahead
+            13,561 kWh
+            (121.7%)
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+    <section
+      class="solar-path-tracker tracker-card mb-4"
+      data-solar-path-tracker
+      data-entry-date="2026-07-25"
+      data-weather="Sunny"
+      data-cloud-cover=""
+      data-irradiance-peak="922"
+      data-daily-production="78.042"
+      data-system-size="18.45"
+      data-hourly-profile="%5B%5D"
+      data-entry-history="[{&#34;cloud_cover_pct&#34;: null, &#34;created_at&#34;: null, &#34;entry_date&#34;: &#34;2026-07-16&#34;, &#34;estimated&#34;: false, &#34;humidity_pct&#34;: null, &#34;irradiance_peak_wm2&#34;: 860, &#34;lookup_source&#34;: &#34;&#34;, &#34;meter_01_import_reading&#34;: 36, &#34;meter_02_export_reading&#34;: 74, &#34;notes&#34;: &#34;Smart meter data starts.&#34;, &#34;notes_manual&#34;: false, &#34;production_kwh&#34;: 44.416, &#34;temperature_f&#34;: null, &#34;temperature_high_f&#34;: null, &#34;temperature_low_f&#34;: null, &#34;updated_at&#34;: null, &#34;weather&#34;: &#34;Sunny&#34;, &#34;wind_mph&#34;: null}, {&#34;cloud_cover_pct&#34;: null, &#34;created_at&#34;: null, &#34;entry_date&#34;: &#34;2026-07-17&#34;, &#34;estimated&#34;: false, &#34;humidity_pct&#34;: null, &#34;irradiance_peak_wm2&#34;: 910, &#34;lookup_source&#34;: &#34;&#34;, &#34;meter_01_import_reading&#34;: 53, &#34;meter_02_export_reading&#34;: 128, &#34;notes&#34;: &#34;Strong clear day.&#34;, &#34;notes_manual&#34;: false, &#34;production_kwh&#34;: 90.788, &#34;temperature_f&#34;: null, &#34;temperature_high_f&#34;: null, &#34;temperature_low_f&#34;: null, &#34;updated_at&#34;: null, &#34;weather&#34;: &#34;Sunny&#34;, &#34;wind_mph&#34;: null}, {&#34;cloud_cover_pct&#34;: null, &#34;created_at&#34;: null, &#34;entry_date&#34;: &#34;2026-07-18&#34;, &#34;estimated&#34;: false, &#34;humidity_pct&#34;: null, &#34;irradiance_peak_wm2&#34;: 740, &#34;lookup_source&#34;: &#34;&#34;, &#34;meter_01_import_reading&#34;: 71, &#34;meter_02_export_reading&#34;: 170, &#34;notes&#34;: &#34;Afternoon cloud cover.&#34;, &#34;notes_manual&#34;: false, &#34;production_kwh&#34;: 25.498, &#34;temperature_f&#34;: null, &#34;temperature_high_f&#34;: null, &#34;temperature_low_f&#34;: null, &#34;updated_at&#34;: null, &#34;weather&#34;: &#34;Cloudy&#34;, &#34;wind_mph&#34;: null}, {&#34;cloud_cover_pct&#34;: null, &#34;created_at&#34;: null, &#34;entry_date&#34;: &#34;2026-07-19&#34;, &#34;estimated&#34;: false, &#34;humidity_pct&#34;: null, &#34;irradiance_peak_wm2&#34;: 802, &#34;lookup_source&#34;: &#34;&#34;, &#34;meter_01_import_reading&#34;: 79, &#34;meter_02_export_reading&#34;: 207, &#34;notes&#34;: &#34;Recovered after clouds.&#34;, &#34;notes_manual&#34;: false, &#34;production_kwh&#34;: 92.862, &#34;temperature_f&#34;: null, &#34;temperature_high_f&#34;: null, &#34;temperature_low_f&#34;: null, &#34;updated_at&#34;: null, &#34;weather&#34;: &#34;Sunny&#34;, &#34;wind_mph&#34;: null}, {&#34;cloud_cover_pct&#34;: null, &#34;created_at&#34;: null, &#34;entry_date&#34;: &#34;2026-07-20&#34;, &#34;estimated&#34;: false, &#34;humidity_pct&#34;: null, &#34;irradiance_peak_wm2&#34;: 950, &#34;lookup_source&#34;: &#34;&#34;, &#34;meter_01_import_reading&#34;: 82, &#34;meter_02_export_reading&#34;: 229, &#34;notes&#34;: &#34;Excellent solar day.&#34;, &#34;notes_manual&#34;: false, &#34;production_kwh&#34;: 94.041, &#34;temperature_f&#34;: null, &#34;temperature_high_f&#34;: null, &#34;temperature_low_f&#34;: null, &#34;updated_at&#34;: null, &#34;weather&#34;: &#34;Sunny&#34;, &#34;wind_mph&#34;: null}, {&#34;cloud_cover_pct&#34;: null, &#34;created_at&#34;: null, &#34;entry_date&#34;: &#34;2026-07-21&#34;, &#34;estimated&#34;: false, &#34;humidity_pct&#34;: null, &#34;irradiance_peak_wm2&#34;: 460, &#34;lookup_source&#34;: &#34;sunrun-csv&#34;, &#34;meter_01_import_reading&#34;: 107, &#34;meter_02_export_reading&#34;: 250, &#34;notes&#34;: &#34;Production synced from SunRun CSV. Smart meter readings remain based on recorded NYSEG history.&#34;, &#34;notes_manual&#34;: false, &#34;production_kwh&#34;: 22.614, &#34;temperature_f&#34;: null, &#34;temperature_high_f&#34;: 76, &#34;temperature_low_f&#34;: 65, &#34;updated_at&#34;: null, &#34;weather&#34;: &#34;Overcast&#34;, &#34;wind_mph&#34;: null}, {&#34;cloud_cover_pct&#34;: null, &#34;created_at&#34;: null, &#34;entry_date&#34;: &#34;2026-07-22&#34;, &#34;estimated&#34;: false, &#34;humidity_pct&#34;: null, &#34;irradiance_peak_wm2&#34;: 922, &#34;lookup_source&#34;: &#34;sunrun-csv&#34;, &#34;meter_01_import_reading&#34;: 126, &#34;meter_02_export_reading&#34;: 305, &#34;notes&#34;: &#34;Production synced from SunRun CSV. Smart meter readings remain based on recorded NYSEG history.&#34;, &#34;notes_manual&#34;: false, &#34;production_kwh&#34;: 78.042, &#34;temperature_f&#34;: null, &#34;temperature_high_f&#34;: 79, &#34;temperature_low_f&#34;: 66, &#34;updated_at&#34;: null, &#34;weather&#34;: &#34;Sunny&#34;, &#34;wind_mph&#34;: null}, {&#34;cloud_cover_pct&#34;: null, &#34;created_at&#34;: null, &#34;entry_date&#34;: &#34;2026-07-23&#34;, &#34;estimated&#34;: false, &#34;humidity_pct&#34;: null, &#34;irradiance_peak_wm2&#34;: 367, &#34;lookup_source&#34;: &#34;sunrun-csv&#34;, &#34;meter_01_import_reading&#34;: 137.3, &#34;meter_02_export_reading&#34;: 343.4, &#34;notes&#34;: &#34;Production synced from SunRun CSV. Smart meter readings remain based on recorded NYSEG history.&#34;, &#34;notes_manual&#34;: false, &#34;production_kwh&#34;: 93.15, &#34;temperature_f&#34;: null, &#34;temperature_high_f&#34;: 83, &#34;temperature_low_f&#34;: 68, &#34;updated_at&#34;: null, &#34;weather&#34;: &#34;Sunny&#34;, &#34;wind_mph&#34;: null}, {&#34;cloud_cover_pct&#34;: null, &#34;created_at&#34;: null, &#34;entry_date&#34;: &#34;2026-07-24&#34;, &#34;estimated&#34;: true, &#34;humidity_pct&#34;: null, &#34;irradiance_peak_wm2&#34;: 460, &#34;lookup_source&#34;: &#34;pending-sunrun-analog&#34;, &#34;meter_01_import_reading&#34;: 162.3, &#34;meter_02_export_reading&#34;: 364.4, &#34;notes&#34;: &#34;Pending data from SunRun. Temporary placeholder aligned to the July 21 pattern until the SunRun CSV includes July 24.&#34;, &#34;notes_manual&#34;: false, &#34;production_kwh&#34;: 22.614, &#34;temperature_f&#34;: null, &#34;temperature_high_f&#34;: 76, &#34;temperature_low_f&#34;: 65, &#34;updated_at&#34;: null, &#34;weather&#34;: &#34;Overcast&#34;, &#34;wind_mph&#34;: null}, {&#34;cloud_cover_pct&#34;: null, &#34;created_at&#34;: null, &#34;entry_date&#34;: &#34;2026-07-25&#34;, &#34;estimated&#34;: true, &#34;humidity_pct&#34;: null, &#34;irradiance_peak_wm2&#34;: 922, &#34;lookup_source&#34;: &#34;pending-sunrun-analog&#34;, &#34;meter_01_import_reading&#34;: 181.3, &#34;meter_02_export_reading&#34;: 419.4, &#34;notes&#34;: &#34;Pending data from SunRun. Temporary placeholder aligned to the July 22 pattern until the SunRun CSV includes July 25.&#34;, &#34;notes_manual&#34;: false, &#34;production_kwh&#34;: 78.042, &#34;temperature_f&#34;: null, &#34;temperature_high_f&#34;: 79, &#34;temperature_low_f&#34;: 66, &#34;updated_at&#34;: null, &#34;weather&#34;: &#34;Sunny&#34;, &#34;wind_mph&#34;: null}]"
+    >
+      <button class="solar-path-summary" type="button" data-solar-path-toggle aria-expanded="false">
+        <span class="solar-path-summary-title">
+          <span class="eyebrow">Live Solar Tracker</span>
+          <strong>The Sun's Path Across Yorktown Heights</strong>
+        </span>
+        <span class="solar-path-summary-live">
+          <span><small>Sun position</small><strong data-solar-summary-position>Calculating...</strong></span>
+          <span><small>Estimated now</small><strong data-solar-summary-power>-- kW</strong></span>
+          <span><small>Sky</small><strong data-solar-summary-weather>Sunny</strong></span>
+        </span>
+        <span class="solar-path-expand-label"><span data-solar-toggle-label>Expand tracker</span><span class="solar-path-chevron" aria-hidden="true">⌄</span></span>
+      </button>
+      <div class="solar-path-panel" data-solar-path-panel hidden>
+        <div class="solar-review-controls" aria-label="Solar path review controls">
+          <div class="solar-review-date-group">
+            <label for="solar-review-date-server">Review Date</label>
+            <div class="solar-review-button-row">
+              <button type="button" data-solar-previous-day title="Review the previous day">Previous</button>
+              <input id="solar-review-date-server" type="date" data-solar-review-date>
+              <button type="button" data-solar-next-day title="Review the next day">Next</button>
+            </div>
+            <label class="solar-location-label" for="solar-location-server">Arc Location</label>
+            <select id="solar-location-server" data-solar-location>
+              <option value="yorktown" selected>Yorktown Heights, NY</option>
+              <option value="dallas">Dallas, TX</option>
+              <option value="negril">Negril, Jamaica</option>
+            </select>
+          </div>
+          <div class="solar-review-time-group">
+            <div class="solar-review-time-heading"><label for="solar-review-time-server">Time of Day</label><strong data-solar-review-time-label>Live now</strong></div>
+            <input id="solar-review-time-server" type="range" min="360" max="1200" step="15" data-solar-review-time>
+            <div class="solar-review-button-row">
+              <button type="button" data-solar-previous-hour>-1 Hour</button>
+              <button type="button" data-solar-play>Play Day</button>
+              <button type="button" data-solar-next-hour>+1 Hour</button>
+              <button type="button" class="solar-live-button" data-solar-live>Live Now</button>
+            </div>
+          </div>
+        </div>
+        <div class="solar-sky" data-solar-sky>
+          <div class="solar-sky-stars" aria-hidden="true"></div>
+          <div class="solar-cloud solar-cloud-one" aria-hidden="true"></div>
+          <div class="solar-cloud solar-cloud-two" aria-hidden="true"></div>
+          <div class="solar-rain" aria-hidden="true"></div>
+          <div class="solar-editorial-head">
+            <span data-solar-window-kicker>Today's Solar Window</span>
+            <h2 data-solar-editorial-title>The Sun's Path Across the Sky</h2>
+            <p data-solar-editorial-meta>Yorktown Heights, NY</p>
+          </div>
+          <div class="solar-insight-card">
+            <span data-solar-interpretation-kicker>Live interpretation</span>
+            <strong data-solar-insight-title>Reading the sky...</strong>
+            <p data-solar-insight>Current conditions and solar position will appear here.</p>
+          </div>
+          <svg class="solar-arc" viewBox="0 0 1000 360" preserveAspectRatio="none" role="img" aria-label="Current day's calculated sun path">
+            <path data-solar-arc-path></path>
+          </svg>
+          <div class="solar-hour-markers" data-solar-hour-markers aria-hidden="true"></div>
+          <div class="solar-current-sun" data-solar-marker aria-hidden="true"><span>Now</span></div>
+          <div class="solar-horizon"></div>
+          <div class="solar-compass" aria-hidden="true"><span>NE<br><small>45°</small></span><span>E<br><small>90°</small></span><span>S<br><small>180°</small></span><span>W<br><small>270°</small></span><span>NW<br><small>315°</small></span></div>
+          <div class="solar-sky-caption"><strong data-solar-sky-title>Selected daylight arc</strong><span data-solar-sky-detail>Calculating the selected day's sunrise-to-sunset path...</span></div>
+        </div>
+        <div class="solar-path-detail-grid">
+          <div><span>Local Time</span><strong data-solar-local-time>--</strong><small>America/New_York</small></div>
+          <div><span>Sun Position</span><strong data-solar-position>--</strong><small data-solar-direction>--</small></div>
+          <div><span>Solar Window</span><strong data-solar-window>--</strong><small data-solar-noon>--</small></div>
+          <div><span>Current Irradiance</span><strong data-solar-irradiance>-- W/m²</strong><small data-solar-irradiance-source>Open-Meteo hourly</small></div>
+          <div><span>Estimated Current Power</span><strong data-solar-power>-- kW</strong><small data-solar-energy-pace>-- kWh per hour at this pace</small></div>
+          <div><span>Sunrun Daily Record</span><strong data-solar-daily-production>-- kWh</strong><small data-solar-record-date>--</small></div>
+        </div>
+        <div class="solar-reference-band">
+          <div class="solar-path-table-wrap">
+            <table class="table solar-path-table mb-0">
+              <thead><tr><th>Time</th><th>Azimuth</th><th>Elevation</th><th>Estimated Power</th></tr></thead>
+              <tbody data-solar-hourly-rows></tbody>
+            </table>
+          </div>
+          <aside class="solar-takeaways">
+            <span class="solar-takeaways-kicker">Key Takeaways</span>
+            <h3>What today's path means</h3>
+            <ul data-solar-takeaways><li>Calculating today's solar story...</li></ul>
+          </aside>
+        </div>
+        <p class="solar-path-disclaimer mb-0" data-solar-path-disclaimer>Sun position is calculated for Yorktown Heights. Current power is an estimate based on Open-Meteo irradiance and an 86% system derate; Sunrun remains the source of final daily production.</p>
+      </div>
+    </section>
+
+    <div class="modal fade" id="annualProjectionModal" tabindex="-1" aria-labelledby="annualProjectionModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content tracker-modal">
+          <div class="modal-header border-0 pb-0">
+            <div>
+              <p class="eyebrow mb-2">Projection Help</p>
+              <h2 class="modal-title h4 mb-0" id="annualProjectionModalLabel">How Annual Projection Is Calculated</h2>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body pt-3">
+            <div class="info-grid mb-4">
+              <div><span>Average Daily Production</span><strong>67.7 kWh/day</strong></div>
+              <div><span>Projected Annual Output</span><strong>24,702 kWh/year</strong></div>
+              <div><span>Contract Guarantee</span><strong>11,141 kWh/year</strong></div>
+              <div><span>Difference</span><strong>Ahead 13,561 kWh</strong></div>
+            </div>
+            <div class="tracker-modal-math">
+              <div class="tracker-modal-step">
+                <strong>1. Find the current daily run rate</strong>
+                <p>The app averages confirmed production entries first and only falls back to estimated rows if no confirmed rows exist yet.</p>
+                <code>67.7 kWh/day from 8 confirmed row(s)</code>
+              </div>
+              <div class="tracker-modal-step">
+                <strong>2. Project that run rate across a full year</strong>
+                <p>Annual Projection = Average Daily Production × 365 days.</p>
+                <code>67.7 × 365 = 24,702 kWh</code>
+              </div>
+              <div class="tracker-modal-step">
+                <strong>3. Compare it to the Sunrun guarantee</strong>
+                <p>The projected annual output is compared against your contract guarantee of 11,141 kWh/year.</p>
+                <code>Ahead 13,561 kWh (121.7%)</code>
+              </div>
+            </div>
+            <p class="text-muted small mt-3 mb-0">This is a running projection based on the data recorded so far. Confirmed production rows are used by default so placeholder days do not distort contract tracking.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal fade" id="dashboardIntroModal" tabindex="-1" aria-labelledby="dashboardIntroModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content tracker-modal">
+          <div class="modal-header border-0 pb-0">
+            <div>
+              <p class="eyebrow mb-2">Dashboard Overview</p>
+              <h2 class="modal-title h4 mb-0" id="dashboardIntroModalLabel">What this dashboard is tracking</h2>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body pt-3">
+            <p class="text-muted">
+              This dashboard combines Sunrun production, NYSEG import and export readings, irradiance, weather,
+              and contract assumptions in one place.
+            </p>
+            <div class="tracker-modal-math">
+              <div class="tracker-modal-step">
+                <strong>Production and Grid Flow</strong>
+                <p>Tracks daily production, import, export, and rolling averages so you can see how the system is behaving day to day.</p>
+              </div>
+              <div class="tracker-modal-step">
+                <strong>Virtual Consumption Estimate</strong>
+                <p>Because there are no consumption CTs installed, the app estimates self-consumption and home usage from production, grid readings, seasonality, and weather.</p>
+              </div>
+              <div class="tracker-modal-step">
+                <strong>Contract Tracking</strong>
+                <p>Compares observed average production against the Sunrun production guarantee and shows whether your current pace is ahead or behind.</p>
+              </div>
+              <div class="tracker-modal-step">
+                <strong>Financial View</strong>
+                <p>Estimates electricity value, grid cost, lease cost, and monthly or annual savings using the current settings saved in the app.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+    <section class="mb-4">
+      <div class="card tracker-card">
+        <div class="card-body">
+          <h2 class="h5 mb-3">Alerts &amp; Context</h2>
+          <div class="d-flex flex-column gap-2">
+
+              <div class="badge text-bg-warning p-2 text-wrap text-start lh-base">Latest day (2026-07-25) is estimated or awaiting final SunRun data, so its 78.0 kWh should not be treated as final. Confirmed production projects to 24,702 kWh/year, ahead by 13,561 kWh (121.7%) versus the 11,141 kWh guarantee.</div>
+
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+    <section class="card tracker-card mb-4 ai-panel">
+      <div class="card-body">
+        <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
+          <div>
+            <p class="eyebrow mb-2">AI Solar Analyst</p>
+            <h2 class="h5 mb-1">Ask questions about your production, savings, and guarantee trend</h2>
+            <p class="text-muted mb-0">This phase includes grounded dashboard answers, forecasts, and anomaly checks. OpenAI enhancement is optional.</p>
+          </div>
+          <div class="d-flex flex-wrap gap-2 align-items-center">
+            <span class="ai-status-pill ai-status-pill-success" id="ai-provider-pill">
+
+              OpenAI Ready
+
+            </span>
+            <button
+              type="button"
+              class="btn btn-contract btn-sm ai-collapse-toggle"
+              data-bs-toggle="collapse"
+              data-bs-target="#ai-panel-collapse"
+              aria-expanded="false"
+              aria-controls="ai-panel-collapse"
+              id="ai-panel-toggle"
+            >Show AI Tools</button>
+          </div>
+        </div>
+        <p class="text-muted small mb-3">AI tools are collapsed by default. Use the button on the right to open or hide them.</p>
+        <div class="collapse" id="ai-panel-collapse">
+          <div class="ai-prompt-list mb-3" id="ai-prompt-list">
+
+            <button type="button" class="btn btn-contract btn-sm ai-prompt-chip" data-ai-prompt="Am I on track to hit my guarantee?">Am I on track to hit my guarantee?</button>
+
+            <button type="button" class="btn btn-contract btn-sm ai-prompt-chip" data-ai-prompt="What caused today&#39;s low production?">What caused today&#39;s low production?</button>
+
+            <button type="button" class="btn btn-contract btn-sm ai-prompt-chip" data-ai-prompt="Compare this month to last month.">Compare this month to last month.</button>
+
+            <button type="button" class="btn btn-contract btn-sm ai-prompt-chip" data-ai-prompt="Estimate next month&#39;s production.">Estimate next month&#39;s production.</button>
+
+            <button type="button" class="btn btn-contract btn-sm ai-prompt-chip" data-ai-prompt="Predict annual savings.">Predict annual savings.</button>
+
+            <button type="button" class="btn btn-contract btn-sm ai-prompt-chip" data-ai-prompt="Predict tomorrow&#39;s production.">Predict tomorrow&#39;s production.</button>
+
+            <button type="button" class="btn btn-contract btn-sm ai-prompt-chip" data-ai-prompt="Show anomalies in my recent data.">Show anomalies in my recent data.</button>
+
+            <button type="button" class="btn btn-contract btn-sm ai-prompt-chip" data-ai-prompt="How effective is the solar usage versus the historic NYSEG baseline?">How effective is the solar usage versus the historic NYSEG baseline?</button>
+
+            <button type="button" class="btn btn-contract btn-sm ai-prompt-chip" data-ai-prompt="Why is the bill still high if usage is low?">Why is the bill still high if usage is low?</button>
+
+            <button type="button" class="btn btn-contract btn-sm ai-prompt-chip" data-ai-prompt="Is one inverter underperforming?">Is one inverter underperforming?</button>
+
+          </div>
+          <form id="ai-ask-form" class="ai-ask-form">
+            <div class="row g-3 align-items-end">
+              <div class="col-lg-9">
+                <label for="ai-question-input" class="form-label">Ask a question</label>
+                <textarea id="ai-question-input" class="form-control ai-question-input" rows="3" placeholder="Example: Am I on track to hit my guarantee?"></textarea>
+              </div>
+              <div class="col-lg-3">
+                <div class="d-grid gap-2">
+                  <button type="submit" class="btn btn-sun" id="ai-ask-button">Ask AI</button>
+                  <button type="button" class="btn btn-contract" id="ai-reset-button">Reset</button>
+                </div>
+              </div>
+            </div>
+          </form>
+          <div class="ai-answer-panel mt-3" id="ai-answer-panel">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+              <strong id="ai-answer-title">AI Solar Analyst</strong>
+              <span class="ai-answer-meta" id="ai-answer-meta">
+
+                OpenAI enhancement available
+
+              </span>
+            </div>
+            <p class="mb-2" id="ai-answer-text">Ask a question or tap one of the prompt chips to generate a grounded solar analysis.</p>
+            <ul class="mb-2 ai-answer-list" id="ai-answer-list">
+              <li>Track guarantee pace against current annual projection.</li>
+              <li>Explain lower production days from irradiance, weather, and recent trend data.</li>
+              <li>Estimate tomorrow, next month, and annual savings from current dashboard data.</li>
+            </ul>
+            <small class="text-muted" id="ai-answer-disclaimer">This phase uses the current dashboard dataset and does not yet include inverter-level telemetry or external forecast APIs.</small>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="row g-2 mb-4 dashboard-summary-row">
+      <div class="col-md-6 col-xl-3">
+        <div
+          class="metric-card dashboard-summary-metric sun"
+          title="Yesterday: 22.6 kWh."
+        >
+          <span>Today's Production</span>
+          <strong>78.0 kWh</strong>
+
+        </div>
+      </div>
+      <div class="col-md-6 col-xl-3">
+        <div class="metric-card dashboard-summary-metric export" title="Today's grid import: 19.0 kWh.">
+          <span>Today's Export</span>
+          <span class="metric-corner-detail">Import 19.0</span>
+          <strong>55.0 kWh</strong>
+        </div>
+      </div>
+      <div class="col-md-6 col-xl-3">
+        <div class="metric-card dashboard-summary-metric sky" title="Current 7-day average production: 68.8 kWh.">
+          <span>Today's Irradiance</span>
+          <strong>922 W/m²</strong>
+        </div>
+      </div>
+      <div class="col-md-6 col-xl-3">
+        <div class="metric-card dashboard-summary-metric money" title="Estimated annual savings: $-663. Use the help button for the full calculation.">
+          <div class="d-flex justify-content-between align-items-start gap-2">
+            <span>Monthly Savings</span>
+            <button
+              type="button"
+              class="metric-info-button"
+              data-bs-toggle="modal"
+              data-bs-target="#monthlySavingsModal"
+              aria-label="Explain monthly savings calculation"
+            >?</button>
+          </div>
+          <strong>$-55</strong>
+        </div>
+      </div>
+    </section>
+
+    <section class="mb-4">
+      <div class="card tracker-card operational-snapshot-card">
+        <div class="card-body">
+          <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
+            <div>
+              <p class="eyebrow mb-2">Operational Snapshot</p>
+              <h2 class="h5 mb-1">Current production and smart meter summary</h2>
+              <p class="text-muted mb-0">Calculated only from matching downloaded SunRun and NYSEG file days, with the shared two-day reporting delay applied.</p>
+            </div>
+            <span class="operational-snapshot-date">Latest matched file day: 2026-07-23</span>
+          </div>
+          <div class="info-grid operational-snapshot-grid mb-3">
+            <div><span>Final Production Through 2026-07-23</span><strong>541.4 kWh</strong></div>
+            <div><span>Average Final Day</span><strong>67.7 kWh/day</strong></div>
+            <div><span>Best Day</span><strong>94.0 kWh</strong></div>
+            <div><span>Cumulative Guarantee Progress</span><strong>4.9%</strong></div>
+            <div><span>Meter Export Since 2026-07-16</span><strong>345.4 kWh</strong></div>
+            <div><span>Meter Import Since 2026-07-16</span><strong>145.3 kWh</strong></div>
+            <div><span>Net Export Since 2026-07-16</span><strong>200.1 kWh</strong></div>
+          </div>
+          <div class="tracker-modal-note operational-snapshot-note">
+            Production is measured by SunRun. Import and export are measured by NYSEG. Home energy delivered = production - export + import. Projected annual production remains in the Annual Projection card above to avoid duplication.
+          </div>
+          <div class="row g-3 mt-1">
+            <div class="col-xl-6">
+              <div class="chart-popout-frame" data-chart-popout-label="Daily SunRun Production">
+                <button type="button" class="btn btn-contract btn-sm chart-popout-button" data-chart-popout>Pop Out</button>
+                <div class="dashboard-chart dashboard-chart-embedded operational-chart-embedded">
+                  <div>                            <div id="3203ff27-8655-495a-9a73-c3a7405071db" class="plotly-graph-div" style="height:100%; width:100%;"></div>            <script>                window.PLOTLYENV=window.PLOTLYENV || {};                                if (document.getElementById("3203ff27-8655-495a-9a73-c3a7405071db")) {                    Plotly.newPlot(                        "3203ff27-8655-495a-9a73-c3a7405071db",                        [{"line":{"color":"#2f6f3e","width":3},"marker":{"color":{"dtype":"f8","bdata":"aJHtfD81RkDfT42XbrJWQHNoke18fzlAukkMAis3V0C0yHa+n4JXQHe+nxovnTZAppvEILCCU0CamZmZmUlXQHe+nxovnTZAppvEILCCU0A="},"colorscale":[[0.0,"#0f4c81"],[0.4,"#2a8ac7"],[0.7,"#f2b94b"],[1.0,"#e26a2c"]],"line":{"color":"#ffffff","width":1},"size":10},"mode":"lines+markers","name":"SunRun Production","x":["2026-07-16T00:00:00.000000000","2026-07-17T00:00:00.000000000","2026-07-18T00:00:00.000000000","2026-07-19T00:00:00.000000000","2026-07-20T00:00:00.000000000","2026-07-21T00:00:00.000000000","2026-07-22T00:00:00.000000000","2026-07-23T00:00:00.000000000","2026-07-24T00:00:00.000000000","2026-07-25T00:00:00.000000000"],"y":{"dtype":"f8","bdata":"aJHtfD81RkDfT42XbrJWQHNoke18fzlAukkMAis3V0C0yHa+n4JXQHe+nxovnTZAppvEILCCU0CamZmZmUlXQHe+nxovnTZAppvEILCCU0A="},"type":"scatter"}],                        {"template":{"data":{"barpolar":[{"marker":{"line":{"color":"white","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"barpolar"}],"bar":[{"error_x":{"color":"#2a3f5f"},"error_y":{"color":"#2a3f5f"},"marker":{"line":{"color":"white","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"bar"}],"carpet":[{"aaxis":{"endlinecolor":"#2a3f5f","gridcolor":"#C8D4E3","linecolor":"#C8D4E3","minorgridcolor":"#C8D4E3","startlinecolor":"#2a3f5f"},"baxis":{"endlinecolor":"#2a3f5f","gridcolor":"#C8D4E3","linecolor":"#C8D4E3","minorgridcolor":"#C8D4E3","startlinecolor":"#2a3f5f"},"type":"carpet"}],"choropleth":[{"colorbar":{"outlinewidth":0,"ticks":""},"type":"choropleth"}],"contourcarpet":[{"colorbar":{"outlinewidth":0,"ticks":""},"type":"contourcarpet"}],"contour":[{"colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"type":"contour"}],"heatmap":[{"colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"type":"heatmap"}],"histogram2dcontour":[{"colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"type":"histogram2dcontour"}],"histogram2d":[{"colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"type":"histogram2d"}],"histogram":[{"marker":{"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"histogram"}],"mesh3d":[{"colorbar":{"outlinewidth":0,"ticks":""},"type":"mesh3d"}],"parcoords":[{"line":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"parcoords"}],"pie":[{"automargin":true,"type":"pie"}],"scatter3d":[{"line":{"colorbar":{"outlinewidth":0,"ticks":""}},"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scatter3d"}],"scattercarpet":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scattercarpet"}],"scattergeo":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scattergeo"}],"scattergl":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scattergl"}],"scattermapbox":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scattermapbox"}],"scattermap":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scattermap"}],"scatterpolargl":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scatterpolargl"}],"scatterpolar":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scatterpolar"}],"scatter":[{"fillpattern":{"fillmode":"overlay","size":10,"solidity":0.2},"type":"scatter"}],"scatterternary":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scatterternary"}],"surface":[{"colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"type":"surface"}],"table":[{"cells":{"fill":{"color":"#EBF0F8"},"line":{"color":"white"}},"header":{"fill":{"color":"#C8D4E3"},"line":{"color":"white"}},"type":"table"}]},"layout":{"annotationdefaults":{"arrowcolor":"#2a3f5f","arrowhead":0,"arrowwidth":1},"autotypenumbers":"strict","coloraxis":{"colorbar":{"outlinewidth":0,"ticks":""}},"colorscale":{"diverging":[[0,"#8e0152"],[0.1,"#c51b7d"],[0.2,"#de77ae"],[0.3,"#f1b6da"],[0.4,"#fde0ef"],[0.5,"#f7f7f7"],[0.6,"#e6f5d0"],[0.7,"#b8e186"],[0.8,"#7fbc41"],[0.9,"#4d9221"],[1,"#276419"]],"sequential":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"sequentialminus":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]},"colorway":["#636efa","#EF553B","#00cc96","#ab63fa","#FFA15A","#19d3f3","#FF6692","#B6E880","#FF97FF","#FECB52"],"font":{"color":"#2a3f5f"},"geo":{"bgcolor":"white","lakecolor":"white","landcolor":"white","showlakes":true,"showland":true,"subunitcolor":"#C8D4E3"},"hoverlabel":{"align":"left"},"hovermode":"closest","mapbox":{"style":"light"},"paper_bgcolor":"white","plot_bgcolor":"white","polar":{"angularaxis":{"gridcolor":"#EBF0F8","linecolor":"#EBF0F8","ticks":""},"bgcolor":"white","radialaxis":{"gridcolor":"#EBF0F8","linecolor":"#EBF0F8","ticks":""}},"scene":{"xaxis":{"backgroundcolor":"white","gridcolor":"#DFE8F3","gridwidth":2,"linecolor":"#EBF0F8","showbackground":true,"ticks":"","zerolinecolor":"#EBF0F8"},"yaxis":{"backgroundcolor":"white","gridcolor":"#DFE8F3","gridwidth":2,"linecolor":"#EBF0F8","showbackground":true,"ticks":"","zerolinecolor":"#EBF0F8"},"zaxis":{"backgroundcolor":"white","gridcolor":"#DFE8F3","gridwidth":2,"linecolor":"#EBF0F8","showbackground":true,"ticks":"","zerolinecolor":"#EBF0F8"}},"shapedefaults":{"line":{"color":"#2a3f5f"}},"ternary":{"aaxis":{"gridcolor":"#DFE8F3","linecolor":"#A2B1C6","ticks":""},"baxis":{"gridcolor":"#DFE8F3","linecolor":"#A2B1C6","ticks":""},"bgcolor":"white","caxis":{"gridcolor":"#DFE8F3","linecolor":"#A2B1C6","ticks":""}},"title":{"x":0.05},"xaxis":{"automargin":true,"gridcolor":"#EBF0F8","linecolor":"#EBF0F8","ticks":"","title":{"standoff":15},"zerolinecolor":"#EBF0F8","zerolinewidth":2},"yaxis":{"automargin":true,"gridcolor":"#EBF0F8","linecolor":"#EBF0F8","ticks":"","title":{"standoff":15},"zerolinecolor":"#EBF0F8","zerolinewidth":2}}},"margin":{"l":20,"r":20,"t":56,"b":30},"xaxis":{"tickangle":-45},"title":{"text":"Daily SunRun Production"},"yaxis":{"title":{"text":"kWh"}}},                        {"displayModeBar": false, "responsive": true}                    )                };            </script>        </div>
+                </div>
+              </div>
+            </div>
+            <div class="col-xl-6">
+              <div class="chart-popout-frame" data-chart-popout-label="Production, Grid Import/Export and Estimated Usage">
+                <button type="button" class="btn btn-contract btn-sm chart-popout-button" data-chart-popout>Pop Out</button>
+                <div class="dashboard-chart dashboard-chart-embedded operational-chart-embedded">
+                  <div>                            <div id="a850ab5d-3b6c-424f-b540-b80af9fe551a" class="plotly-graph-div" style="height:100%; width:100%;"></div>            <script>                window.PLOTLYENV=window.PLOTLYENV || {};                                if (document.getElementById("a850ab5d-3b6c-424f-b540-b80af9fe551a")) {                    Plotly.newPlot(                        "a850ab5d-3b6c-424f-b540-b80af9fe551a",                        [{"marker":{"color":"#e26a2c"},"name":"SunRun Production","x":["2026-07-16T00:00:00.000000000","2026-07-17T00:00:00.000000000","2026-07-18T00:00:00.000000000","2026-07-19T00:00:00.000000000","2026-07-20T00:00:00.000000000","2026-07-21T00:00:00.000000000","2026-07-22T00:00:00.000000000","2026-07-23T00:00:00.000000000","2026-07-24T00:00:00.000000000","2026-07-25T00:00:00.000000000"],"y":{"dtype":"f8","bdata":"aJHtfD81RkDfT42XbrJWQHNoke18fzlAukkMAis3V0C0yHa+n4JXQHe+nxovnTZAppvEILCCU0CamZmZmUlXQHe+nxovnTZAppvEILCCU0A="},"type":"bar"},{"marker":{"color":"#157f3b"},"name":"Grid Import","x":["2026-07-16T00:00:00.000000000","2026-07-17T00:00:00.000000000","2026-07-18T00:00:00.000000000","2026-07-19T00:00:00.000000000","2026-07-20T00:00:00.000000000","2026-07-21T00:00:00.000000000","2026-07-22T00:00:00.000000000","2026-07-23T00:00:00.000000000","2026-07-24T00:00:00.000000000","2026-07-25T00:00:00.000000000"],"y":{"dtype":"f8","bdata":"AAAAAAAAAAAAAAAAAAAxQAAAAAAAADJAAAAAAAAAIEAAAAAAAAAIQAAAAAAAADlAAAAAAAAAM0CgmZmZmZkmQAAAAAAAADlAAAAAAAAAM0A="},"type":"bar"},{"marker":{"color":"#2a8ac7"},"name":"Grid Export","x":["2026-07-16T00:00:00.000000000","2026-07-17T00:00:00.000000000","2026-07-18T00:00:00.000000000","2026-07-19T00:00:00.000000000","2026-07-20T00:00:00.000000000","2026-07-21T00:00:00.000000000","2026-07-22T00:00:00.000000000","2026-07-23T00:00:00.000000000","2026-07-24T00:00:00.000000000","2026-07-25T00:00:00.000000000"],"y":{"dtype":"f8","bdata":"AAAAAAAAAAAAAAAAAABLQAAAAAAAAEVAAAAAAACAQkAAAAAAAAA2QAAAAAAAADVAAAAAAACAS0AwMzMzMzNDQAAAAAAAADVAAAAAAACAS0A="},"type":"bar"},{"marker":{"color":"#8c3fa8"},"name":"Estimated Home Usage","x":["2026-07-16T00:00:00.000000000","2026-07-17T00:00:00.000000000","2026-07-18T00:00:00.000000000","2026-07-19T00:00:00.000000000","2026-07-20T00:00:00.000000000","2026-07-21T00:00:00.000000000","2026-07-22T00:00:00.000000000","2026-07-23T00:00:00.000000000","2026-07-24T00:00:00.000000000","2026-07-25T00:00:00.000000000"],"y":{"dtype":"f8","bdata":"aJHtfD81RkAUrkfhejRSQDq0yHa+v0VAKVyPwvXoT0ApXI\u002fC9WhNQDzfT42XzkdAFK5H4Xq0UkBI4XoUrsdQQDzfT42XzkdAFK5H4Xq0UkA="},"type":"bar"}],                        {"template":{"data":{"barpolar":[{"marker":{"line":{"color":"white","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"barpolar"}],"bar":[{"error_x":{"color":"#2a3f5f"},"error_y":{"color":"#2a3f5f"},"marker":{"line":{"color":"white","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"bar"}],"carpet":[{"aaxis":{"endlinecolor":"#2a3f5f","gridcolor":"#C8D4E3","linecolor":"#C8D4E3","minorgridcolor":"#C8D4E3","startlinecolor":"#2a3f5f"},"baxis":{"endlinecolor":"#2a3f5f","gridcolor":"#C8D4E3","linecolor":"#C8D4E3","minorgridcolor":"#C8D4E3","startlinecolor":"#2a3f5f"},"type":"carpet"}],"choropleth":[{"colorbar":{"outlinewidth":0,"ticks":""},"type":"choropleth"}],"contourcarpet":[{"colorbar":{"outlinewidth":0,"ticks":""},"type":"contourcarpet"}],"contour":[{"colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"type":"contour"}],"heatmap":[{"colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"type":"heatmap"}],"histogram2dcontour":[{"colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"type":"histogram2dcontour"}],"histogram2d":[{"colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"type":"histogram2d"}],"histogram":[{"marker":{"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"histogram"}],"mesh3d":[{"colorbar":{"outlinewidth":0,"ticks":""},"type":"mesh3d"}],"parcoords":[{"line":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"parcoords"}],"pie":[{"automargin":true,"type":"pie"}],"scatter3d":[{"line":{"colorbar":{"outlinewidth":0,"ticks":""}},"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scatter3d"}],"scattercarpet":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scattercarpet"}],"scattergeo":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scattergeo"}],"scattergl":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scattergl"}],"scattermapbox":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scattermapbox"}],"scattermap":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scattermap"}],"scatterpolargl":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scatterpolargl"}],"scatterpolar":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scatterpolar"}],"scatter":[{"fillpattern":{"fillmode":"overlay","size":10,"solidity":0.2},"type":"scatter"}],"scatterternary":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scatterternary"}],"surface":[{"colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"type":"surface"}],"table":[{"cells":{"fill":{"color":"#EBF0F8"},"line":{"color":"white"}},"header":{"fill":{"color":"#C8D4E3"},"line":{"color":"white"}},"type":"table"}]},"layout":{"annotationdefaults":{"arrowcolor":"#2a3f5f","arrowhead":0,"arrowwidth":1},"autotypenumbers":"strict","coloraxis":{"colorbar":{"outlinewidth":0,"ticks":""}},"colorscale":{"diverging":[[0,"#8e0152"],[0.1,"#c51b7d"],[0.2,"#de77ae"],[0.3,"#f1b6da"],[0.4,"#fde0ef"],[0.5,"#f7f7f7"],[0.6,"#e6f5d0"],[0.7,"#b8e186"],[0.8,"#7fbc41"],[0.9,"#4d9221"],[1,"#276419"]],"sequential":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"sequentialminus":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]},"colorway":["#636efa","#EF553B","#00cc96","#ab63fa","#FFA15A","#19d3f3","#FF6692","#B6E880","#FF97FF","#FECB52"],"font":{"color":"#2a3f5f"},"geo":{"bgcolor":"white","lakecolor":"white","landcolor":"white","showlakes":true,"showland":true,"subunitcolor":"#C8D4E3"},"hoverlabel":{"align":"left"},"hovermode":"closest","mapbox":{"style":"light"},"paper_bgcolor":"white","plot_bgcolor":"white","polar":{"angularaxis":{"gridcolor":"#EBF0F8","linecolor":"#EBF0F8","ticks":""},"bgcolor":"white","radialaxis":{"gridcolor":"#EBF0F8","linecolor":"#EBF0F8","ticks":""}},"scene":{"xaxis":{"backgroundcolor":"white","gridcolor":"#DFE8F3","gridwidth":2,"linecolor":"#EBF0F8","showbackground":true,"ticks":"","zerolinecolor":"#EBF0F8"},"yaxis":{"backgroundcolor":"white","gridcolor":"#DFE8F3","gridwidth":2,"linecolor":"#EBF0F8","showbackground":true,"ticks":"","zerolinecolor":"#EBF0F8"},"zaxis":{"backgroundcolor":"white","gridcolor":"#DFE8F3","gridwidth":2,"linecolor":"#EBF0F8","showbackground":true,"ticks":"","zerolinecolor":"#EBF0F8"}},"shapedefaults":{"line":{"color":"#2a3f5f"}},"ternary":{"aaxis":{"gridcolor":"#DFE8F3","linecolor":"#A2B1C6","ticks":""},"baxis":{"gridcolor":"#DFE8F3","linecolor":"#A2B1C6","ticks":""},"bgcolor":"white","caxis":{"gridcolor":"#DFE8F3","linecolor":"#A2B1C6","ticks":""}},"title":{"x":0.05},"xaxis":{"automargin":true,"gridcolor":"#EBF0F8","linecolor":"#EBF0F8","ticks":"","title":{"standoff":15},"zerolinecolor":"#EBF0F8","zerolinewidth":2},"yaxis":{"automargin":true,"gridcolor":"#EBF0F8","linecolor":"#EBF0F8","ticks":"","title":{"standoff":15},"zerolinecolor":"#EBF0F8","zerolinewidth":2}}},"margin":{"l":20,"r":20,"t":68,"b":40},"xaxis":{"tickangle":-45},"legend":{"font":{"size":11},"orientation":"h","yanchor":"bottom","y":-0.34,"xanchor":"left","x":0},"title":{"text":"Production, Grid Import\u002fExport and Estimated Usage"},"barmode":"group","yaxis":{"title":{"text":"kWh"}}},                        {"displayModeBar": false, "responsive": true}                    )                };            </script>        </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="modal fade" id="monthlySavingsModal" tabindex="-1" aria-labelledby="monthlySavingsModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content tracker-modal">
+          <div class="modal-header border-0 pb-0">
+            <div>
+              <p class="eyebrow mb-2">Financial Breakdown</p>
+              <h2 class="modal-title h4 mb-0" id="monthlySavingsModalLabel">How Monthly Savings Is Calculated</h2>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body pt-3">
+            <p class="text-muted">
+              The dashboard currently estimates monthly savings from your observed solar production, estimated grid imports,
+              and the lease assumptions in your settings. A negative number means current costs are exceeding the electricity value produced.
+            </p>
+
+            <div class="info-grid mb-4">
+              <div><span>Observed Months</span><strong>1</strong></div>
+              <div><span>Electric Rate</span><strong>$0.24/kWh</strong></div>
+              <div><span>Monthly Fixed Charges</span><strong>$19.50</strong></div>
+              <div><span>Monthly Lease Payment</span><strong>$155.00</strong></div>
+            </div>
+
+            <div class="tracker-modal-math">
+              <div class="tracker-modal-step">
+                <strong>1. Electricity Value Produced</strong>
+                <p>Total solar production × electric rate</p>
+                <code>$154</code>
+              </div>
+              <div class="tracker-modal-step">
+                <strong>2. Grid Cost</strong>
+                <p>(Total imported kWh × electric rate) + (monthly fixed charges × observed months)</p>
+                <code>$54</code>
+              </div>
+              <div class="tracker-modal-step">
+                <strong>3. Lease Cost</strong>
+                <p>Monthly lease payment × observed months</p>
+                <code>$155</code>
+              </div>
+              <div class="tracker-modal-step">
+                <strong>4. Monthly Savings</strong>
+                <p>(Electricity value produced - grid cost - lease cost) ÷ observed months</p>
+                <code>$-55</code>
+              </div>
+              <div class="tracker-modal-step">
+                <strong>5. Annual Savings</strong>
+                <p>Monthly savings × 12</p>
+                <code>$-663</code>
+              </div>
+            </div>
+
+            <div class="tracker-modal-note mt-4">
+              This is an estimate. It does not yet include actual consumption CT data, TOU complexity, tax treatment, or utility credit settlement timing.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal fade" id="productionOverviewModal" tabindex="-1" aria-labelledby="productionOverviewModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content tracker-modal">
+          <div class="modal-header border-0 pb-0">
+            <div>
+              <p class="eyebrow mb-2">Chart Help</p>
+              <h2 class="modal-title h4 mb-0" id="productionOverviewModalLabel">How Production Overview Works</h2>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body pt-3">
+            <div class="tracker-modal-math">
+              <div class="tracker-modal-step">
+                <strong>Confirmed vs Estimated bars</strong>
+                <p>Solid gold bars are confirmed production values. Hatched lighter bars are estimated placeholder values that should be replaced with actual Sunrun production when available.</p>
+              </div>
+              <div class="tracker-modal-step">
+                <strong>Why Wednesday, July 22, 2026 can look lower than Tuesday, July 21, 2026</strong>
+                <p>Weather labels like rainy or sunny come from Open-Meteo, but estimated production rows still come from the app's placeholder logic, not from Sunrun. That means a rainy day can appear more productive than the next day if one or both rows are still estimated.</p>
+              </div>
+              <div class="tracker-modal-step">
+                <strong>What the blue line means</strong>
+                <p>The blue line is the rolling 7-day average. It smooths the bars so you can see the broader trend instead of reacting to one day by itself.</p>
+              </div>
+              <div class="tracker-modal-step">
+                <strong>How contract tracking stays grounded</strong>
+                <p>Annual projection and guarantee pace use confirmed production rows by default. Estimated rows remain visible for context, but they do not drive contract conclusions unless no confirmed rows exist yet.</p>
+              </div>
+            </div>
+            <p class="text-muted small mt-3 mb-0">Best practice: replace each estimated day with the real Sunrun production as soon as it is available. That makes the chart, warnings, and contract projection much more trustworthy.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <section class="row g-3 mb-4">
+      <div class="col-lg-8">
+          <div class="card tracker-card h-100">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+              <h2 class="h5 mb-0">Production Overview</h2>
+              <button
+                type="button"
+                class="metric-info-button"
+                data-bs-toggle="modal"
+                data-bs-target="#productionOverviewModal"
+                aria-label="Explain production overview"
+              >?</button>
+            </div>
+
+            <div class="tracker-inline-warning mb-3">
+
+              Today's production is currently estimated.
+
+              Estimated bars are hatched, and annual projection uses confirmed rows by default.
+            </div>
+
+            <div class="chart-popout-frame" data-chart-popout-label="Production Overview">
+              <button type="button" class="btn btn-contract btn-sm chart-popout-button" data-chart-popout>Pop Out</button>
+              <div class="dashboard-chart dashboard-chart-embedded">
+                <div>                            <div id="04e0f8d9-3741-4e88-ae2e-ff567d145ae5" class="plotly-graph-div" style="height:100%; width:100%;"></div>            <script>                window.PLOTLYENV=window.PLOTLYENV || {};                                if (document.getElementById("04e0f8d9-3741-4e88-ae2e-ff567d145ae5")) {                    Plotly.newPlot(                        "04e0f8d9-3741-4e88-ae2e-ff567d145ae5",                        [{"marker":{"color":"#e3a008"},"name":"Confirmed Production (kWh)","x":["2026-07-16T00:00:00.000000000","2026-07-17T00:00:00.000000000","2026-07-18T00:00:00.000000000","2026-07-19T00:00:00.000000000","2026-07-20T00:00:00.000000000","2026-07-21T00:00:00.000000000","2026-07-22T00:00:00.000000000","2026-07-23T00:00:00.000000000","2026-07-24T00:00:00.000000000","2026-07-25T00:00:00.000000000"],"y":{"dtype":"f8","bdata":"aJHtfD81RkDfT42XbrJWQHNoke18fzlAukkMAis3V0C0yHa+n4JXQHe+nxovnTZAppvEILCCU0CamZmZmUlXQAAAAAAAAPh\u002fAAAAAAAA+H8="},"type":"bar"},{"marker":{"color":"#f6c86a","pattern":{"shape":"\u002f"}},"name":"Estimated Production (kWh)","x":["2026-07-16T00:00:00.000000000","2026-07-17T00:00:00.000000000","2026-07-18T00:00:00.000000000","2026-07-19T00:00:00.000000000","2026-07-20T00:00:00.000000000","2026-07-21T00:00:00.000000000","2026-07-22T00:00:00.000000000","2026-07-23T00:00:00.000000000","2026-07-24T00:00:00.000000000","2026-07-25T00:00:00.000000000"],"y":{"dtype":"f8","bdata":"AAAAAAAA+H8AAAAAAAD4fwAAAAAAAPh\u002fAAAAAAAA+H8AAAAAAAD4fwAAAAAAAPh\u002fAAAAAAAA+H8AAAAAAAD4f3e+nxovnTZAppvEILCCU0A="},"type":"bar"},{"line":{"color":"#0f4c81","width":3},"name":"7-Day Average","x":["2026-07-16T00:00:00.000000000","2026-07-17T00:00:00.000000000","2026-07-18T00:00:00.000000000","2026-07-19T00:00:00.000000000","2026-07-20T00:00:00.000000000","2026-07-21T00:00:00.000000000","2026-07-22T00:00:00.000000000","2026-07-23T00:00:00.000000000","2026-07-24T00:00:00.000000000","2026-07-25T00:00:00.000000000"],"y":{"dtype":"f8","bdata":"aJHtfD81RkBKDAIrh+ZQQHVM8GCeyEpANV66SQyyT0DTTWIQWGFRQD98hl0B2k5Axd2e42ICUEDmjRFM9L9RQLjbc1xMoU5AXkBsKg0xUUA="},"type":"scatter"}],                        {"template":{"data":{"barpolar":[{"marker":{"line":{"color":"white","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"barpolar"}],"bar":[{"error_x":{"color":"#2a3f5f"},"error_y":{"color":"#2a3f5f"},"marker":{"line":{"color":"white","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"bar"}],"carpet":[{"aaxis":{"endlinecolor":"#2a3f5f","gridcolor":"#C8D4E3","linecolor":"#C8D4E3","minorgridcolor":"#C8D4E3","startlinecolor":"#2a3f5f"},"baxis":{"endlinecolor":"#2a3f5f","gridcolor":"#C8D4E3","linecolor":"#C8D4E3","minorgridcolor":"#C8D4E3","startlinecolor":"#2a3f5f"},"type":"carpet"}],"choropleth":[{"colorbar":{"outlinewidth":0,"ticks":""},"type":"choropleth"}],"contourcarpet":[{"colorbar":{"outlinewidth":0,"ticks":""},"type":"contourcarpet"}],"contour":[{"colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"type":"contour"}],"heatmap":[{"colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"type":"heatmap"}],"histogram2dcontour":[{"colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"type":"histogram2dcontour"}],"histogram2d":[{"colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"type":"histogram2d"}],"histogram":[{"marker":{"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"histogram"}],"mesh3d":[{"colorbar":{"outlinewidth":0,"ticks":""},"type":"mesh3d"}],"parcoords":[{"line":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"parcoords"}],"pie":[{"automargin":true,"type":"pie"}],"scatter3d":[{"line":{"colorbar":{"outlinewidth":0,"ticks":""}},"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scatter3d"}],"scattercarpet":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scattercarpet"}],"scattergeo":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scattergeo"}],"scattergl":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scattergl"}],"scattermapbox":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scattermapbox"}],"scattermap":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scattermap"}],"scatterpolargl":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scatterpolargl"}],"scatterpolar":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scatterpolar"}],"scatter":[{"fillpattern":{"fillmode":"overlay","size":10,"solidity":0.2},"type":"scatter"}],"scatterternary":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scatterternary"}],"surface":[{"colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"type":"surface"}],"table":[{"cells":{"fill":{"color":"#EBF0F8"},"line":{"color":"white"}},"header":{"fill":{"color":"#C8D4E3"},"line":{"color":"white"}},"type":"table"}]},"layout":{"annotationdefaults":{"arrowcolor":"#2a3f5f","arrowhead":0,"arrowwidth":1},"autotypenumbers":"strict","coloraxis":{"colorbar":{"outlinewidth":0,"ticks":""}},"colorscale":{"diverging":[[0,"#8e0152"],[0.1,"#c51b7d"],[0.2,"#de77ae"],[0.3,"#f1b6da"],[0.4,"#fde0ef"],[0.5,"#f7f7f7"],[0.6,"#e6f5d0"],[0.7,"#b8e186"],[0.8,"#7fbc41"],[0.9,"#4d9221"],[1,"#276419"]],"sequential":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"sequentialminus":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]},"colorway":["#636efa","#EF553B","#00cc96","#ab63fa","#FFA15A","#19d3f3","#FF6692","#B6E880","#FF97FF","#FECB52"],"font":{"color":"#2a3f5f"},"geo":{"bgcolor":"white","lakecolor":"white","landcolor":"white","showlakes":true,"showland":true,"subunitcolor":"#C8D4E3"},"hoverlabel":{"align":"left"},"hovermode":"closest","mapbox":{"style":"light"},"paper_bgcolor":"white","plot_bgcolor":"white","polar":{"angularaxis":{"gridcolor":"#EBF0F8","linecolor":"#EBF0F8","ticks":""},"bgcolor":"white","radialaxis":{"gridcolor":"#EBF0F8","linecolor":"#EBF0F8","ticks":""}},"scene":{"xaxis":{"backgroundcolor":"white","gridcolor":"#DFE8F3","gridwidth":2,"linecolor":"#EBF0F8","showbackground":true,"ticks":"","zerolinecolor":"#EBF0F8"},"yaxis":{"backgroundcolor":"white","gridcolor":"#DFE8F3","gridwidth":2,"linecolor":"#EBF0F8","showbackground":true,"ticks":"","zerolinecolor":"#EBF0F8"},"zaxis":{"backgroundcolor":"white","gridcolor":"#DFE8F3","gridwidth":2,"linecolor":"#EBF0F8","showbackground":true,"ticks":"","zerolinecolor":"#EBF0F8"}},"shapedefaults":{"line":{"color":"#2a3f5f"}},"ternary":{"aaxis":{"gridcolor":"#DFE8F3","linecolor":"#A2B1C6","ticks":""},"baxis":{"gridcolor":"#DFE8F3","linecolor":"#A2B1C6","ticks":""},"bgcolor":"white","caxis":{"gridcolor":"#DFE8F3","linecolor":"#A2B1C6","ticks":""}},"title":{"x":0.05},"xaxis":{"automargin":true,"gridcolor":"#EBF0F8","linecolor":"#EBF0F8","ticks":"","title":{"standoff":15},"zerolinecolor":"#EBF0F8","zerolinewidth":2},"yaxis":{"automargin":true,"gridcolor":"#EBF0F8","linecolor":"#EBF0F8","ticks":"","title":{"standoff":15},"zerolinecolor":"#EBF0F8","zerolinewidth":2}}},"margin":{"l":20,"r":20,"t":50,"b":20},"title":{"text":"Daily Production"},"bargap":0.12,"barmode":"overlay"},                        {"displayModeBar": false, "responsive": true}                    )                };            </script>        </div>
+              </div>
+            </div>
+            <div class="energy-impact-panel mt-3">
+              <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
+                <div>
+                  <h3 class="h6 mb-1">What This Energy Could Do</h3>
+                  <p class="text-muted mb-0">A quick real-world translation of your solar output using your historic household baseline and a typical EV efficiency.</p>
+                </div>
+                <span class="energy-impact-assumption">
+                  49.2 kWh/day home use • 0.30 kWh/EV mile
+                </span>
+              </div>
+              <div class="info-grid energy-impact-grid">
+                <div>
+                  <span>Today's Output</span>
+                  <strong>78.0 kWh</strong>
+                  <small>Enough for about 38 hours of whole-home usage at your historic average.</small>
+                </div>
+                <div>
+                  <span>House Coverage</span>
+                  <strong>1.59 days</strong>
+                  <small>Based on your pre-solar average of 49.2 kWh per day.</small>
+                </div>
+                <div>
+                  <span>EV Range Equivalent</span>
+                  <strong>260 miles</strong>
+                  <small>Approximate EV driving range that one day of solar production could provide.</small>
+                </div>
+                <div>
+                  <span>Year-To-Date Impact</span>
+                  <strong>13.0 home-days</strong>
+                  <small>That same production is roughly equal to 2,140 EV miles so far.</small>
+                </div>
+                <div>
+                  <span>Total Energy To Date</span>
+                  <strong>642.1 kWh</strong>
+                  <small>Enough cumulative solar energy to cover about 13.0 full home-days or roughly 2,140 EV miles.</small>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-4">
+          <div class="card tracker-card h-100">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+              <h2 class="h5 mb-0">Contract Progress</h2>
+              <div class="d-flex flex-wrap gap-2 justify-content-end">
+                <a class="btn btn-contract btn-sm" href="contract-summary.html">Summary</a>
+                <a class="btn btn-contract btn-sm" href="/documents/sunrun-contract" target="_blank" rel="noopener noreferrer">PDF</a>
+              </div>
+            </div>
+            <div class="progress tracker-progress mb-3">
+              <div class="progress-bar" role="progressbar" style="width: 100%"></div>
+            </div>
+            <div class="info-grid">
+              <div><span>Guarantee</span><strong>11,141 kWh</strong></div>
+              <div><span>Progress</span><strong>221.7%</strong></div>
+              <div><span>YTD Production</span><strong>642.1 kWh</strong></div>
+              <div><span>Avg Daily</span><strong>67.7 kWh</strong></div>
+              <div><span>Best Day</span><strong>94.0 kWh</strong></div>
+              <div><span>Lowest Day</span><strong>22.6 kWh</strong></div>
+              <div><span>Consecutive Poor Days</span><strong>0</strong></div>
+              <div><span>Monthly Avg</span><strong>64.2 kWh</strong></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="row g-3 mb-4">
+      <div class="col-lg-6">
+        <div class="card tracker-card h-100">
+          <div class="card-body">
+            <h2 class="h5 mb-3">Grid Flow and Virtual Consumption Monitor</h2>
+            <div class="chart-popout-frame" data-chart-popout-label="Grid Flow and Virtual Consumption Monitor">
+              <button type="button" class="btn btn-contract btn-sm chart-popout-button" data-chart-popout>Pop Out</button>
+              <div class="dashboard-chart dashboard-chart-embedded">
+                <div>                            <div id="2346a036-e106-4860-8020-c61fdfe931b0" class="plotly-graph-div" style="height:100%; width:100%;"></div>            <script>                window.PLOTLYENV=window.PLOTLYENV || {};                                if (document.getElementById("2346a036-e106-4860-8020-c61fdfe931b0")) {                    Plotly.newPlot(                        "2346a036-e106-4860-8020-c61fdfe931b0",                        [{"line":{"color":"#b42318"},"name":"Import","x":["2026-07-16T00:00:00.000000000","2026-07-17T00:00:00.000000000","2026-07-18T00:00:00.000000000","2026-07-19T00:00:00.000000000","2026-07-20T00:00:00.000000000","2026-07-21T00:00:00.000000000","2026-07-22T00:00:00.000000000","2026-07-23T00:00:00.000000000","2026-07-24T00:00:00.000000000","2026-07-25T00:00:00.000000000"],"y":{"dtype":"f8","bdata":"AAAAAAAAAAAAAAAAAAAxQAAAAAAAADJAAAAAAAAAIEAAAAAAAAAIQAAAAAAAADlAAAAAAAAAM0CgmZmZmZkmQAAAAAAAADlAAAAAAAAAM0A="},"type":"scatter","xaxis":"x","yaxis":"y"},{"line":{"color":"#157f3b"},"name":"Export","x":["2026-07-16T00:00:00.000000000","2026-07-17T00:00:00.000000000","2026-07-18T00:00:00.000000000","2026-07-19T00:00:00.000000000","2026-07-20T00:00:00.000000000","2026-07-21T00:00:00.000000000","2026-07-22T00:00:00.000000000","2026-07-23T00:00:00.000000000","2026-07-24T00:00:00.000000000","2026-07-25T00:00:00.000000000"],"y":{"dtype":"f8","bdata":"AAAAAAAAAAAAAAAAAABLQAAAAAAAAEVAAAAAAACAQkAAAAAAAAA2QAAAAAAAADVAAAAAAACAS0AwMzMzMzNDQAAAAAAAADVAAAAAAACAS0A="},"type":"scatter","xaxis":"x","yaxis":"y"},{"line":{"color":"#0f4c81","dash":"dot"},"name":"Estimated Self Consumption","x":["2026-07-16T00:00:00.000000000","2026-07-17T00:00:00.000000000","2026-07-18T00:00:00.000000000","2026-07-19T00:00:00.000000000","2026-07-20T00:00:00.000000000","2026-07-21T00:00:00.000000000","2026-07-22T00:00:00.000000000","2026-07-23T00:00:00.000000000","2026-07-24T00:00:00.000000000","2026-07-25T00:00:00.000000000"],"y":{"dtype":"f8","bdata":"aJHtfD81RkApXI\u002fC9ehLQHNoke18fzlAKVyPwvXoS0ApXI\u002fC9ehLQHe+nxovnTZAKVyPwvXoS0ApXI\u002fC9ehLQHe+nxovnTZAKVyPwvXoS0A="},"type":"scatter","xaxis":"x","yaxis":"y2"}],                        {"template":{"data":{"barpolar":[{"marker":{"line":{"color":"white","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"barpolar"}],"bar":[{"error_x":{"color":"#2a3f5f"},"error_y":{"color":"#2a3f5f"},"marker":{"line":{"color":"white","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"bar"}],"carpet":[{"aaxis":{"endlinecolor":"#2a3f5f","gridcolor":"#C8D4E3","linecolor":"#C8D4E3","minorgridcolor":"#C8D4E3","startlinecolor":"#2a3f5f"},"baxis":{"endlinecolor":"#2a3f5f","gridcolor":"#C8D4E3","linecolor":"#C8D4E3","minorgridcolor":"#C8D4E3","startlinecolor":"#2a3f5f"},"type":"carpet"}],"choropleth":[{"colorbar":{"outlinewidth":0,"ticks":""},"type":"choropleth"}],"contourcarpet":[{"colorbar":{"outlinewidth":0,"ticks":""},"type":"contourcarpet"}],"contour":[{"colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"type":"contour"}],"heatmap":[{"colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"type":"heatmap"}],"histogram2dcontour":[{"colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"type":"histogram2dcontour"}],"histogram2d":[{"colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"type":"histogram2d"}],"histogram":[{"marker":{"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"histogram"}],"mesh3d":[{"colorbar":{"outlinewidth":0,"ticks":""},"type":"mesh3d"}],"parcoords":[{"line":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"parcoords"}],"pie":[{"automargin":true,"type":"pie"}],"scatter3d":[{"line":{"colorbar":{"outlinewidth":0,"ticks":""}},"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scatter3d"}],"scattercarpet":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scattercarpet"}],"scattergeo":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scattergeo"}],"scattergl":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scattergl"}],"scattermapbox":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scattermapbox"}],"scattermap":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scattermap"}],"scatterpolargl":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scatterpolargl"}],"scatterpolar":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scatterpolar"}],"scatter":[{"fillpattern":{"fillmode":"overlay","size":10,"solidity":0.2},"type":"scatter"}],"scatterternary":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scatterternary"}],"surface":[{"colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"type":"surface"}],"table":[{"cells":{"fill":{"color":"#EBF0F8"},"line":{"color":"white"}},"header":{"fill":{"color":"#C8D4E3"},"line":{"color":"white"}},"type":"table"}]},"layout":{"annotationdefaults":{"arrowcolor":"#2a3f5f","arrowhead":0,"arrowwidth":1},"autotypenumbers":"strict","coloraxis":{"colorbar":{"outlinewidth":0,"ticks":""}},"colorscale":{"diverging":[[0,"#8e0152"],[0.1,"#c51b7d"],[0.2,"#de77ae"],[0.3,"#f1b6da"],[0.4,"#fde0ef"],[0.5,"#f7f7f7"],[0.6,"#e6f5d0"],[0.7,"#b8e186"],[0.8,"#7fbc41"],[0.9,"#4d9221"],[1,"#276419"]],"sequential":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"sequentialminus":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]},"colorway":["#636efa","#EF553B","#00cc96","#ab63fa","#FFA15A","#19d3f3","#FF6692","#B6E880","#FF97FF","#FECB52"],"font":{"color":"#2a3f5f"},"geo":{"bgcolor":"white","lakecolor":"white","landcolor":"white","showlakes":true,"showland":true,"subunitcolor":"#C8D4E3"},"hoverlabel":{"align":"left"},"hovermode":"closest","mapbox":{"style":"light"},"paper_bgcolor":"white","plot_bgcolor":"white","polar":{"angularaxis":{"gridcolor":"#EBF0F8","linecolor":"#EBF0F8","ticks":""},"bgcolor":"white","radialaxis":{"gridcolor":"#EBF0F8","linecolor":"#EBF0F8","ticks":""}},"scene":{"xaxis":{"backgroundcolor":"white","gridcolor":"#DFE8F3","gridwidth":2,"linecolor":"#EBF0F8","showbackground":true,"ticks":"","zerolinecolor":"#EBF0F8"},"yaxis":{"backgroundcolor":"white","gridcolor":"#DFE8F3","gridwidth":2,"linecolor":"#EBF0F8","showbackground":true,"ticks":"","zerolinecolor":"#EBF0F8"},"zaxis":{"backgroundcolor":"white","gridcolor":"#DFE8F3","gridwidth":2,"linecolor":"#EBF0F8","showbackground":true,"ticks":"","zerolinecolor":"#EBF0F8"}},"shapedefaults":{"line":{"color":"#2a3f5f"}},"ternary":{"aaxis":{"gridcolor":"#DFE8F3","linecolor":"#A2B1C6","ticks":""},"baxis":{"gridcolor":"#DFE8F3","linecolor":"#A2B1C6","ticks":""},"bgcolor":"white","caxis":{"gridcolor":"#DFE8F3","linecolor":"#A2B1C6","ticks":""}},"title":{"x":0.05},"xaxis":{"automargin":true,"gridcolor":"#EBF0F8","linecolor":"#EBF0F8","ticks":"","title":{"standoff":15},"zerolinecolor":"#EBF0F8","zerolinewidth":2},"yaxis":{"automargin":true,"gridcolor":"#EBF0F8","linecolor":"#EBF0F8","ticks":"","title":{"standoff":15},"zerolinecolor":"#EBF0F8","zerolinewidth":2}}},"xaxis":{"anchor":"y","domain":[0.0,0.94]},"yaxis":{"anchor":"x","domain":[0.0,1.0]},"yaxis2":{"anchor":"x","overlaying":"y","side":"right"},"margin":{"l":20,"r":20,"t":50,"b":20},"title":{"text":"Grid Flow and Estimated Self Consumption"}},                        {"displayModeBar": false, "responsive": true}                    )                };            </script>        </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-6">
+        <div class="card tracker-card h-100">
+          <div class="card-body">
+            <h2 class="h5 mb-3">Solar Offset Snapshot</h2>
+            <div class="info-grid">
+              <div><span>Estimated Self Consumption</span><strong>450.1 kWh</strong></div>
+              <div><span>Total Home Consumption</span><strong>595.4 kWh</strong></div>
+              <div><span>Solar Offset</span><strong>74.5%</strong></div>
+              <div><span>Expected Offset</span><strong>62.0%</strong></div>
+              <div><span>Electricity Value Produced</span><strong>$154</strong></div>
+              <div><span>Grid Cost</span><strong>$54</strong></div>
+              <div><span>Lease Cost</span><strong>$155</strong></div>
+              <div><span>Lifetime Savings</span><strong>$-16,583</strong></div>
+              <div><span>Tree Removal Payback</span><strong>N/A</strong></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="row g-3 mb-4">
+      <div class="col-12">
+        <div class="card tracker-card h-100">
+          <div class="card-body">
+            <h2 class="h5 mb-2">Running Totals</h2>
+            <p class="text-muted mb-3">Cumulative solar production, grid import, grid export, estimated self-consumption, and cumulative net savings over time.</p>
+            <div class="chart-popout-frame" data-chart-popout-label="Running Totals">
+              <button type="button" class="btn btn-contract btn-sm chart-popout-button" data-chart-popout>Pop Out</button>
+              <div class="dashboard-chart dashboard-chart-embedded">
+                <div>                            <div id="236d99f1-ef80-4c56-a49f-2c8094eddb2b" class="plotly-graph-div" style="height:100%; width:100%;"></div>            <script>                window.PLOTLYENV=window.PLOTLYENV || {};                                if (document.getElementById("236d99f1-ef80-4c56-a49f-2c8094eddb2b")) {                    Plotly.newPlot(                        "236d99f1-ef80-4c56-a49f-2c8094eddb2b",                        [{"line":{"color":"#e3a008","width":3},"name":"Cumulative Production","x":["2026-07-16T00:00:00.000000000","2026-07-17T00:00:00.000000000","2026-07-18T00:00:00.000000000","2026-07-19T00:00:00.000000000","2026-07-20T00:00:00.000000000","2026-07-21T00:00:00.000000000","2026-07-22T00:00:00.000000000","2026-07-23T00:00:00.000000000","2026-07-24T00:00:00.000000000","2026-07-25T00:00:00.000000000"],"y":{"dtype":"f8","bdata":"aJHtfD81RkBKDAIrh+ZgQFg5tMh2FmRANV66SQyyb0BI4XoUrrl1QC\u002fdJAaBI3dAGARWDi0EfEA\u002fNV66SeuAQDMzMzMzoIFAqMZLN4kQhEA="},"type":"scatter"},{"line":{"color":"#b42318","width":3},"name":"Cumulative Import","x":["2026-07-16T00:00:00.000000000","2026-07-17T00:00:00.000000000","2026-07-18T00:00:00.000000000","2026-07-19T00:00:00.000000000","2026-07-20T00:00:00.000000000","2026-07-21T00:00:00.000000000","2026-07-22T00:00:00.000000000","2026-07-23T00:00:00.000000000","2026-07-24T00:00:00.000000000","2026-07-25T00:00:00.000000000"],"y":{"dtype":"f8","bdata":"AAAAAAAAAAAAAAAAAAAxQAAAAAAAgEFAAAAAAACARUAAAAAAAABHQAAAAAAAwFFAAAAAAACAVkA0MzMzM1NZQDQzMzMzk19AmpmZmZkpYkA="},"type":"scatter"},{"line":{"color":"#157f3b","width":3},"name":"Cumulative Export","x":["2026-07-16T00:00:00.000000000","2026-07-17T00:00:00.000000000","2026-07-18T00:00:00.000000000","2026-07-19T00:00:00.000000000","2026-07-20T00:00:00.000000000","2026-07-21T00:00:00.000000000","2026-07-22T00:00:00.000000000","2026-07-23T00:00:00.000000000","2026-07-24T00:00:00.000000000","2026-07-25T00:00:00.000000000"],"y":{"dtype":"f8","bdata":"AAAAAAAAAAAAAAAAAABLQAAAAAAAAFhAAAAAAACgYEAAAAAAAGBjQAAAAAAAAGZAAAAAAADgbEBmZmZmZtZwQGZmZmZmJnJAZmZmZmaWdUA="},"type":"scatter"},{"line":{"color":"#0f4c81","dash":"dot","width":3},"name":"Cumulative Self Consumption","x":["2026-07-16T00:00:00.000000000","2026-07-17T00:00:00.000000000","2026-07-18T00:00:00.000000000","2026-07-19T00:00:00.000000000","2026-07-20T00:00:00.000000000","2026-07-21T00:00:00.000000000","2026-07-22T00:00:00.000000000","2026-07-23T00:00:00.000000000","2026-07-24T00:00:00.000000000","2026-07-25T00:00:00.000000000"],"y":{"dtype":"f8","bdata":"aJHtfD81RkDIdr6fGg9ZQOXQItv5bl9AfT81XrqxZkCHFtnO96ttQCuHFtnOP3BAsHJoke28c0A1XrpJDDp3QBxaZDvfo3hAoUW28\u002f0gfEA="},"type":"scatter"},{"line":{"color":"#7c3aed","dash":"dash","width":3},"name":"Cumulative Net Savings","x":["2026-07-16T00:00:00.000000000","2026-07-17T00:00:00.000000000","2026-07-18T00:00:00.000000000","2026-07-19T00:00:00.000000000","2026-07-20T00:00:00.000000000","2026-07-21T00:00:00.000000000","2026-07-22T00:00:00.000000000","2026-07-23T00:00:00.000000000","2026-07-24T00:00:00.000000000","2026-07-25T00:00:00.000000000"],"y":{"dtype":"f8","bdata":"8G36sx8pG8CseCPzyB8awOaRPxh4LjbApTZxcr9DM8BgKcsQx7otwMSUSKKXcUDAS1RvDWwVQsAGnnsPl\u002fxAwHJoke18\u002f0nA+Se4WFGjS8A="},"yaxis":"y2","type":"scatter"}],                        {"template":{"data":{"barpolar":[{"marker":{"line":{"color":"white","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"barpolar"}],"bar":[{"error_x":{"color":"#2a3f5f"},"error_y":{"color":"#2a3f5f"},"marker":{"line":{"color":"white","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"bar"}],"carpet":[{"aaxis":{"endlinecolor":"#2a3f5f","gridcolor":"#C8D4E3","linecolor":"#C8D4E3","minorgridcolor":"#C8D4E3","startlinecolor":"#2a3f5f"},"baxis":{"endlinecolor":"#2a3f5f","gridcolor":"#C8D4E3","linecolor":"#C8D4E3","minorgridcolor":"#C8D4E3","startlinecolor":"#2a3f5f"},"type":"carpet"}],"choropleth":[{"colorbar":{"outlinewidth":0,"ticks":""},"type":"choropleth"}],"contourcarpet":[{"colorbar":{"outlinewidth":0,"ticks":""},"type":"contourcarpet"}],"contour":[{"colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"type":"contour"}],"heatmap":[{"colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"type":"heatmap"}],"histogram2dcontour":[{"colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"type":"histogram2dcontour"}],"histogram2d":[{"colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"type":"histogram2d"}],"histogram":[{"marker":{"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"histogram"}],"mesh3d":[{"colorbar":{"outlinewidth":0,"ticks":""},"type":"mesh3d"}],"parcoords":[{"line":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"parcoords"}],"pie":[{"automargin":true,"type":"pie"}],"scatter3d":[{"line":{"colorbar":{"outlinewidth":0,"ticks":""}},"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scatter3d"}],"scattercarpet":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scattercarpet"}],"scattergeo":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scattergeo"}],"scattergl":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scattergl"}],"scattermapbox":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scattermapbox"}],"scattermap":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scattermap"}],"scatterpolargl":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scatterpolargl"}],"scatterpolar":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scatterpolar"}],"scatter":[{"fillpattern":{"fillmode":"overlay","size":10,"solidity":0.2},"type":"scatter"}],"scatterternary":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scatterternary"}],"surface":[{"colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"type":"surface"}],"table":[{"cells":{"fill":{"color":"#EBF0F8"},"line":{"color":"white"}},"header":{"fill":{"color":"#C8D4E3"},"line":{"color":"white"}},"type":"table"}]},"layout":{"annotationdefaults":{"arrowcolor":"#2a3f5f","arrowhead":0,"arrowwidth":1},"autotypenumbers":"strict","coloraxis":{"colorbar":{"outlinewidth":0,"ticks":""}},"colorscale":{"diverging":[[0,"#8e0152"],[0.1,"#c51b7d"],[0.2,"#de77ae"],[0.3,"#f1b6da"],[0.4,"#fde0ef"],[0.5,"#f7f7f7"],[0.6,"#e6f5d0"],[0.7,"#b8e186"],[0.8,"#7fbc41"],[0.9,"#4d9221"],[1,"#276419"]],"sequential":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"sequentialminus":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]},"colorway":["#636efa","#EF553B","#00cc96","#ab63fa","#FFA15A","#19d3f3","#FF6692","#B6E880","#FF97FF","#FECB52"],"font":{"color":"#2a3f5f"},"geo":{"bgcolor":"white","lakecolor":"white","landcolor":"white","showlakes":true,"showland":true,"subunitcolor":"#C8D4E3"},"hoverlabel":{"align":"left"},"hovermode":"closest","mapbox":{"style":"light"},"paper_bgcolor":"white","plot_bgcolor":"white","polar":{"angularaxis":{"gridcolor":"#EBF0F8","linecolor":"#EBF0F8","ticks":""},"bgcolor":"white","radialaxis":{"gridcolor":"#EBF0F8","linecolor":"#EBF0F8","ticks":""}},"scene":{"xaxis":{"backgroundcolor":"white","gridcolor":"#DFE8F3","gridwidth":2,"linecolor":"#EBF0F8","showbackground":true,"ticks":"","zerolinecolor":"#EBF0F8"},"yaxis":{"backgroundcolor":"white","gridcolor":"#DFE8F3","gridwidth":2,"linecolor":"#EBF0F8","showbackground":true,"ticks":"","zerolinecolor":"#EBF0F8"},"zaxis":{"backgroundcolor":"white","gridcolor":"#DFE8F3","gridwidth":2,"linecolor":"#EBF0F8","showbackground":true,"ticks":"","zerolinecolor":"#EBF0F8"}},"shapedefaults":{"line":{"color":"#2a3f5f"}},"ternary":{"aaxis":{"gridcolor":"#DFE8F3","linecolor":"#A2B1C6","ticks":""},"baxis":{"gridcolor":"#DFE8F3","linecolor":"#A2B1C6","ticks":""},"bgcolor":"white","caxis":{"gridcolor":"#DFE8F3","linecolor":"#A2B1C6","ticks":""}},"title":{"x":0.05},"xaxis":{"automargin":true,"gridcolor":"#EBF0F8","linecolor":"#EBF0F8","ticks":"","title":{"standoff":15},"zerolinecolor":"#EBF0F8","zerolinewidth":2},"yaxis":{"automargin":true,"gridcolor":"#EBF0F8","linecolor":"#EBF0F8","ticks":"","title":{"standoff":15},"zerolinecolor":"#EBF0F8","zerolinewidth":2}}},"margin":{"l":20,"r":20,"t":110,"b":20},"yaxis2":{"title":{"text":"Dollars ($)"},"overlaying":"y","side":"right","showgrid":false},"legend":{"font":{"size":11},"orientation":"h","yanchor":"bottom","y":1.18,"x":0},"title":{"text":"Running Totals"},"yaxis":{"title":{"text":"Energy (kWh)"}}},                        {"displayModeBar": false, "responsive": true}                    )                };            </script>        </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="row g-3 mb-4">
+      <div class="col-lg-7">
+        <div class="card tracker-card h-100">
+          <div class="card-body">
+            <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
+              <div>
+                <p class="eyebrow mb-2">Forward Billing Outlook</p>
+                <h2 class="h5 mb-1">What your monthly bills should look like going forward</h2>
+                <p class="text-muted mb-0">This combines the July NYSEG bill behavior with the Sunrun contract terms and your current production pace.</p>
+              </div>
+              <span class="ai-status-pill ai-status-pill-success">
+
+                Production pacing ahead of guarantee
+
+              </span>
+            </div>
+            <div class="info-grid mb-3">
+              <div><span>Expected NYSEG Grid Use</span><strong>569 kWh/month</strong></div>
+              <div><span>NYSEG Usage-Based July Pattern</span><strong>$63.07/month</strong></div>
+              <div><span>NYSEG Contract-Based Average</span><strong>$156.02/month</strong></div>
+              <div><span>Sunrun Current Monthly</span><strong>$153.19</strong></div>
+              <div><span>Sunrun Next Year Est.</span><strong>$157.77</strong></div>
+              <div><span>Combined Typical Range</span><strong>$216 to $309/month</strong></div>
+            </div>
+            <div class="tracker-modal-math">
+              <div class="tracker-modal-step">
+                <strong>NYSEG going forward</strong>
+                <p>If budget billing is ignored and you just look at underlying usage, the July bill suggests NYSEG may often land around $63/month during strong solar periods. Using the contract's expected post-solar grid usage of 6,826 kWh/year, a more normal all-season average is about $156/month.</p>
+              </div>
+              <div class="tracker-modal-step">
+                <strong>Sunrun going forward</strong>
+                <p>The contract summary shows a year 1 Sunrun lease payment of $153.19/month with ACH discount. The dashboard projects about $153.19/month now, increasing to roughly $157.77/month next year with the 2.99% escalator.</p>
+              </div>
+              <div class="tracker-modal-step">
+                <strong>Combined expectation</strong>
+                <p>That puts the likely ongoing combined monthly burden near $216 in very favorable low-import months and around $309 as a contract-based average across the year.</p>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-5">
+        <div class="card tracker-card h-100">
+          <div class="card-body">
+            <h2 class="h5 mb-3">Billing Interpretation</h2>
+            <div class="tracker-modal-math">
+              <div class="tracker-modal-step">
+                <strong>Production guarantee context</strong>
+                <p>The contract guarantee averages about 30.5 kWh/day. Your current observed pace is 67.7 kWh/day, which supports the lower-usage NYSEG outlook if this production trend holds.</p>
+              </div>
+              <div class="tracker-modal-step">
+                <strong>What should improve first</strong>
+                <p>During sunny months, the NYSEG energy-charge portion should usually be the first thing to shrink. The fixed service charges and the Sunrun lease remain, so the utility bill may not drop to zero even when production is strong.</p>
+              </div>
+              <div class="tracker-modal-step">
+                <strong>Best planning number</strong>
+                <p>For budgeting, it is reasonable to plan around about $309/month combined on average, while recognizing that solar-heavy months can be lower and winter or cloudy stretches can run higher.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="mb-4">
+  <div class="card tracker-card nyseg-baseline-card">
+    <div class="card-body">
+      <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
+        <div>
+          <p class="eyebrow mb-2">Historic NYSEG Baseline</p>
+          <h2 class="h5 mb-1">Monthly usage, billing, and net-metering history</h2>
+          <p class="text-muted mb-0">Usage comes from the NYSEG monthly export. Charge details and meter registers come from the bill PDFs.</p>
+        </div>
+        <div class="d-flex flex-wrap gap-2 align-items-center">
+
+          <span class="ai-status-pill ai-status-pill-success">36 Usage Months</span>
+          <span class="ai-status-pill ai-status-pill-success">5 Bills Reviewed</span>
+          <a class="btn btn-contract btn-sm" href="#" aria-disabled="true" title="Available in the local app only">Historic Spreadsheet</a>
+          <a class="btn btn-contract btn-sm" href="#" aria-disabled="true" title="Private bill PDFs are available in the local app only">Latest Bill</a>
+
+        </div>
+      </div>
+
+
+      <div class="nyseg-baseline-summary mb-3">
+        <div class="nyseg-summary-tile">
+          <span>Average Monthly Usage</span>
+          <strong>1,433 kWh</strong>
+          <small>2023-09-02 to 2026-09-03</small>
+        </div>
+        <div class="nyseg-summary-tile">
+          <span>Average Monthly Usage Cost</span>
+          <strong>$313.24</strong>
+          <small>$0.219/kWh blended</small>
+        </div>
+        <div class="nyseg-summary-tile nyseg-summary-tile-import">
+          <span>Bill-Period Import</span>
+          <strong>2,459 kWh</strong>
+          <small>Includes 419 kWh on the replaced meter</small>
+        </div>
+        <div class="nyseg-summary-tile nyseg-summary-tile-export">
+          <span>Smart-Meter Export</span>
+          <strong>4,720 kWh</strong>
+          <small>Register 02 across available solar bills</small>
+        </div>
+        <div class="nyseg-summary-tile nyseg-summary-tile-net">
+          <span>Bill-Period Net Position</span>
+          <strong>2,261 kWh net export</strong>
+          <small>Import minus export; negative means surplus export</small>
+        </div>
+      </div>
+
+      <div class="nyseg-baseline-layout">
+        <article class="nyseg-data-panel nyseg-data-panel-wide">
+          <div class="nyseg-panel-heading">
+            <div><h3>Historical Billing Month to Month</h3><p>Energy usage and itemized electricity charges from each PDF.</p></div>
+          </div>
+          <div class="nyseg-table-scroll">
+            <table class="table nyseg-data-table mb-0">
+              <thead><tr><th>Billing Period</th><th>Used</th><th>Delivery</th><th>Supply</th><th>Taxes</th><th>Misc.</th><th>Energy Total</th><th>Amount Due</th></tr></thead>
+              <tbody>
+
+                <tr>
+                  <td><strong>2026-09-04 to 2026-10-06</strong><small>33 days</small></td>
+                  <td>495 kWh</td>
+                  <td>$40.99</td>
+                  <td>$0.00</td>
+                  <td>$2.58</td>
+                  <td>$0.95</td>
+                  <td><strong>$43.57</strong></td>
+                  <td>$468.25</td>
+                </tr>
+
+                <tr>
+                  <td><strong>2026-08-06 to 2026-09-03</strong><small>29 days</small></td>
+                  <td>518 kWh</td>
+                  <td>$77.47</td>
+                  <td>$37.40</td>
+                  <td>$6.40</td>
+                  <td>$0.95</td>
+                  <td><strong>$121.27</strong></td>
+                  <td>$1,054.04</td>
+                </tr>
+
+                <tr>
+                  <td><strong>2026-08-06 to 2026-09-03</strong><small>29 days</small></td>
+                  <td>518 kWh</td>
+                  <td>$40.99</td>
+                  <td>$0.00</td>
+                  <td>$2.58</td>
+                  <td>$0.95</td>
+                  <td><strong>$43.57</strong></td>
+                  <td>$913.73</td>
+                </tr>
+
+                <tr>
+                  <td><strong>2026-07-02 to 2026-08-05</strong><small>35 days</small></td>
+                  <td>810 kWh</td>
+                  <td>$112.94</td>
+                  <td>$96.56</td>
+                  <td>$11.09</td>
+                  <td>$0.95</td>
+                  <td><strong>$220.59</strong></td>
+                  <td>$921.82</td>
+                </tr>
+
+                <tr>
+                  <td><strong>2026-06-05 to 2026-07-01</strong><small>27 days</small></td>
+                  <td>118 kWh</td>
+                  <td>$32.58</td>
+                  <td>$10.69</td>
+                  <td>$2.49</td>
+                  <td>$0.95</td>
+                  <td><strong>$45.76</strong></td>
+                  <td>$516.90</td>
+                </tr>
+
+              </tbody>
+            </table>
+          </div>
+          <p class="nyseg-table-footnote">Amount Due can include prior balances, budget billing, or payment-plan amounts. Energy Total is the better month-to-month electricity-charge comparison.</p>
+        </article>
+
+        <article class="nyseg-data-panel">
+          <div class="nyseg-panel-heading"><div><h3>Net Metering</h3><p>Register 01 import versus Register 02 export.</p></div></div>
+          <div class="nyseg-table-scroll nyseg-table-scroll-compact">
+            <table class="table nyseg-data-table mb-0">
+              <thead><tr><th>Period</th><th>Import</th><th>Export</th><th>Net</th></tr></thead>
+              <tbody>
+
+                <tr>
+                  <td><strong>2026-10-06</strong><small title="Automatically extracted from the saved NYSEG PDF. Review the source bill if a corrected statement changes the period.">Net export</small></td>
+                  <td>495</td>
+                  <td>1,175</td>
+                  <td class="nyseg-net-positive">-680</td>
+                </tr>
+
+                <tr>
+                  <td><strong>2026-09-03</strong><small title="Register 01 recorded 518 kWh imported; Register 02 recorded 1,260 kWh exported.">Net export</small></td>
+                  <td>518</td>
+                  <td>1,260</td>
+                  <td class="nyseg-net-positive">-742</td>
+                </tr>
+
+                <tr>
+                  <td><strong>2026-09-03</strong><small title="NYSEG applied solar generation against the 518 kWh of use. Its excess-generation table shows 634 kWh prior excess, 1,260 kWh generated, and 1,376 kWh remaining.">Net export</small></td>
+                  <td>518</td>
+                  <td>1,260</td>
+                  <td class="nyseg-net-positive">-742</td>
+                </tr>
+
+                <tr>
+                  <td><strong>2026-08-05</strong><small title="Meter-transition month: 419 kWh old-meter use plus 391 kWh smart-meter import; Register 02 recorded 1,025 kWh exported.">Net export</small></td>
+                  <td>810</td>
+                  <td>1,025</td>
+                  <td class="nyseg-net-positive">-215</td>
+                </tr>
+
+                <tr>
+                  <td><strong>2026-07-01</strong><small title="Pre-smart-meter bill; no export register was available.">Net import</small></td>
+                  <td>118</td>
+                  <td>0</td>
+                  <td class="nyseg-net-negative">+118</td>
+                </tr>
+
+              </tbody>
+            </table>
+          </div>
+          <div class="tracker-modal-note mt-2">The meter-transition bill includes 419 kWh from the old meter. Smart-meter-only totals are 1,922 kWh imported and 4,720 kWh exported.</div>
+        </article>
+
+        <article class="nyseg-data-panel nyseg-data-panel-full">
+          <div class="nyseg-panel-heading"><div><h3>Usage Data Month to Month</h3><p>Scrollable NYSEG export history, newest month first.</p></div></div>
+          <div class="nyseg-table-scroll nyseg-usage-scroll">
+            <table class="table nyseg-data-table mb-0">
+              <thead><tr><th>Month</th><th>Billing Period</th><th>Usage</th><th>Usage Cost</th><th>Effective $/kWh</th><th>Avg. Temp.</th></tr></thead>
+              <tbody>
+
+                <tr><td><strong>Sep 2026</strong></td><td>2026-08-06 to 2026-09-03</td><td>518 kWh</td><td>$114.87</td><td>$0.222</td><td>72°F</td></tr>
+
+                <tr><td><strong>Aug 2026</strong></td><td>2026-07-02 to 2026-08-05</td><td>810 kWh</td><td>$209.50</td><td>$0.259</td><td>73°F</td></tr>
+
+                <tr><td><strong>Jul 2026</strong></td><td>2026-06-05 to 2026-07-01</td><td>118 kWh</td><td>$43.27</td><td>$0.367</td><td>71°F</td></tr>
+
+                <tr><td><strong>Jun 2026</strong></td><td>2026-05-06 to 2026-06-04</td><td>1,913 kWh</td><td>$486.94</td><td>$0.255</td><td>61°F</td></tr>
+
+                <tr><td><strong>May 2026</strong></td><td>2026-04-07 to 2026-05-05</td><td>1,473 kWh</td><td>$403.45</td><td>$0.274</td><td>52°F</td></tr>
+
+                <tr><td><strong>Apr 2026</strong></td><td>2026-03-04 to 2026-04-06</td><td>1,874 kWh</td><td>$501.89</td><td>$0.268</td><td>45°F</td></tr>
+
+                <tr><td><strong>Mar 2026</strong></td><td>2026-02-05 to 2026-03-03</td><td>3,160 kWh</td><td>$811.93</td><td>$0.257</td><td>28°F</td></tr>
+
+                <tr><td><strong>Feb 2026</strong></td><td>2026-01-07 to 2026-02-04</td><td>1,419 kWh</td><td>$397.06</td><td>$0.280</td><td>25°F</td></tr>
+
+                <tr><td><strong>Jan 2026</strong></td><td>2025-12-06 to 2026-01-06</td><td>1,955 kWh</td><td>$493.13</td><td>$0.252</td><td>29°F</td></tr>
+
+                <tr><td><strong>Dec 2025</strong></td><td>2025-11-05 to 2025-12-05</td><td>2,296 kWh</td><td>$480.25</td><td>$0.209</td><td>40°F</td></tr>
+
+                <tr><td><strong>Nov 2025</strong></td><td>2025-10-07 to 2025-11-04</td><td>523 kWh</td><td>$139.51</td><td>$0.267</td><td>52°F</td></tr>
+
+                <tr><td><strong>Oct 2025</strong></td><td>2025-09-04 to 2025-10-06</td><td>1,002 kWh</td><td>$235.40</td><td>$0.235</td><td>66°F</td></tr>
+
+                <tr><td><strong>Sep 2025</strong></td><td>2025-08-06 to 2025-09-03</td><td>1,210 kWh</td><td>$277.30</td><td>$0.229</td><td>70°F</td></tr>
+
+                <tr><td><strong>Aug 2025</strong></td><td>2025-07-04 to 2025-08-05</td><td>1,087 kWh</td><td>$257.28</td><td>$0.237</td><td>76°F</td></tr>
+
+                <tr><td><strong>Jul 2025</strong></td><td>2025-06-05 to 2025-07-03</td><td>1,005 kWh</td><td>$233.29</td><td>$0.232</td><td>72°F</td></tr>
+
+                <tr><td><strong>Jun 2025</strong></td><td>2025-05-06 to 2025-06-04</td><td>1,077 kWh</td><td>$277.70</td><td>$0.258</td><td>59°F</td></tr>
+
+                <tr><td><strong>May 2025</strong></td><td>2025-04-04 to 2025-05-05</td><td>3,865 kWh</td><td>$992.56</td><td>$0.257</td><td>54°F</td></tr>
+
+                <tr><td><strong>Apr 2025</strong></td><td>2025-03-04 to 2025-04-03</td><td>1,380 kWh</td><td>$329.46</td><td>$0.239</td><td>44°F</td></tr>
+
+                <tr><td><strong>Mar 2025</strong></td><td>2025-02-06 to 2025-03-03</td><td>2,110 kWh</td><td>$478.61</td><td>$0.227</td><td>31°F</td></tr>
+
+                <tr><td><strong>Feb 2025</strong></td><td>2025-01-07 to 2025-02-05</td><td>561 kWh</td><td>$132.60</td><td>$0.236</td><td>26°F</td></tr>
+
+                <tr><td><strong>Jan 2025</strong></td><td>2024-12-06 to 2025-01-06</td><td>2,936 kWh</td><td>$549.15</td><td>$0.187</td><td>34°F</td></tr>
+
+                <tr><td><strong>Dec 2024</strong></td><td>2024-11-05 to 2024-12-05</td><td>1,778 kWh</td><td>$320.44</td><td>$0.180</td><td>44°F</td></tr>
+
+                <tr><td><strong>Nov 2024</strong></td><td>2024-10-04 to 2024-11-04</td><td>24 kWh</td><td>$22.87</td><td>$0.953</td><td>55°F</td></tr>
+
+                <tr><td><strong>Oct 2024</strong></td><td>2024-09-04 to 2024-10-03</td><td>875 kWh</td><td>$165.06</td><td>$0.189</td><td>64°F</td></tr>
+
+                <tr><td><strong>Sep 2024</strong></td><td>2024-08-06 to 2024-09-03</td><td>1,602 kWh</td><td>$297.46</td><td>$0.186</td><td>70°F</td></tr>
+
+                <tr><td><strong>Aug 2024</strong></td><td>2024-07-03 to 2024-08-05</td><td>943 kWh</td><td>$184.59</td><td>$0.196</td><td>77°F</td></tr>
+
+                <tr><td><strong>Jul 2024</strong></td><td>2024-06-06 to 2024-07-02</td><td>471 kWh</td><td>$93.39</td><td>$0.198</td><td>72°F</td></tr>
+
+                <tr><td><strong>Jun 2024</strong></td><td>2024-05-03 to 2024-06-05</td><td>1,255 kWh</td><td>$215.26</td><td>$0.172</td><td>63°F</td></tr>
+
+                <tr><td><strong>May 2024</strong></td><td>2024-04-04 to 2024-05-02</td><td>925 kWh</td><td>$157.10</td><td>$0.170</td><td>52°F</td></tr>
+
+                <tr><td><strong>Apr 2024</strong></td><td>2024-03-02 to 2024-04-03</td><td>1,723 kWh</td><td>$288.26</td><td>$0.167</td><td>44°F</td></tr>
+
+                <tr><td><strong>Mar 2024</strong></td><td>2024-02-06 to 2024-03-01</td><td>2,119 kWh</td><td>$422.72</td><td>$0.199</td><td>35°F</td></tr>
+
+                <tr><td><strong>Feb 2024</strong></td><td>2024-01-03 to 2024-02-05</td><td>2,461 kWh</td><td>$469.56</td><td>$0.191</td><td>33°F</td></tr>
+
+                <tr><td><strong>Jan 2024</strong></td><td>2023-12-06 to 2024-01-02</td><td>1,909 kWh</td><td>$360.69</td><td>$0.189</td><td>39°F</td></tr>
+
+                <tr><td><strong>Dec 2023</strong></td><td>2023-11-01 to 2023-12-05</td><td>1,758 kWh</td><td>$313.05</td><td>$0.178</td><td>42°F</td></tr>
+
+                <tr><td><strong>Oct 2023</strong></td><td>2023-10-05 to 2023-10-31</td><td>384 kWh</td><td>$39.44</td><td>$0.103</td><td>56°F</td></tr>
+
+                <tr><td><strong>Oct 2023</strong></td><td>2023-09-02 to 2023-10-04</td><td>1,086 kWh</td><td>$81.46</td><td>$0.075</td><td>66°F</td></tr>
+
+              </tbody>
+            </table>
+          </div>
+        </article>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+    <section class="row g-3 mb-4">
+      <div class="col-lg-4">
+        <div class="card tracker-card h-100">
+          <div class="card-body">
+            <div class="chart-popout-frame" data-chart-popout-label="Production and Irradiance Trend">
+              <button type="button" class="btn btn-contract btn-sm chart-popout-button" data-chart-popout>Pop Out</button>
+              <div class="dashboard-chart dashboard-chart-embedded">
+                <div>                            <div id="d6f70b20-45c3-43c2-bd93-7fadf20db733" class="plotly-graph-div" style="height:100%; width:100%;"></div>            <script>                window.PLOTLYENV=window.PLOTLYENV || {};                                if (document.getElementById("d6f70b20-45c3-43c2-bd93-7fadf20db733")) {                    Plotly.newPlot(                        "d6f70b20-45c3-43c2-bd93-7fadf20db733",                        [{"customdata":["Sunny","Sunny","Cloudy","Sunny","Sunny","Overcast","Sunny","Sunny","Overcast","Sunny"],"hovertemplate":"Date: %{x|%Y-%m-%d}\u003cbr\u003eProduction: %{y:.1f} kWh\u003cbr\u003eWeather: %{customdata}\u003cextra\u003e\u003c\u002fextra\u003e","marker":{"color":"#e3a008"},"name":"Production","x":["2026-07-16T00:00:00.000000000","2026-07-17T00:00:00.000000000","2026-07-18T00:00:00.000000000","2026-07-19T00:00:00.000000000","2026-07-20T00:00:00.000000000","2026-07-21T00:00:00.000000000","2026-07-22T00:00:00.000000000","2026-07-23T00:00:00.000000000","2026-07-24T00:00:00.000000000","2026-07-25T00:00:00.000000000"],"y":{"dtype":"f8","bdata":"aJHtfD81RkDfT42XbrJWQHNoke18fzlAukkMAis3V0C0yHa+n4JXQHe+nxovnTZAppvEILCCU0CamZmZmUlXQHe+nxovnTZAppvEILCCU0A="},"type":"bar","xaxis":"x","yaxis":"y"},{"hovertemplate":"Date: %{x|%Y-%m-%d}\u003cbr\u003eIrradiance: %{y:.0f} W\u002fm\u00b2\u003cextra\u003e\u003c\u002fextra\u003e","line":{"color":"#0f4c81","width":3},"marker":{"size":8},"mode":"lines+markers","name":"Irradiance","x":["2026-07-16T00:00:00.000000000","2026-07-17T00:00:00.000000000","2026-07-18T00:00:00.000000000","2026-07-19T00:00:00.000000000","2026-07-20T00:00:00.000000000","2026-07-21T00:00:00.000000000","2026-07-22T00:00:00.000000000","2026-07-23T00:00:00.000000000","2026-07-24T00:00:00.000000000","2026-07-25T00:00:00.000000000"],"y":{"dtype":"i2","bdata":"XAOOA+QCIgO2A8wBmgNvAcwBmgM="},"type":"scatter","xaxis":"x","yaxis":"y2"}],                        {"template":{"data":{"barpolar":[{"marker":{"line":{"color":"white","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"barpolar"}],"bar":[{"error_x":{"color":"#2a3f5f"},"error_y":{"color":"#2a3f5f"},"marker":{"line":{"color":"white","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"bar"}],"carpet":[{"aaxis":{"endlinecolor":"#2a3f5f","gridcolor":"#C8D4E3","linecolor":"#C8D4E3","minorgridcolor":"#C8D4E3","startlinecolor":"#2a3f5f"},"baxis":{"endlinecolor":"#2a3f5f","gridcolor":"#C8D4E3","linecolor":"#C8D4E3","minorgridcolor":"#C8D4E3","startlinecolor":"#2a3f5f"},"type":"carpet"}],"choropleth":[{"colorbar":{"outlinewidth":0,"ticks":""},"type":"choropleth"}],"contourcarpet":[{"colorbar":{"outlinewidth":0,"ticks":""},"type":"contourcarpet"}],"contour":[{"colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"type":"contour"}],"heatmap":[{"colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"type":"heatmap"}],"histogram2dcontour":[{"colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"type":"histogram2dcontour"}],"histogram2d":[{"colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"type":"histogram2d"}],"histogram":[{"marker":{"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"histogram"}],"mesh3d":[{"colorbar":{"outlinewidth":0,"ticks":""},"type":"mesh3d"}],"parcoords":[{"line":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"parcoords"}],"pie":[{"automargin":true,"type":"pie"}],"scatter3d":[{"line":{"colorbar":{"outlinewidth":0,"ticks":""}},"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scatter3d"}],"scattercarpet":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scattercarpet"}],"scattergeo":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scattergeo"}],"scattergl":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scattergl"}],"scattermapbox":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scattermapbox"}],"scattermap":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scattermap"}],"scatterpolargl":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scatterpolargl"}],"scatterpolar":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scatterpolar"}],"scatter":[{"fillpattern":{"fillmode":"overlay","size":10,"solidity":0.2},"type":"scatter"}],"scatterternary":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scatterternary"}],"surface":[{"colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"type":"surface"}],"table":[{"cells":{"fill":{"color":"#EBF0F8"},"line":{"color":"white"}},"header":{"fill":{"color":"#C8D4E3"},"line":{"color":"white"}},"type":"table"}]},"layout":{"annotationdefaults":{"arrowcolor":"#2a3f5f","arrowhead":0,"arrowwidth":1},"autotypenumbers":"strict","coloraxis":{"colorbar":{"outlinewidth":0,"ticks":""}},"colorscale":{"diverging":[[0,"#8e0152"],[0.1,"#c51b7d"],[0.2,"#de77ae"],[0.3,"#f1b6da"],[0.4,"#fde0ef"],[0.5,"#f7f7f7"],[0.6,"#e6f5d0"],[0.7,"#b8e186"],[0.8,"#7fbc41"],[0.9,"#4d9221"],[1,"#276419"]],"sequential":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"sequentialminus":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]},"colorway":["#636efa","#EF553B","#00cc96","#ab63fa","#FFA15A","#19d3f3","#FF6692","#B6E880","#FF97FF","#FECB52"],"font":{"color":"#2a3f5f"},"geo":{"bgcolor":"white","lakecolor":"white","landcolor":"white","showlakes":true,"showland":true,"subunitcolor":"#C8D4E3"},"hoverlabel":{"align":"left"},"hovermode":"closest","mapbox":{"style":"light"},"paper_bgcolor":"white","plot_bgcolor":"white","polar":{"angularaxis":{"gridcolor":"#EBF0F8","linecolor":"#EBF0F8","ticks":""},"bgcolor":"white","radialaxis":{"gridcolor":"#EBF0F8","linecolor":"#EBF0F8","ticks":""}},"scene":{"xaxis":{"backgroundcolor":"white","gridcolor":"#DFE8F3","gridwidth":2,"linecolor":"#EBF0F8","showbackground":true,"ticks":"","zerolinecolor":"#EBF0F8"},"yaxis":{"backgroundcolor":"white","gridcolor":"#DFE8F3","gridwidth":2,"linecolor":"#EBF0F8","showbackground":true,"ticks":"","zerolinecolor":"#EBF0F8"},"zaxis":{"backgroundcolor":"white","gridcolor":"#DFE8F3","gridwidth":2,"linecolor":"#EBF0F8","showbackground":true,"ticks":"","zerolinecolor":"#EBF0F8"}},"shapedefaults":{"line":{"color":"#2a3f5f"}},"ternary":{"aaxis":{"gridcolor":"#DFE8F3","linecolor":"#A2B1C6","ticks":""},"baxis":{"gridcolor":"#DFE8F3","linecolor":"#A2B1C6","ticks":""},"bgcolor":"white","caxis":{"gridcolor":"#DFE8F3","linecolor":"#A2B1C6","ticks":""}},"title":{"x":0.05},"xaxis":{"automargin":true,"gridcolor":"#EBF0F8","linecolor":"#EBF0F8","ticks":"","title":{"standoff":15},"zerolinecolor":"#EBF0F8","zerolinewidth":2},"yaxis":{"automargin":true,"gridcolor":"#EBF0F8","linecolor":"#EBF0F8","ticks":"","title":{"standoff":15},"zerolinecolor":"#EBF0F8","zerolinewidth":2}}},"xaxis":{"anchor":"y","domain":[0.0,0.94]},"yaxis":{"anchor":"x","domain":[0.0,1.0],"title":{"text":"Production (kWh)"}},"yaxis2":{"anchor":"x","overlaying":"y","side":"right","title":{"text":"Irradiance (W\u002fm\u00b2)"}},"margin":{"l":20,"r":20,"t":56,"b":28},"legend":{"font":{"size":11},"orientation":"h","yanchor":"bottom","y":1.02,"xanchor":"left","x":0},"title":{"text":"Production and Irradiance Trend"}},                        {"displayModeBar": false, "responsive": true}                    )                };            </script>        </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-4">
+        <div class="card tracker-card h-100">
+          <div class="card-body">
+            <div class="chart-popout-frame" data-chart-popout-label="Daily Production by Weather">
+              <button type="button" class="btn btn-contract btn-sm chart-popout-button" data-chart-popout>Pop Out</button>
+              <div class="dashboard-chart dashboard-chart-embedded">
+                <div>                            <div id="6fff422b-e778-41ba-8a03-e7bf15002ee4" class="plotly-graph-div" style="height:100%; width:100%;"></div>            <script>                window.PLOTLYENV=window.PLOTLYENV || {};                                if (document.getElementById("6fff422b-e778-41ba-8a03-e7bf15002ee4")) {                    Plotly.newPlot(                        "6fff422b-e778-41ba-8a03-e7bf15002ee4",                        [{"customdata":["Sunny","Sunny","Cloudy","Sunny","Sunny","Overcast","Sunny","Sunny","Overcast","Sunny"],"hovertemplate":"Date: %{x|%Y-%m-%d}\u003cbr\u003eProduction: %{y:.1f} kWh\u003cbr\u003eWeather: %{customdata}\u003cextra\u003e\u003c\u002fextra\u003e","marker":{"color":["#f2b94b","#f2b94b","#7c96ad","#f2b94b","#f2b94b","#58728d","#f2b94b","#f2b94b","#58728d","#f2b94b"]},"name":"Daily Production","x":["2026-07-16T00:00:00.000000000","2026-07-17T00:00:00.000000000","2026-07-18T00:00:00.000000000","2026-07-19T00:00:00.000000000","2026-07-20T00:00:00.000000000","2026-07-21T00:00:00.000000000","2026-07-22T00:00:00.000000000","2026-07-23T00:00:00.000000000","2026-07-24T00:00:00.000000000","2026-07-25T00:00:00.000000000"],"y":{"dtype":"f8","bdata":"aJHtfD81RkDfT42XbrJWQHNoke18fzlAukkMAis3V0C0yHa+n4JXQHe+nxovnTZAppvEILCCU0CamZmZmUlXQHe+nxovnTZAppvEILCCU0A="},"type":"bar"},{"line":{"color":"#0f4c81","dash":"dot","width":3},"mode":"lines","name":"Overall Average","x":["2026-07-16T00:00:00.000000000","2026-07-17T00:00:00.000000000","2026-07-18T00:00:00.000000000","2026-07-19T00:00:00.000000000","2026-07-20T00:00:00.000000000","2026-07-21T00:00:00.000000000","2026-07-22T00:00:00.000000000","2026-07-23T00:00:00.000000000","2026-07-24T00:00:00.000000000","2026-07-25T00:00:00.000000000"],"y":[64.20670000000001,64.20670000000001,64.20670000000001,64.20670000000001,64.20670000000001,64.20670000000001,64.20670000000001,64.20670000000001,64.20670000000001,64.20670000000001],"type":"scatter"},{"line":{"color":"#b42318","dash":"dash","width":2},"mode":"lines","name":"Guarantee Daily Target","x":["2026-07-16T00:00:00.000000000","2026-07-17T00:00:00.000000000","2026-07-18T00:00:00.000000000","2026-07-19T00:00:00.000000000","2026-07-20T00:00:00.000000000","2026-07-21T00:00:00.000000000","2026-07-22T00:00:00.000000000","2026-07-23T00:00:00.000000000","2026-07-24T00:00:00.000000000","2026-07-25T00:00:00.000000000"],"y":[30.523287671232875,30.523287671232875,30.523287671232875,30.523287671232875,30.523287671232875,30.523287671232875,30.523287671232875,30.523287671232875,30.523287671232875,30.523287671232875],"type":"scatter"}],                        {"template":{"data":{"barpolar":[{"marker":{"line":{"color":"white","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"barpolar"}],"bar":[{"error_x":{"color":"#2a3f5f"},"error_y":{"color":"#2a3f5f"},"marker":{"line":{"color":"white","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"bar"}],"carpet":[{"aaxis":{"endlinecolor":"#2a3f5f","gridcolor":"#C8D4E3","linecolor":"#C8D4E3","minorgridcolor":"#C8D4E3","startlinecolor":"#2a3f5f"},"baxis":{"endlinecolor":"#2a3f5f","gridcolor":"#C8D4E3","linecolor":"#C8D4E3","minorgridcolor":"#C8D4E3","startlinecolor":"#2a3f5f"},"type":"carpet"}],"choropleth":[{"colorbar":{"outlinewidth":0,"ticks":""},"type":"choropleth"}],"contourcarpet":[{"colorbar":{"outlinewidth":0,"ticks":""},"type":"contourcarpet"}],"contour":[{"colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"type":"contour"}],"heatmap":[{"colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"type":"heatmap"}],"histogram2dcontour":[{"colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"type":"histogram2dcontour"}],"histogram2d":[{"colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"type":"histogram2d"}],"histogram":[{"marker":{"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"histogram"}],"mesh3d":[{"colorbar":{"outlinewidth":0,"ticks":""},"type":"mesh3d"}],"parcoords":[{"line":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"parcoords"}],"pie":[{"automargin":true,"type":"pie"}],"scatter3d":[{"line":{"colorbar":{"outlinewidth":0,"ticks":""}},"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scatter3d"}],"scattercarpet":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scattercarpet"}],"scattergeo":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scattergeo"}],"scattergl":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scattergl"}],"scattermapbox":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scattermapbox"}],"scattermap":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scattermap"}],"scatterpolargl":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scatterpolargl"}],"scatterpolar":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scatterpolar"}],"scatter":[{"fillpattern":{"fillmode":"overlay","size":10,"solidity":0.2},"type":"scatter"}],"scatterternary":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scatterternary"}],"surface":[{"colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"type":"surface"}],"table":[{"cells":{"fill":{"color":"#EBF0F8"},"line":{"color":"white"}},"header":{"fill":{"color":"#C8D4E3"},"line":{"color":"white"}},"type":"table"}]},"layout":{"annotationdefaults":{"arrowcolor":"#2a3f5f","arrowhead":0,"arrowwidth":1},"autotypenumbers":"strict","coloraxis":{"colorbar":{"outlinewidth":0,"ticks":""}},"colorscale":{"diverging":[[0,"#8e0152"],[0.1,"#c51b7d"],[0.2,"#de77ae"],[0.3,"#f1b6da"],[0.4,"#fde0ef"],[0.5,"#f7f7f7"],[0.6,"#e6f5d0"],[0.7,"#b8e186"],[0.8,"#7fbc41"],[0.9,"#4d9221"],[1,"#276419"]],"sequential":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"sequentialminus":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]},"colorway":["#636efa","#EF553B","#00cc96","#ab63fa","#FFA15A","#19d3f3","#FF6692","#B6E880","#FF97FF","#FECB52"],"font":{"color":"#2a3f5f"},"geo":{"bgcolor":"white","lakecolor":"white","landcolor":"white","showlakes":true,"showland":true,"subunitcolor":"#C8D4E3"},"hoverlabel":{"align":"left"},"hovermode":"closest","mapbox":{"style":"light"},"paper_bgcolor":"white","plot_bgcolor":"white","polar":{"angularaxis":{"gridcolor":"#EBF0F8","linecolor":"#EBF0F8","ticks":""},"bgcolor":"white","radialaxis":{"gridcolor":"#EBF0F8","linecolor":"#EBF0F8","ticks":""}},"scene":{"xaxis":{"backgroundcolor":"white","gridcolor":"#DFE8F3","gridwidth":2,"linecolor":"#EBF0F8","showbackground":true,"ticks":"","zerolinecolor":"#EBF0F8"},"yaxis":{"backgroundcolor":"white","gridcolor":"#DFE8F3","gridwidth":2,"linecolor":"#EBF0F8","showbackground":true,"ticks":"","zerolinecolor":"#EBF0F8"},"zaxis":{"backgroundcolor":"white","gridcolor":"#DFE8F3","gridwidth":2,"linecolor":"#EBF0F8","showbackground":true,"ticks":"","zerolinecolor":"#EBF0F8"}},"shapedefaults":{"line":{"color":"#2a3f5f"}},"ternary":{"aaxis":{"gridcolor":"#DFE8F3","linecolor":"#A2B1C6","ticks":""},"baxis":{"gridcolor":"#DFE8F3","linecolor":"#A2B1C6","ticks":""},"bgcolor":"white","caxis":{"gridcolor":"#DFE8F3","linecolor":"#A2B1C6","ticks":""}},"title":{"x":0.05},"xaxis":{"automargin":true,"gridcolor":"#EBF0F8","linecolor":"#EBF0F8","ticks":"","title":{"standoff":15},"zerolinecolor":"#EBF0F8","zerolinewidth":2},"yaxis":{"automargin":true,"gridcolor":"#EBF0F8","linecolor":"#EBF0F8","ticks":"","title":{"standoff":15},"zerolinecolor":"#EBF0F8","zerolinewidth":2}}},"margin":{"l":20,"r":20,"t":56,"b":28},"legend":{"font":{"size":11},"orientation":"h","yanchor":"bottom","y":1.02,"xanchor":"left","x":0},"title":{"text":"Daily Production by Weather"}},                        {"displayModeBar": false, "responsive": true}                    )                };            </script>        </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-4">
+        <div class="card tracker-card h-100">
+          <div class="card-body">
+            <div class="chart-popout-frame" data-chart-popout-label="Monthly Progress vs Guarantee">
+              <button type="button" class="btn btn-contract btn-sm chart-popout-button" data-chart-popout>Pop Out</button>
+              <div class="dashboard-chart dashboard-chart-embedded">
+                <div>                            <div id="b3f49c6b-085b-4f47-ae76-aa10b79f7cab" class="plotly-graph-div" style="height:100%; width:100%;"></div>            <script>                window.PLOTLYENV=window.PLOTLYENV || {};                                if (document.getElementById("b3f49c6b-085b-4f47-ae76-aa10b79f7cab")) {                    Plotly.newPlot(                        "b3f49c6b-085b-4f47-ae76-aa10b79f7cab",                        [{"marker":{"color":"#157f3b"},"name":"Actual To Date","x":["2026-07"],"y":{"dtype":"f8","bdata":"qMZLN4kQhEA="},"type":"bar"},{"marker":{"color":"#e3a008"},"name":"Projected Month End","x":["2026-07"],"y":{"dtype":"f8","bdata":"UdobfKEZn0A="},"type":"bar"},{"marker":{"color":"#7c96ad"},"name":"Guarantee Pace","x":["2026-07"],"y":{"dtype":"f8","bdata":"nAXYfMaRjUA="},"type":"bar"}],                        {"template":{"data":{"barpolar":[{"marker":{"line":{"color":"white","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"barpolar"}],"bar":[{"error_x":{"color":"#2a3f5f"},"error_y":{"color":"#2a3f5f"},"marker":{"line":{"color":"white","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"bar"}],"carpet":[{"aaxis":{"endlinecolor":"#2a3f5f","gridcolor":"#C8D4E3","linecolor":"#C8D4E3","minorgridcolor":"#C8D4E3","startlinecolor":"#2a3f5f"},"baxis":{"endlinecolor":"#2a3f5f","gridcolor":"#C8D4E3","linecolor":"#C8D4E3","minorgridcolor":"#C8D4E3","startlinecolor":"#2a3f5f"},"type":"carpet"}],"choropleth":[{"colorbar":{"outlinewidth":0,"ticks":""},"type":"choropleth"}],"contourcarpet":[{"colorbar":{"outlinewidth":0,"ticks":""},"type":"contourcarpet"}],"contour":[{"colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"type":"contour"}],"heatmap":[{"colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"type":"heatmap"}],"histogram2dcontour":[{"colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"type":"histogram2dcontour"}],"histogram2d":[{"colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"type":"histogram2d"}],"histogram":[{"marker":{"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"histogram"}],"mesh3d":[{"colorbar":{"outlinewidth":0,"ticks":""},"type":"mesh3d"}],"parcoords":[{"line":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"parcoords"}],"pie":[{"automargin":true,"type":"pie"}],"scatter3d":[{"line":{"colorbar":{"outlinewidth":0,"ticks":""}},"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scatter3d"}],"scattercarpet":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scattercarpet"}],"scattergeo":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scattergeo"}],"scattergl":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scattergl"}],"scattermapbox":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scattermapbox"}],"scattermap":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scattermap"}],"scatterpolargl":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scatterpolargl"}],"scatterpolar":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scatterpolar"}],"scatter":[{"fillpattern":{"fillmode":"overlay","size":10,"solidity":0.2},"type":"scatter"}],"scatterternary":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scatterternary"}],"surface":[{"colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"type":"surface"}],"table":[{"cells":{"fill":{"color":"#EBF0F8"},"line":{"color":"white"}},"header":{"fill":{"color":"#C8D4E3"},"line":{"color":"white"}},"type":"table"}]},"layout":{"annotationdefaults":{"arrowcolor":"#2a3f5f","arrowhead":0,"arrowwidth":1},"autotypenumbers":"strict","coloraxis":{"colorbar":{"outlinewidth":0,"ticks":""}},"colorscale":{"diverging":[[0,"#8e0152"],[0.1,"#c51b7d"],[0.2,"#de77ae"],[0.3,"#f1b6da"],[0.4,"#fde0ef"],[0.5,"#f7f7f7"],[0.6,"#e6f5d0"],[0.7,"#b8e186"],[0.8,"#7fbc41"],[0.9,"#4d9221"],[1,"#276419"]],"sequential":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"sequentialminus":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]},"colorway":["#636efa","#EF553B","#00cc96","#ab63fa","#FFA15A","#19d3f3","#FF6692","#B6E880","#FF97FF","#FECB52"],"font":{"color":"#2a3f5f"},"geo":{"bgcolor":"white","lakecolor":"white","landcolor":"white","showlakes":true,"showland":true,"subunitcolor":"#C8D4E3"},"hoverlabel":{"align":"left"},"hovermode":"closest","mapbox":{"style":"light"},"paper_bgcolor":"white","plot_bgcolor":"white","polar":{"angularaxis":{"gridcolor":"#EBF0F8","linecolor":"#EBF0F8","ticks":""},"bgcolor":"white","radialaxis":{"gridcolor":"#EBF0F8","linecolor":"#EBF0F8","ticks":""}},"scene":{"xaxis":{"backgroundcolor":"white","gridcolor":"#DFE8F3","gridwidth":2,"linecolor":"#EBF0F8","showbackground":true,"ticks":"","zerolinecolor":"#EBF0F8"},"yaxis":{"backgroundcolor":"white","gridcolor":"#DFE8F3","gridwidth":2,"linecolor":"#EBF0F8","showbackground":true,"ticks":"","zerolinecolor":"#EBF0F8"},"zaxis":{"backgroundcolor":"white","gridcolor":"#DFE8F3","gridwidth":2,"linecolor":"#EBF0F8","showbackground":true,"ticks":"","zerolinecolor":"#EBF0F8"}},"shapedefaults":{"line":{"color":"#2a3f5f"}},"ternary":{"aaxis":{"gridcolor":"#DFE8F3","linecolor":"#A2B1C6","ticks":""},"baxis":{"gridcolor":"#DFE8F3","linecolor":"#A2B1C6","ticks":""},"bgcolor":"white","caxis":{"gridcolor":"#DFE8F3","linecolor":"#A2B1C6","ticks":""}},"title":{"x":0.05},"xaxis":{"automargin":true,"gridcolor":"#EBF0F8","linecolor":"#EBF0F8","ticks":"","title":{"standoff":15},"zerolinecolor":"#EBF0F8","zerolinewidth":2},"yaxis":{"automargin":true,"gridcolor":"#EBF0F8","linecolor":"#EBF0F8","ticks":"","title":{"standoff":15},"zerolinecolor":"#EBF0F8","zerolinewidth":2}}},"margin":{"l":20,"r":20,"t":56,"b":28},"legend":{"font":{"size":11},"orientation":"h","yanchor":"bottom","y":1.02,"xanchor":"left","x":0},"title":{"text":"Monthly Progress vs Guarantee"},"barmode":"group"},                        {"displayModeBar": false, "responsive": true}                    )                };            </script>        </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card tracker-card">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h2 class="h5 mb-0">Recent Entries</h2>
+          <a href="/entries?autocreate=1" class="btn btn-sun btn-sm">Add Daily Entry</a>
+        </div>
+        <div class="table-responsive">
+          <table class="table align-middle">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Production</th>
+                <th>Irradiance</th>
+                <th>Meter 01</th>
+                <th>Meter 02</th>
+                <th>Weather</th>
+                <th>High</th>
+                <th>Low</th>
+              </tr>
+            </thead>
+            <tbody>
+
+              <tr>
+                <td>2026-07-25</td>
+                <td>78.0 kWh</td>
+                <td>922</td>
+                <td>181.3</td>
+                <td>419.4</td>
+                <td>Sunny</td>
+                <td>79°F</td>
+                <td>66°F</td>
+              </tr>
+
+              <tr>
+                <td>2026-07-24</td>
+                <td>22.6 kWh</td>
+                <td>460</td>
+                <td>162.3</td>
+                <td>364.4</td>
+                <td>Overcast</td>
+                <td>76°F</td>
+                <td>65°F</td>
+              </tr>
+
+              <tr>
+                <td>2026-07-23</td>
+                <td>93.2 kWh</td>
+                <td>367</td>
+                <td>137.3</td>
+                <td>343.4</td>
+                <td>Sunny</td>
+                <td>83°F</td>
+                <td>68°F</td>
+              </tr>
+
+              <tr>
+                <td>2026-07-22</td>
+                <td>78.0 kWh</td>
+                <td>922</td>
+                <td>126.0</td>
+                <td>305.0</td>
+                <td>Sunny</td>
+                <td>79°F</td>
+                <td>66°F</td>
+              </tr>
+
+              <tr>
+                <td>2026-07-21</td>
+                <td>22.6 kWh</td>
+                <td>460</td>
+                <td>107.0</td>
+                <td>250.0</td>
+                <td>Overcast</td>
+                <td>76°F</td>
+                <td>65°F</td>
+              </tr>
+
+              <tr>
+                <td>2026-07-20</td>
+                <td>94.0 kWh</td>
+                <td>950</td>
+                <td>82.0</td>
+                <td>229.0</td>
+                <td>Sunny</td>
+                <td><span class="text-muted">-</span></td>
+                <td><span class="text-muted">-</span></td>
+              </tr>
+
+              <tr>
+                <td>2026-07-19</td>
+                <td>92.9 kWh</td>
+                <td>802</td>
+                <td>79.0</td>
+                <td>207.0</td>
+                <td>Sunny</td>
+                <td><span class="text-muted">-</span></td>
+                <td><span class="text-muted">-</span></td>
+              </tr>
+
+              <tr>
+                <td>2026-07-18</td>
+                <td>25.5 kWh</td>
+                <td>740</td>
+                <td>71.0</td>
+                <td>170.0</td>
+                <td>Cloudy</td>
+                <td><span class="text-muted">-</span></td>
+                <td><span class="text-muted">-</span></td>
+              </tr>
+
+              <tr>
+                <td>2026-07-17</td>
+                <td>90.8 kWh</td>
+                <td>910</td>
+                <td>53.0</td>
+                <td>128.0</td>
+                <td>Sunny</td>
+                <td><span class="text-muted">-</span></td>
+                <td><span class="text-muted">-</span></td>
+              </tr>
+
+              <tr>
+                <td>2026-07-16</td>
+                <td>44.4 kWh</td>
+                <td>860</td>
+                <td>36.0</td>
+                <td>74.0</td>
+                <td>Sunny</td>
+                <td><span class="text-muted">-</span></td>
+                <td><span class="text-muted">-</span></td>
+              </tr>
+
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <aside class="dashboard-side-panel">
+    <div class="dashboard-side-frame">
+      <img src="/static/images/solar-farm-side.png" alt="Solar farm at sunrise">
+      <div class="dashboard-side-overlay">
+        <span class="dashboard-side-kicker">Projection View</span>
+        <strong>Long-range clean energy context</strong>
+        <p>Frame the contract progress area with utility-scale solar imagery and a calmer editorial presentation.</p>
+      </div>
+    </div>
+  </aside>
+</div>
+</div>
+
+    </div>
+  </main>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="assets/js/site-bootstrap.js?v=20261017-nyseg-startup"></script>
+  <script src="assets/js/firebase-config.js?v=20261017-nyseg-startup"></script>
+  <script defer src="assets/js/app-bundle.js?v=20261017-nyseg-startup"></script>
+
+<script defer src="assets/js/solar-path-tracker.js?v=20261017-nyseg-startup"></script>
+
+</body>
+</html>
