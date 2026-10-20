@@ -4076,3 +4076,32 @@ body[data-page="dashboard"].dashboard-compact-mode .btn-contract {
 .nyseg-file-table tbody tr:last-child > .nyseg-power-group { border-bottom: 4px solid #9b5b00 !important; }
 .nyseg-file-table tbody tr:last-child > .nyseg-m01-group-start { border-bottom: 4px solid #175caa !important; }
 .nyseg-file-table tbody tr:last-child > .nyseg-m02-group-start { border-bottom: 4px solid #007a70 !important; }
+
+/* Keep the three framed metric columns as compact as neighboring values. */
+.nyseg-file-table :is(th, td):is(.nyseg-power-group, .nyseg-m01-group-start, .nyseg-m02-group-start) {
+  box-sizing: border-box;
+  width: 4.8rem !important;
+  min-width: 4.8rem !important;
+  max-width: 4.8rem !important;
+  padding-left: .18rem !important;
+  padding-right: .18rem !important;
+}
+.nyseg-file-table thead th:is(.nyseg-power-group, .nyseg-m01-group-start, .nyseg-m02-group-start) {
+  padding-top: 1.55rem !important;
+  padding-bottom: .25rem !important;
+  text-align: center !important;
+}
+.nyseg-file-table thead th:is(.nyseg-power-group, .nyseg-m01-group-start, .nyseg-m02-group-start) > span {
+  line-height: 1.05;
+  overflow-wrap: anywhere;
+}
+.nyseg-file-table thead th:is(.nyseg-power-group, .nyseg-m01-group-start, .nyseg-m02-group-start) .nyseg-column-sort {
+  top: .16rem;
+  right: .2rem;
+  width: 2.2rem;
+  min-width: 2.2rem;
+  height: 1.1rem;
+}
+.nyseg-file-table tbody td:is(.nyseg-power-group, .nyseg-m01-group-start, .nyseg-m02-group-start) {
+  white-space: nowrap;
+}
