@@ -4035,3 +4035,44 @@ body[data-page="dashboard"].dashboard-compact-mode .btn-contract {
 .nyseg-file-table th:has(.nyseg-column-sort) { padding-right: 2.55rem !important; position: sticky; white-space: normal; }
 .nyseg-file-table th:has(.nyseg-column-sort) > span { display: block; }
 .nyseg-column-sort { background: #fff; border: 1px solid #85b4c7; border-radius: .25rem; color: #225b72; font-size: .56rem; font-weight: 700; height: 1.25rem; line-height: 1; margin: 0; min-width: 2.35rem; padding: 0 .04rem; position: absolute; right: .16rem; top: .22rem; width: 2.35rem; }
+
+/* Individually framed NYSEG power and meter columns. */
+.nyseg-file-table .nyseg-power-group {
+  border-left: 4px solid #9b5b00 !important;
+  border-right: 4px solid #9b5b00 !important;
+}
+.nyseg-file-table .nyseg-m01-group-start {
+  border-left: 4px solid #175caa !important;
+  border-right: 4px solid #175caa !important;
+}
+.nyseg-file-table .nyseg-m02-group-start {
+  border-left: 4px solid #007a70 !important;
+  border-right: 4px solid #007a70 !important;
+}
+.nyseg-file-table thead th.nyseg-power-group {
+  background: #ffdf9c !important;
+  border-top: 4px solid #9b5b00 !important;
+  border-bottom: 3px solid #9b5b00 !important;
+  color: #573400;
+}
+.nyseg-file-table thead th.nyseg-m01-group-start {
+  background: #cce3ff !important;
+  border-top: 4px solid #175caa !important;
+  border-bottom: 3px solid #175caa !important;
+  color: #124778;
+}
+.nyseg-file-table thead th.nyseg-m02-group-start {
+  background: #c2eee5 !important;
+  border-top: 4px solid #007a70 !important;
+  border-bottom: 3px solid #007a70 !important;
+  color: #00534d;
+}
+.nyseg-file-table tbody tr.nyseg-import-row:not(.nyseg-row-selected) > .nyseg-power-group,
+.nyseg-file-table tbody tr.nyseg-export-row:not(.nyseg-row-selected) > .nyseg-power-group { background: #fff0c6 !important; }
+.nyseg-file-table tbody tr.nyseg-import-row:not(.nyseg-row-selected) > .nyseg-m01-group-start,
+.nyseg-file-table tbody tr.nyseg-export-row:not(.nyseg-row-selected) > .nyseg-m01-group-start { background: #dfedff !important; }
+.nyseg-file-table tbody tr.nyseg-import-row:not(.nyseg-row-selected) > .nyseg-m02-group-start,
+.nyseg-file-table tbody tr.nyseg-export-row:not(.nyseg-row-selected) > .nyseg-m02-group-start { background: #d8f5ed !important; }
+.nyseg-file-table tbody tr:last-child > .nyseg-power-group { border-bottom: 4px solid #9b5b00 !important; }
+.nyseg-file-table tbody tr:last-child > .nyseg-m01-group-start { border-bottom: 4px solid #175caa !important; }
+.nyseg-file-table tbody tr:last-child > .nyseg-m02-group-start { border-bottom: 4px solid #007a70 !important; }
