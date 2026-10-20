@@ -718,6 +718,16 @@ def build_meter_file_reconciliation(interval_file: dict) -> dict:
     }
 
 
+# Peak instantaneous global horizontal irradiance (W/m²), read from the
+# Open-Meteo historical hourly archive for Yorktown Heights on 2026-10-20.
+# The Daily Entry lookup uses the same shortwave_radiation_instant field.
+# https://archive-api.open-meteo.com/v1/archive?latitude=41.2706&longitude=-73.7774&start_date=2026-10-03&end_date=2026-10-11&hourly=shortwave_radiation_instant&timezone=America%2FNew_York
+HISTORICAL_IRRADIANCE_PEAKS = {
+    "2026-10-03": 717, "2026-10-04": 310, "2026-10-05": 699,
+    "2026-10-06": 710, "2026-10-07": 697, "2026-10-08": 692,
+    "2026-10-09": 691, "2026-10-10": 623, "2026-10-11": 59,
+}
+
 YORKTOWN_LATITUDE = 41.2706
 YORKTOWN_LONGITUDE = -73.7774
 YORKTOWN_TIMEZONE = gettz("America/New_York")
@@ -759,8 +769,14 @@ def nyseg_usage_file():
     interval_file = load_nyseg_interval_file_rows()
     grouped = request.path.endswith("/daily")
     sunrun_by_date = load_sunrun_daily_production().get("by_date", {})
-    entry_weather, _ = load_reconciliation_entries()
-    irradiance_by_date = {entry.entry_date.isoformat(): entry.irradiance_peak_wm2 for entry in entry_weather}
+    entry_weather, entry_source = load_reconciliation_entries()
+    irradiance_by_date = {
+        entry.entry_date.isoformat(): entry.irradiance_peak_wm2
+        for entry in entry_weather
+        if entry_source != "starter records" and entry.irradiance_peak_wm2 > 0
+    }
+    for day, peak in HISTORICAL_IRRADIANCE_PEAKS.items():
+        irradiance_by_date.setdefault(day, peak)
     peak_angle_by_date = {}
     weather_by_date = {
         entry.entry_date.isoformat(): {
