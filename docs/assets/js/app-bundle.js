@@ -22913,6 +22913,12 @@ This typically indicates that your device does not have a healthy Internet conne
     const t = await __PRIVATE_ensureOnlineComponents(e), n = t.eventManager;
     return n.onListen = __PRIVATE_syncEngineListen.bind(null, t.syncEngine), n.onUnlisten = __PRIVATE_syncEngineUnlisten.bind(null, t.syncEngine), n.onFirstRemoteStoreListen = __PRIVATE_triggerRemoteStoreListen.bind(null, t.syncEngine), n.onLastRemoteStoreUnlisten = __PRIVATE_triggerRemoteStoreUnlisten.bind(null, t.syncEngine), n;
   }
+  function __PRIVATE_firestoreClientListen(e, t, n, r) {
+    const i = new __PRIVATE_AsyncObserver(r), s = new __PRIVATE_QueryListener(t, i, n);
+    return e.asyncQueue.enqueueAndForget(async () => __PRIVATE_eventManagerListen(await __PRIVATE_getEventManager(e), s)), () => {
+      i.gc(), e.asyncQueue.enqueueAndForget(async () => __PRIVATE_eventManagerUnlisten(await __PRIVATE_getEventManager(e), s));
+    };
+  }
   function __PRIVATE_firestoreClientGetDocumentViaSnapshotListener(e, t, n = {}) {
     const r = new __PRIVATE_Deferred();
     return e.asyncQueue.enqueueAndForget(async () => function __PRIVATE_readDocumentViaSnapshotListener(e2, t2, n2, r2, i) {
@@ -23269,6 +23275,14 @@ This typically indicates that your device does not have a healthy Internet conne
   // node_modules/.pnpm/@firebase+firestore@4.16.0_@firebase+app@0.15.1/node_modules/@firebase/firestore/dist/index.esm.js
   var Yt2 = "@firebase/firestore";
   var Kt2 = "4.16.0";
+  function __PRIVATE_isPartialObserver(t) {
+    return function __PRIVATE_implementsAnyMethods(t2, e) {
+      if ("object" != typeof t2 || null === t2) return false;
+      const n = t2;
+      for (const t3 of e) if (t3 in n && "function" == typeof n[t3]) return true;
+      return false;
+    }(t, ["next", "error", "complete"]);
+  }
   var DocumentSnapshot$1 = class {
     // Note: This class is stripped down version of the DocumentSnapshot in
     // the legacy SDK. The changes are:
@@ -23869,6 +23883,44 @@ This typically indicates that your device does not have a healthy Internet conne
     t = __PRIVATE_cast(t, DocumentReference);
     const r = __PRIVATE_cast(t.firestore, Firestore), s = __PRIVATE_applyFirestoreDataConverter(t.converter, e, n), o = __PRIVATE_newUserDataReader(r);
     return executeWrite(r, [__PRIVATE_parseSetData(o, "setDoc", t._key, s, null !== t.converter, n).toMutation(t._key, Precondition.none())]);
+  }
+  function onSnapshot(t, ...e) {
+    t = getModularInstance(t);
+    let n = {
+      includeMetadataChanges: false,
+      source: "default"
+    }, r = 0;
+    "object" != typeof e[r] || __PRIVATE_isPartialObserver(e[r]) || (n = e[r++]);
+    const s = {
+      includeMetadataChanges: n.includeMetadataChanges,
+      source: n.source
+    };
+    if (__PRIVATE_isPartialObserver(e[r])) {
+      const t2 = e[r];
+      e[r] = t2.next?.bind(t2), e[r + 1] = t2.error?.bind(t2), e[r + 2] = t2.complete?.bind(t2);
+    }
+    let o, i, c;
+    if (t instanceof DocumentReference) i = __PRIVATE_cast(t.firestore, Firestore), c = __PRIVATE_newQueryForPath(t._key.path), o = {
+      next: (n2) => {
+        e[r] && e[r](__PRIVATE_convertToDocSnapshot(i, t, n2));
+      },
+      error: e[r + 1],
+      complete: e[r + 2]
+    };
+    else {
+      const n2 = __PRIVATE_cast(t, Query);
+      i = __PRIVATE_cast(n2.firestore, Firestore), c = n2._query;
+      const s2 = new __PRIVATE_ExpUserDataWriter(i);
+      o = {
+        next: (t2) => {
+          e[r] && e[r](new QuerySnapshot(i, s2, n2, t2));
+        },
+        error: e[r + 1],
+        complete: e[r + 2]
+      }, __PRIVATE_validateHasExplicitOrderByForLimitToLast(t._query);
+    }
+    const h = ensureFirestoreConfigured(i);
+    return __PRIVATE_firestoreClientListen(h, c, s, o);
   }
   function executeWrite(t, e) {
     const n = ensureFirestoreConfigured(t);
@@ -28828,6 +28880,154 @@ This is a reconciliation, not an independent measurement, because EDC includes S
       await bootSettings(context.db);
     }
   }
+  function setupSolarProcessNotes() {
+    const nav = document.querySelector(".tracker-nav .navbar-nav");
+    if (!nav) return;
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "nav-link nav-link-button solar-notes-nav";
+    button.textContent = "Notes";
+    const settings = [...nav.querySelectorAll("a")].find((link) => link.textContent.trim() === "Settings");
+    nav.insertBefore(button, settings || null);
+    const dialog = document.createElement("dialog");
+    dialog.className = "solar-notes-dialog";
+    dialog.setAttribute("aria-labelledby", "solar-notes-heading");
+    dialog.innerHTML = `<div class="solar-notes-shell"><header class="solar-notes-header"><div><h2 id="solar-notes-heading">Solar Process Notes</h2><p>Keep decisions, calls, documents, and follow-ups in one place. Changes sync across devices.</p></div><button type="button" class="solar-notes-close" aria-label="Close notes">\xD7</button></header><div class="solar-notes-toolbar"><label>Find a note<input type="search" class="solar-notes-search" placeholder="Search title or details"></label><button type="button" class="solar-notes-new">+ New note</button></div><div class="solar-notes-body"><aside class="solar-notes-list" aria-label="Saved notes"></aside><form class="solar-notes-form"><label>Title<input name="title" required maxlength="160" placeholder="What happened or needs follow-up?"></label><div class="solar-notes-fields"><label>Date<input name="date" type="date" required></label><label>Status<select name="status"><option>Open</option><option>In progress</option><option>Waiting</option><option>Done</option><option>Archived</option></select></label></div><label>Details<textarea name="details" rows="9" placeholder="Add the context, next step, names, or reference numbers"></textarea></label><div class="solar-notes-actions"><button type="button" class="solar-notes-delete">Delete</button><button type="submit" class="solar-notes-save">Save note</button></div><p class="solar-notes-message" role="status" aria-live="polite"></p></form></div></div>`;
+    document.body.appendChild(dialog);
+    const list = dialog.querySelector(".solar-notes-list");
+    const form = dialog.querySelector("form");
+    const message = dialog.querySelector(".solar-notes-message");
+    const search = dialog.querySelector(".solar-notes-search");
+    const remove = dialog.querySelector(".solar-notes-delete");
+    let notes = [];
+    let selectedId = null;
+    let unsubscribe = null;
+    let reference = null;
+    let busy = false;
+    const setMessage = (value, isError = false) => {
+      message.textContent = value;
+      message.dataset.error = String(isError);
+    };
+    const clearForm = () => {
+      selectedId = null;
+      form.reset();
+      form.elements.date.value = getTodayIsoDate();
+      remove.hidden = true;
+      dialog.querySelector(".solar-notes-save").textContent = "Create note";
+      renderList();
+    };
+    const selectNote = (note) => {
+      selectedId = note.id;
+      form.elements.title.value = note.title || "";
+      form.elements.date.value = note.date || getTodayIsoDate();
+      form.elements.status.value = note.status || "Open";
+      form.elements.details.value = note.details || "";
+      remove.hidden = false;
+      dialog.querySelector(".solar-notes-save").textContent = "Save changes";
+      setMessage("");
+      renderList();
+    };
+    function renderList() {
+      list.replaceChildren();
+      const term = search.value.trim().toLowerCase();
+      const filtered = [...notes].sort((a, b) => (b.date || "").localeCompare(a.date || "") || (b.updated_at || "").localeCompare(a.updated_at || "")).filter((note) => `${note.title || ""} ${note.details || ""} ${note.status || ""}`.toLowerCase().includes(term));
+      if (!filtered.length) {
+        const empty = document.createElement("p");
+        empty.className = "solar-notes-empty";
+        empty.textContent = term ? "No matching notes." : "No notes yet. Create one to begin.";
+        list.appendChild(empty);
+      }
+      filtered.forEach((note) => {
+        const item = document.createElement("button");
+        item.type = "button";
+        item.className = "solar-notes-item";
+        item.dataset.selected = String(note.id === selectedId);
+        const title = document.createElement("strong");
+        title.textContent = note.title || "Untitled";
+        const meta = document.createElement("small");
+        meta.textContent = `${note.date || "No date"} \xB7 ${note.status || "Open"}`;
+        item.append(title, meta);
+        item.onclick = () => selectNote(note);
+        list.appendChild(item);
+      });
+    }
+    const setBusy = (value) => {
+      busy = value;
+      dialog.querySelector(".solar-notes-save").disabled = value;
+      remove.disabled = value;
+      dialog.querySelector(".solar-notes-new").disabled = value;
+    };
+    async function changeNotes(operation) {
+      if (!reference || busy) return;
+      setBusy(true);
+      try {
+        await runTransaction(getFirebaseAppContext().db, async (transaction) => {
+          const snapshot = await transaction.get(reference);
+          const current = Array.isArray(snapshot.data()?.solar_process_notes) ? snapshot.data().solar_process_notes : [];
+          const updated = operation(current);
+          transaction.set(reference, { solar_process_notes: updated, solar_process_notes_updated_at: (/* @__PURE__ */ new Date()).toISOString() }, { merge: true });
+        });
+        setMessage("Saved and synced across devices.");
+        return true;
+      } catch (error) {
+        setMessage(`Could not save note: ${error.message}`, true);
+        return false;
+      } finally {
+        setBusy(false);
+      }
+    }
+    button.onclick = () => {
+      dialog.showModal();
+      clearForm();
+      setMessage("Connecting to synced notes\u2026");
+      try {
+        reference = doc(getFirebaseAppContext().db, configCollectionName, configDocumentId);
+        unsubscribe?.();
+        unsubscribe = onSnapshot(reference, (snapshot) => {
+          notes = Array.isArray(snapshot.data()?.solar_process_notes) ? snapshot.data().solar_process_notes : [];
+          if (selectedId) {
+            const current = notes.find((note) => note.id === selectedId);
+            if (current) selectNote(current);
+            else clearForm();
+          } else renderList();
+          if (message.textContent === "Connecting to synced notes\u2026") setMessage("Notes are ready.");
+        }, (error) => setMessage(`Could not load synced notes: ${error.message}`, true));
+      } catch (error) {
+        setMessage(`Could not connect to synced notes: ${error.message}`, true);
+      }
+    };
+    dialog.querySelector(".solar-notes-close").onclick = () => dialog.close();
+    dialog.addEventListener("close", () => {
+      unsubscribe?.();
+      unsubscribe = null;
+    });
+    dialog.querySelector(".solar-notes-new").onclick = () => {
+      clearForm();
+      setMessage("New note ready.");
+      form.elements.title.focus();
+    };
+    search.oninput = renderList;
+    form.onsubmit = async (event) => {
+      event.preventDefault();
+      const id = selectedId || crypto.randomUUID();
+      const now = (/* @__PURE__ */ new Date()).toISOString();
+      const record = { id, title: form.elements.title.value.trim(), date: form.elements.date.value, status: form.elements.status.value, details: form.elements.details.value.trim(), updated_at: now };
+      if (!record.title || !record.date) return;
+      const saved = await changeNotes((current) => {
+        const previous = current.find((note) => note.id === id);
+        const next = { ...record, created_at: previous?.created_at || now };
+        return previous ? current.map((note) => note.id === id ? next : note) : [...current, next];
+      });
+      if (saved) selectedId = id;
+    };
+    remove.onclick = async () => {
+      if (!selectedId || !window.confirm("Delete this solar process note?")) return;
+      const id = selectedId;
+      if (await changeNotes((current) => current.filter((note) => note.id !== id))) clearForm();
+    };
+    clearForm();
+  }
+  setupSolarProcessNotes();
   bootPage();
 })();
 /*! Bundled license information:
@@ -28873,7 +29073,6 @@ This is a reconciliation, not an independent measurement, because EDC includes S
 @firebase/firestore/dist/common-456515ba.esm.js:
 @firebase/firestore/dist/common-456515ba.esm.js:
 @firebase/firestore/dist/common-456515ba.esm.js:
-@firebase/firestore/dist/index.esm.js:
   (**
    * @license
    * Copyright 2017 Google LLC
@@ -28899,7 +29098,6 @@ This is a reconciliation, not an independent measurement, because EDC includes S
 @firebase/firestore/dist/common-456515ba.esm.js:
 @firebase/firestore/dist/common-456515ba.esm.js:
 @firebase/firestore/dist/common-456515ba.esm.js:
-@firebase/firestore/dist/index.esm.js:
 @firebase/firestore/dist/index.esm.js:
 @firebase/firestore/dist/index.esm.js:
   (**
@@ -29746,6 +29944,7 @@ re2js/build/index.esm.js:
    *)
 
 @firebase/firestore/dist/common-456515ba.esm.js:
+@firebase/firestore/dist/index.esm.js:
   (**
    * @license
    * Copyright 2017 Google LLC

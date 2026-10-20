@@ -5,6 +5,7 @@ import {
   getDoc,
   getDocs,
   initializeFirestore,
+  onSnapshot,
   orderBy,
   query,
   runTransaction,
@@ -6168,4 +6169,140 @@ async function bootPage() {
   }
 }
 
+function setupSolarProcessNotes() {
+  const nav = document.querySelector(".tracker-nav .navbar-nav");
+  if (!nav) return;
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "nav-link nav-link-button solar-notes-nav";
+  button.textContent = "Notes";
+  const settings = [...nav.querySelectorAll("a")].find((link) => link.textContent.trim() === "Settings");
+  nav.insertBefore(button, settings || null);
+
+  const dialog = document.createElement("dialog");
+  dialog.className = "solar-notes-dialog";
+  dialog.setAttribute("aria-labelledby", "solar-notes-heading");
+  dialog.innerHTML = `<div class="solar-notes-shell"><header class="solar-notes-header"><div><h2 id="solar-notes-heading">Solar Process Notes</h2><p>Keep decisions, calls, documents, and follow-ups in one place. Changes sync across devices.</p></div><button type="button" class="solar-notes-close" aria-label="Close notes">×</button></header><div class="solar-notes-toolbar"><label>Find a note<input type="search" class="solar-notes-search" placeholder="Search title or details"></label><button type="button" class="solar-notes-new">+ New note</button></div><div class="solar-notes-body"><aside class="solar-notes-list" aria-label="Saved notes"></aside><form class="solar-notes-form"><label>Title<input name="title" required maxlength="160" placeholder="What happened or needs follow-up?"></label><div class="solar-notes-fields"><label>Date<input name="date" type="date" required></label><label>Status<select name="status"><option>Open</option><option>In progress</option><option>Waiting</option><option>Done</option><option>Archived</option></select></label></div><label>Details<textarea name="details" rows="9" placeholder="Add the context, next step, names, or reference numbers"></textarea></label><div class="solar-notes-actions"><button type="button" class="solar-notes-delete">Delete</button><button type="submit" class="solar-notes-save">Save note</button></div><p class="solar-notes-message" role="status" aria-live="polite"></p></form></div></div>`;
+  document.body.appendChild(dialog);
+  const list = dialog.querySelector(".solar-notes-list");
+  const form = dialog.querySelector("form");
+  const message = dialog.querySelector(".solar-notes-message");
+  const search = dialog.querySelector(".solar-notes-search");
+  const remove = dialog.querySelector(".solar-notes-delete");
+  let notes = [];
+  let selectedId = null;
+  let unsubscribe = null;
+  let reference = null;
+  let busy = false;
+  const setMessage = (value, isError = false) => { message.textContent = value; message.dataset.error = String(isError); };
+  const clearForm = () => {
+    selectedId = null;
+    form.reset();
+    form.elements.date.value = getTodayIsoDate();
+    remove.hidden = true;
+    dialog.querySelector(".solar-notes-save").textContent = "Create note";
+    renderList();
+  };
+  const selectNote = (note) => {
+    selectedId = note.id;
+    form.elements.title.value = note.title || "";
+    form.elements.date.value = note.date || getTodayIsoDate();
+    form.elements.status.value = note.status || "Open";
+    form.elements.details.value = note.details || "";
+    remove.hidden = false;
+    dialog.querySelector(".solar-notes-save").textContent = "Save changes";
+    setMessage("");
+    renderList();
+  };
+  function renderList() {
+    list.replaceChildren();
+    const term = search.value.trim().toLowerCase();
+    const filtered = [...notes].sort((a, b) => (b.date || "").localeCompare(a.date || "") || (b.updated_at || "").localeCompare(a.updated_at || "")).filter((note) => `${note.title || ""} ${note.details || ""} ${note.status || ""}`.toLowerCase().includes(term));
+    if (!filtered.length) {
+      const empty = document.createElement("p");
+      empty.className = "solar-notes-empty";
+      empty.textContent = term ? "No matching notes." : "No notes yet. Create one to begin.";
+      list.appendChild(empty);
+    }
+    filtered.forEach((note) => {
+      const item = document.createElement("button");
+      item.type = "button";
+      item.className = "solar-notes-item";
+      item.dataset.selected = String(note.id === selectedId);
+      const title = document.createElement("strong");
+      title.textContent = note.title || "Untitled";
+      const meta = document.createElement("small");
+      meta.textContent = `${note.date || "No date"} · ${note.status || "Open"}`;
+      item.append(title, meta);
+      item.onclick = () => selectNote(note);
+      list.appendChild(item);
+    });
+  }
+  const setBusy = (value) => {
+    busy = value;
+    dialog.querySelector(".solar-notes-save").disabled = value;
+    remove.disabled = value;
+    dialog.querySelector(".solar-notes-new").disabled = value;
+  };
+  async function changeNotes(operation) {
+    if (!reference || busy) return;
+    setBusy(true);
+    try {
+      await runTransaction(getFirebaseAppContext().db, async (transaction) => {
+        const snapshot = await transaction.get(reference);
+        const current = Array.isArray(snapshot.data()?.solar_process_notes) ? snapshot.data().solar_process_notes : [];
+        const updated = operation(current);
+        transaction.set(reference, { solar_process_notes: updated, solar_process_notes_updated_at: new Date().toISOString() }, { merge: true });
+      });
+      setMessage("Saved and synced across devices.");
+      return true;
+    } catch (error) {
+      setMessage(`Could not save note: ${error.message}`, true);
+      return false;
+    } finally { setBusy(false); }
+  }
+  button.onclick = () => {
+    dialog.showModal();
+    clearForm();
+    setMessage("Connecting to synced notes…");
+    try {
+      reference = doc(getFirebaseAppContext().db, configCollectionName, configDocumentId);
+      unsubscribe?.();
+      unsubscribe = onSnapshot(reference, (snapshot) => {
+        notes = Array.isArray(snapshot.data()?.solar_process_notes) ? snapshot.data().solar_process_notes : [];
+        if (selectedId) {
+          const current = notes.find((note) => note.id === selectedId);
+          if (current) selectNote(current);
+          else clearForm();
+        } else renderList();
+        if (message.textContent === "Connecting to synced notes…") setMessage("Notes are ready.");
+      }, (error) => setMessage(`Could not load synced notes: ${error.message}`, true));
+    } catch (error) { setMessage(`Could not connect to synced notes: ${error.message}`, true); }
+  };
+  dialog.querySelector(".solar-notes-close").onclick = () => dialog.close();
+  dialog.addEventListener("close", () => { unsubscribe?.(); unsubscribe = null; });
+  dialog.querySelector(".solar-notes-new").onclick = () => { clearForm(); setMessage("New note ready."); form.elements.title.focus(); };
+  search.oninput = renderList;
+  form.onsubmit = async (event) => {
+    event.preventDefault();
+    const id = selectedId || crypto.randomUUID();
+    const now = new Date().toISOString();
+    const record = { id, title: form.elements.title.value.trim(), date: form.elements.date.value, status: form.elements.status.value, details: form.elements.details.value.trim(), updated_at: now };
+    if (!record.title || !record.date) return;
+    const saved = await changeNotes((current) => {
+      const previous = current.find((note) => note.id === id);
+      const next = { ...record, created_at: previous?.created_at || now };
+      return previous ? current.map((note) => note.id === id ? next : note) : [...current, next];
+    });
+    if (saved) selectedId = id;
+  };
+  remove.onclick = async () => {
+    if (!selectedId || !window.confirm("Delete this solar process note?")) return;
+    const id = selectedId;
+    if (await changeNotes((current) => current.filter((note) => note.id !== id))) clearForm();
+  };
+  clearForm();
+}
+
+setupSolarProcessNotes();
 bootPage();
