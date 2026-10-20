@@ -917,6 +917,7 @@ def nyseg_usage_file():
         local_snapshot_mode=False,
         bootstrap_data=build_bootstrap_data(),
         interval_file=interval_file,
+        rows=interval_file.get("daily_rows" if grouped else "rows", []),
         grouped=grouped,
         chart_rows=chart_rows,
         hourly_chart_rows=hourly_chart_rows,
