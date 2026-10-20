@@ -63,6 +63,10 @@ def render_static_page(path: str) -> str:
         html,
     )
     html = html.replace(
+        'href="/static/css/solar-process-notes.css?v=20261020"',
+        'href="assets/css/solar-process-notes.css?v=20261020"',
+    )
+    html = html.replace(
         'src="/static/js/appliances.js"',
         f'src="assets/js/appliances.js?v={ASSET_VERSION}"',
     )

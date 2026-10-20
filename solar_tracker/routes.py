@@ -1,15 +1,17 @@
 from dataclasses import asdict
-from datetime import date, datetime
+from datetime import date, datetime, timedelta, timezone
 import csv
 from http.client import HTTPConnection
 from io import StringIO
 import json
+import math
 import os
 from pathlib import Path
 import shutil
 import subprocess
 import sys
 from typing import Optional, Tuple
+from dateutil.tz import gettz
 
 import pandas as pd
 from flask import Blueprint, Response, jsonify, redirect, render_template, request, send_file, send_from_directory, url_for
@@ -716,6 +718,41 @@ def build_meter_file_reconciliation(interval_file: dict) -> dict:
     }
 
 
+YORKTOWN_LATITUDE = 41.2706
+YORKTOWN_LONGITUDE = -73.7774
+YORKTOWN_TIMEZONE = gettz("America/New_York")
+
+
+def yorktown_sun_elevation(moment: datetime) -> float:
+    """Sun altitude above the horizon, using the same solar-position model as the sky view."""
+    instant = moment.astimezone(timezone.utc)
+    days = instant.timestamp() / 86400 + 2440587.5 - 2451545.0
+    radians = math.radians
+    mean_longitude = (280.46 + 0.9856474 * days) % 360
+    mean_anomaly = (357.528 + 0.9856003 * days) % 360
+    ecliptic_longitude = (mean_longitude + 1.915 * math.sin(radians(mean_anomaly))
+                          + 0.02 * math.sin(radians(2 * mean_anomaly))) % 360
+    obliquity = 23.439 - 0.0000004 * days
+    right_ascension = math.degrees(math.atan2(
+        math.cos(radians(obliquity)) * math.sin(radians(ecliptic_longitude)),
+        math.cos(radians(ecliptic_longitude)),
+    )) % 360
+    declination = math.asin(math.sin(radians(obliquity)) * math.sin(radians(ecliptic_longitude)))
+    sidereal = (280.46061837 + 360.98564736629 * days + YORKTOWN_LONGITUDE) % 360
+    hour_angle = (sidereal - right_ascension + 180) % 360 - 180
+    sine_elevation = (math.sin(radians(YORKTOWN_LATITUDE)) * math.sin(declination)
+                      + math.cos(radians(YORKTOWN_LATITUDE)) * math.cos(declination)
+                      * math.cos(radians(hour_angle)))
+    return math.degrees(math.asin(max(-1.0, min(1.0, sine_elevation))))
+
+
+def daily_peak_sun_elevation(day: str) -> float:
+    local_day = date.fromisoformat(day)
+    local_start = datetime.combine(local_day, datetime.min.time(), YORKTOWN_TIMEZONE)
+    return max(yorktown_sun_elevation(local_start + timedelta(minutes=minute))
+               for minute in range(0, 24 * 60, 5))
+
+
 @main_blueprint.route("/nyseg-usage-file")
 @main_blueprint.route("/nyseg-usage-file/daily")
 def nyseg_usage_file():
@@ -723,6 +760,8 @@ def nyseg_usage_file():
     grouped = request.path.endswith("/daily")
     sunrun_by_date = load_sunrun_daily_production().get("by_date", {})
     entry_weather, _ = load_reconciliation_entries()
+    irradiance_by_date = {entry.entry_date.isoformat(): entry.irradiance_peak_wm2 for entry in entry_weather}
+    peak_angle_by_date = {}
     weather_by_date = {
         entry.entry_date.isoformat(): {
             "condition": str(entry.weather or "Unknown").strip(),
@@ -751,6 +790,19 @@ def nyseg_usage_file():
         pass
     for row in [*interval_file.get("daily_rows", []), *interval_file.get("rows", [])]:
         row["sunrun_power_kwh"] = sunrun_by_date.get(row["Date"], {}).get("production_kwh")
+        row["daily_irradiance_wm2"] = irradiance_by_date.get(row["Date"])
+        if grouped or "Start Time" not in row:
+            if row["Date"] not in peak_angle_by_date:
+                peak_angle_by_date[row["Date"]] = daily_peak_sun_elevation(row["Date"])
+            row["sun_elevation_deg"] = peak_angle_by_date[row["Date"]]
+        else:
+            try:
+                interval_start = datetime.fromisoformat(str(row["Start Time"]))
+                if interval_start.tzinfo is None:
+                    interval_start = interval_start.replace(tzinfo=YORKTOWN_TIMEZONE)
+                row["sun_elevation_deg"] = yorktown_sun_elevation(interval_start + timedelta(minutes=30))
+            except (TypeError, ValueError):
+                row["sun_elevation_deg"] = None
         weather = weather_by_date.get(row["Date"], {"condition": "Unknown", "high_f": None, "low_f": None})
         row["weather_condition"] = weather["condition"]
         row["weather_high_f"] = weather["high_f"]
