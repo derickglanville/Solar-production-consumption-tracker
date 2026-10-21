@@ -17,7 +17,7 @@ from solar_tracker.routes import build_bootstrap_data
 
 
 DOCS = ROOT / "docs"
-ASSET_VERSION = "20261017-nyseg-daily-startup"
+ASSET_VERSION = "20261021-irradiance-date"
 
 ROUTE_REPLACEMENTS = {
     'href="/"': 'href="index.html"',

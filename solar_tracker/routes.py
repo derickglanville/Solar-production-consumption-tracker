@@ -10,7 +10,9 @@ from pathlib import Path
 import shutil
 import subprocess
 import sys
-from typing import Optional, Tuple
+from urllib.parse import urlencode
+from urllib.request import urlopen
+from typing import Dict, List, Optional, Tuple
 from dateutil.tz import gettz
 
 import pandas as pd
@@ -728,6 +730,44 @@ HISTORICAL_IRRADIANCE_PEAKS = {
     "2026-10-09": 691, "2026-10-10": 623, "2026-10-11": 59,
 }
 
+_recent_irradiance_cache = {"key": None, "expires": datetime.min.replace(tzinfo=timezone.utc), "values": {}}
+
+
+def recent_open_meteo_irradiance_peaks(days: List[str]) -> Dict[str, int]:
+    """Fill missing recent grid days from the same hourly GHI field used by Daily Entry."""
+    today = tracker_today()
+    recent = sorted({day for day in days if (today - timedelta(days=14)).isoformat() <= day <= today.isoformat()})
+    if not recent:
+        return {}
+    key = (recent[0], recent[-1])
+    now = datetime.now(timezone.utc)
+    if _recent_irradiance_cache["key"] == key and now < _recent_irradiance_cache["expires"]:
+        return _recent_irradiance_cache["values"]
+    query = urlencode({
+        "latitude": YORKTOWN_LATITUDE,
+        "longitude": YORKTOWN_LONGITUDE,
+        "start_date": recent[0],
+        "end_date": recent[-1],
+        "past_days": 14,
+        "hourly": "shortwave_radiation_instant",
+        "timezone": "America/New_York",
+    })
+    try:
+        with urlopen(f"https://api.open-meteo.com/v1/forecast?{query}", timeout=5) as response:
+            hourly = json.load(response).get("hourly", {})
+        values = {}
+        for timestamp, irradiance in zip(hourly.get("time", []), hourly.get("shortwave_radiation_instant", [])):
+            if irradiance is None:
+                continue
+            day = str(timestamp)[:10]
+            values[day] = max(values.get(day, 0), round(float(irradiance)))
+        _recent_irradiance_cache.update(key=key, expires=now + timedelta(minutes=30), values=values)
+        return values
+    except (OSError, ValueError, TypeError, KeyError):
+        # An unavailable weather service must not prevent the bill grid from loading.
+        _recent_irradiance_cache.update(key=key, expires=now + timedelta(minutes=5), values={})
+        return {}
+
 YORKTOWN_LATITUDE = 41.2706
 YORKTOWN_LONGITUDE = -73.7774
 YORKTOWN_TIMEZONE = gettz("America/New_York")
@@ -777,6 +817,13 @@ def nyseg_usage_file():
     }
     for day, peak in HISTORICAL_IRRADIANCE_PEAKS.items():
         irradiance_by_date.setdefault(day, peak)
+    missing_recent_days = [
+        row["Date"] for row in interval_file.get("daily_rows", [])
+        if row["Date"] not in irradiance_by_date
+    ]
+    forecast_irradiance = recent_open_meteo_irradiance_peaks(missing_recent_days)
+    for day, peak in forecast_irradiance.items():
+        irradiance_by_date.setdefault(day, peak)
     peak_angle_by_date = {}
     weather_by_date = {
         entry.entry_date.isoformat(): {
@@ -807,6 +854,7 @@ def nyseg_usage_file():
     for row in [*interval_file.get("daily_rows", []), *interval_file.get("rows", [])]:
         row["sunrun_power_kwh"] = sunrun_by_date.get(row["Date"], {}).get("production_kwh")
         row["daily_irradiance_wm2"] = irradiance_by_date.get(row["Date"])
+        row["daily_irradiance_source"] = "Open-Meteo recent hourly data" if row["Date"] in forecast_irradiance else "Saved Daily Entry or historical archive" if row["daily_irradiance_wm2"] is not None else "Unavailable"
         if grouped or "Start Time" not in row:
             if row["Date"] not in peak_angle_by_date:
                 peak_angle_by_date[row["Date"]] = daily_peak_sun_elevation(row["Date"])

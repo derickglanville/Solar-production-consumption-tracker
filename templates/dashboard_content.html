@@ -356,6 +356,7 @@
         >
           <span>Today's Production</span>
           <strong>{{ "%.1f"|format(metrics.today_production) }} kWh</strong>
+          <small class="d-block text-muted">Reported for {{ recent_entries[0].entry_date.isoformat() if recent_entries else 'no available date' }}</small>
           {% if metrics.today_pending_sunrun %}<span class="metric-status-dot" aria-label="Pending final SunRun data"></span>{% endif %}
         </div>
       </div>
