@@ -17,7 +17,7 @@ from solar_tracker.routes import build_bootstrap_data
 
 
 DOCS = ROOT / "docs"
-ASSET_VERSION = "20261021-irradiance-date"
+ASSET_VERSION = "20261022-irradiance-backfill"
 
 ROUTE_REPLACEMENTS = {
     'href="/"': 'href="index.html"',
@@ -101,6 +101,15 @@ def render_static_page(path: str) -> str:
     )
     for local_href, static_href in ROUTE_REPLACEMENTS.items():
         html = html.replace(local_href, static_href)
+    # The circuit breaker directory contains private, editable household data and
+    # only exists in the local Flask app.  A placeholder anchor on GitHub Pages
+    # can be followed by mobile browsers as a site-root navigation, so render a
+    # non-interactive menu item instead.
+    html = re.sub(
+        r'<a class="dropdown-item" href="#" aria-disabled="true" title="The private circuit directory is available in the local app only"(?: target="_blank" rel="noopener noreferrer")?>Circuit Breakers</a>',
+        '<span class="dropdown-item disabled" aria-disabled="true" title="Open this directory in the local app on your computer">Circuit Breakers (Local)</span>',
+        html,
+    )
     return "\n".join(line.rstrip() for line in html.splitlines()) + "\n"
 
 
