@@ -3070,25 +3070,90 @@ body[data-page="dashboard"].dashboard-compact-mode .btn-contract {
 .usage-reference-table th:nth-child(3) { width: 28%; }
 
 .circuit-reference-table-scroll {
-  max-height: 57vh;
+  max-height: none;
+  overflow-x: auto;
+  overflow-y: visible;
+  background: linear-gradient(145deg, #f3fbff 0%, #f8fbff 46%, #f7fffb 100%);
+  border: 1px solid #b6d5e3;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.92);
 }
 
 .circuit-reference-table {
-  min-width: 900px;
+  min-width: 940px;
 }
 
+.reference-editor-card:has(.circuit-reference-table) {
+  border: 1px solid #b7d9e7;
+  box-shadow: 0 0.75rem 1.75rem rgba(34, 108, 146, 0.13);
+}
+
+.circuit-map-heading {
+  align-items: center;
+  background: linear-gradient(110deg, #e1f4ff, #eef9ff 48%, #e8fff2);
+  border: 1px solid #b9dfed;
+  border-radius: 0.85rem;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  padding: 0.8rem 0.95rem;
+}
+
+.circuit-map-heading h2 { color: #145a7e; }
+.circuit-map-heading p:last-child { color: #507486; font-size: 0.78rem; }
+
+.circuit-map-summary { display: flex; flex-wrap: wrap; gap: 0.45rem; justify-content: flex-end; }
+.circuit-map-summary span { background: rgba(255, 255, 255, 0.88); border: 1px solid #b6dce9; border-radius: 999px; color: #28647e; font-size: 0.71rem; font-weight: 700; padding: 0.38rem 0.6rem; white-space: nowrap; }
+.circuit-map-summary span:last-child { background: #fff2e0; border-color: #edc28e; color: #9a5a16; }
+
 .circuit-reference-table th:first-child { width: 13%; }
-.circuit-reference-table th:nth-child(2) { width: 31%; }
-.circuit-reference-table th:nth-child(3) { width: 46%; }
+.circuit-reference-table th:nth-child(2) { width: 8%; }
+.circuit-reference-table th:nth-child(3) { width: 27%; }
+.circuit-reference-table th:nth-child(4) { width: 43%; }
+.circuit-reference-table .reference-action-column { width: 9%; }
+
+.circuit-reference-table thead th {
+  background: linear-gradient(135deg, #176a91, #2781a5);
+  border-bottom: 2px solid #0f587c;
+  color: #fff;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.15);
+}
+
+.circuit-reference-table tbody tr:nth-child(even) td { background: rgba(49, 129, 166, 0.07); }
+.circuit-reference-table tbody tr:hover td { background: rgba(255, 221, 133, 0.28); }
 
 .circuit-reference-table .circuit-number-input {
+  background: linear-gradient(135deg, #e2f5ff, #f8fdff);
+  border-color: #85bed7;
+  color: #145b80;
   font-weight: 700;
   text-align: center;
 }
 
+.circuit-reference-table .circuit-amperage-input {
+  background: #f8fcff;
+  border-color: #b6d4e1;
+  color: #23566c;
+  margin-inline: auto;
+  max-width: 5.5rem;
+  text-align: center;
+}
+
+.circuit-reference-table .circuit-amperage-50 {
+  background: #ffe1df;
+  border-color: #e8928c;
+  color: #8f302c;
+  font-weight: 800;
+}
+
 .circuit-row-probable td { background: rgba(225, 166, 63, 0.18); }
 .circuit-row-unknown td { background: rgba(214, 92, 74, 0.16); }
-.circuit-row-240v td { background: rgba(119, 159, 180, 0.14); }
+.circuit-row-240v td { background: rgba(120, 93, 183, 0.13) !important; }
+.circuit-row-240v .circuit-number-input { background: #eee8ff; border-color: #aa98df; color: #5d4697; }
+
+@media (max-width: 700px) {
+  .circuit-map-heading { align-items: stretch; flex-direction: column; }
+  .circuit-map-summary { justify-content: flex-start; }
+}
 
 .circuit-safety-input {
   border-color: rgba(214, 92, 74, 0.38);

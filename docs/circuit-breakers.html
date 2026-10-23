@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Solar Tracker</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/styles.css?v=20261022-irradiance-backfill">
+  <link rel="stylesheet" href="assets/css/solar-process-notes.css?v=20261020">
+  <script src="https://cdn.plot.ly/plotly-3.4.0.min.js"></script>
+</head>
+<body data-page="circuit-breakers" data-local-snapshot-mode="false">
+  <nav class="navbar navbar-expand-lg tracker-nav">
+    <div class="container">
+      <a class="navbar-brand fw-semibold" href="dashboard.html">Solar Production & Consumption Tracker</a>
+      <div class="navbar-nav ms-auto">
+
+        <div class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="dashboard.html" id="dashboardMenu" role="button" data-bs-toggle="dropdown" aria-expanded="false">Dashboard</a>
+          <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dashboardMenu">
+            <li><a class="dropdown-item" href="dashboard.html">Dashboard overview</a></li>
+            <li><a class="dropdown-item" href="electricity-usage.html">Electricity Usage</a></li>
+            <li><a class="dropdown-item" href="circuit-breakers.html" target="_blank" rel="noopener noreferrer">Circuit Breakers</a></li>
+            <li><a class="dropdown-item" href="light-bulbs.html">Light Bulbs</a></li>
+          </ul>
+        </div>
+        <a class="nav-link" href="entries.html">Daily Entry</a>
+        <a class="nav-link" href="nyseg-usage-file-daily.html">View NYSEG and Sunrun Data</a>
+        <a class="nav-link" href="sunrun-production.html">SunRun Data</a>
+        <a class="nav-link" href="appliances.html">Appliances</a>
+        <a class="nav-link" href="contract-summary.html">Contract Summary</a>
+        <a class="nav-link" href="settings.html">Settings</a>
+        <a class="nav-link nav-link-button" href="dictionary.html">Dictionary</a>
+        <a class="nav-link" href="solar_tracker_demo_export.csv">CSV Export</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="py-4">
+    <div class="container">
+
+
+
+
+<section class="hero-panel reference-editor-hero mb-3">
+  <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+    <div>
+      <p class="eyebrow mb-1">Home Reference</p>
+      <h1 class="hero-title mb-1">Circuit Breaker Directory</h1>
+      <p class="text-muted mb-0">View the latest published circuit map. To edit it, open the local app on your computer.</p>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+
+        <span class="btn btn-contract btn-sm disabled" aria-disabled="true">View only</span>
+
+      <a class="btn btn-contract btn-sm" href="dashboard.html">Back to Dashboard</a>
+    </div>
+  </div>
+</section>
+
+<div id="circuit-editor-status"></div>
+
+<section class="card tracker-card mb-3">
+  <div class="card-body reference-summary-editor">
+    <div class="row g-2">
+      <div class="col-lg-6"><label class="form-label" for="circuit-title">Document Title</label><input id="circuit-title" class="form-control form-control-sm" type="text" readonly></div>
+      <div class="col-lg-3"><label class="form-label" for="circuit-subtitle">Description</label><input id="circuit-subtitle" class="form-control form-control-sm" type="text" readonly></div>
+      <div class="col-lg-3"><label class="form-label" for="circuit-updated">Updated</label><input id="circuit-updated" class="form-control form-control-sm" type="text" readonly></div>
+    </div>
+  </div>
+</section>
+
+<section class="card tracker-card reference-editor-card mb-3">
+  <div class="card-body">
+    <div class="circuit-map-heading mb-3">
+      <div>
+        <p class="eyebrow mb-1">Panel reference</p>
+        <h2 class="h5 mb-1">Editable Circuit Map</h2>
+        <p class="mb-0">Keep each breaker’s coverage and rating together for quick, safe identification.</p>
+      </div>
+      <div class="circuit-map-summary" aria-label="Circuit map summary">
+        <span><b id="circuit-row-count">0</b> listed circuits</span>
+        <span>50 A circuits highlighted</span>
+      </div>
+    </div>
+    <div class="reference-table-scroll circuit-reference-table-scroll">
+      <table class="table align-middle reference-editor-table circuit-reference-table">
+        <thead><tr><th>Circuit</th><th>Amperage</th><th>Identification</th><th>Status / Notes</th></tr></thead>
+        <tbody id="circuit-breakers-table-body"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section class="card tracker-card mb-3">
+  <div class="card-body reference-summary-editor">
+    <div class="row g-3">
+      <div class="col-lg-6"><label class="form-label" for="circuit-key-note">Key Equipment Note</label><textarea id="circuit-key-note" class="form-control" rows="3" readonly></textarea></div>
+      <div class="col-lg-6"><label class="form-label" for="circuit-safety-note">Safety Note</label><textarea id="circuit-safety-note" class="form-control circuit-safety-input" rows="3" readonly></textarea></div>
+    </div>
+  </div>
+</section>
+
+    </div>
+  </main>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="assets/js/site-bootstrap.js?v=20261022-irradiance-backfill"></script>
+  <script src="assets/js/firebase-config.js?v=20261022-irradiance-backfill"></script>
+  <script defer src="assets/js/app-bundle.js?v=20261022-irradiance-backfill"></script>
+
+<script>window.CIRCUIT_BREAKER_BOOTSTRAP = {"key_note": "Family-room electric heat: 8-foot electric baseboard heater, confirmed 240 V on paired breakers 15 and 17.", "records": [{"amperage": "50", "circuit": "1 \u0026 3", "identification": "Ductless AC system", "notes": "Former MBR AC circuit; repurposed for ductless AC."}, {"amperage": "50", "circuit": "2 \u0026 4", "identification": "Stove / Range", "notes": "240 V circuit."}, {"amperage": "20", "circuit": "5", "identification": "Refrigerator", "notes": "Identified."}, {"amperage": "50", "circuit": "6 \u0026 8", "identification": "Dryer", "notes": "240 V circuit."}, {"amperage": "20", "circuit": "7", "identification": "Basement / Laundry Room", "notes": "Identified."}, {"amperage": "20", "circuit": "9", "identification": "Missing - Empty", "notes": "Identified."}, {"amperage": "20", "circuit": "10", "identification": "Microwave", "notes": "Identified."}, {"amperage": "20", "circuit": "11", "identification": "Upstairs X", "notes": "Original 2020 notation; wording retained."}, {"amperage": "20", "circuit": "12", "identification": "Family Room / Dining Room / Kitchen / Basement stairs / Utility storage", "notes": "Lights: family room, dining room, kitchen, basement stairs, and utility storage room (wine cellar). Outlets: dining room and family room."}, {"amperage": "20", "circuit": "13", "identification": "Bathroom", "notes": "Identified."}, {"amperage": "20", "circuit": "14", "identification": "Boiler", "notes": "Oil-heating system electrical circuit."}, {"amperage": "50", "circuit": "15 \u0026 17", "identification": "Family Room Electric Baseboard Heater", "notes": "240 V family-room baseboard heat circuit (paired breakers 15 and 17)."}, {"amperage": "20", "circuit": "16", "identification": "Refrigerator", "notes": "Confirmed."}, {"amperage": "20", "circuit": "18", "identification": "MBR", "notes": "Confirmed."}, {"amperage": "20", "circuit": "19", "identification": "Dishwasher / Router", "notes": "Identified."}, {"amperage": "20", "circuit": "20", "identification": "Unknown", "notes": "Not identified"}], "safety_note": "Circuit identifications should be verified at the panel before electrical work. For 240 V equipment, both poles of the paired breaker must be treated as the same branch circuit.", "subtitle": "Working residential circuit map", "title": "Home Electrical Panel - Circuit Breaker Directory", "updated": "October 23, 2026"}; window.CIRCUIT_BREAKER_READ_ONLY = true;</script>
+<script defer src="assets/js/circuit-breakers.js?v=20261022-irradiance-backfill"></script>
+
+</body>
+</html>

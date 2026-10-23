@@ -38,7 +38,7 @@ ROUTE_REPLACEMENTS = {
     'href="/export/csv"': 'href="solar_tracker_demo_export.csv"',
     'href="/documents/nyseg-bill/view"': 'href="#" aria-disabled="true" title="Available in the local app only"',
     'href="/documents/nyseg-monthly-bill/view"': 'href="#" aria-disabled="true" title="Private bill PDFs are available in the local app only"',
-    'href="/circuit-breakers"': 'href="#" aria-disabled="true" title="The private circuit directory is available in the local app only"',
+    'href="/circuit-breakers"': 'href="circuit-breakers.html"',
 }
 
 
@@ -95,21 +95,17 @@ def render_static_page(path: str) -> str:
         f'src="assets/js/app-bundle.js?v={ASSET_VERSION}"',
         html,
     )
+    html = re.sub(
+        r'src="/static/js/circuit-breakers\.js\?v=[^"]+"',
+        f'src="assets/js/circuit-breakers.js?v={ASSET_VERSION}"',
+        html,
+    )
     html = html.replace(
         'src="/vendor/plotly.min.js"',
         'src="https://cdn.plot.ly/plotly-3.4.0.min.js"',
     )
     for local_href, static_href in ROUTE_REPLACEMENTS.items():
         html = html.replace(local_href, static_href)
-    # The circuit breaker directory contains private, editable household data and
-    # only exists in the local Flask app.  A placeholder anchor on GitHub Pages
-    # can be followed by mobile browsers as a site-root navigation, so render a
-    # non-interactive menu item instead.
-    html = re.sub(
-        r'<a class="dropdown-item" href="#" aria-disabled="true" title="The private circuit directory is available in the local app only"(?: target="_blank" rel="noopener noreferrer")?>Circuit Breakers</a>',
-        '<span class="dropdown-item disabled" aria-disabled="true" title="Open this directory in the local app on your computer">Circuit Breakers (Local)</span>',
-        html,
-    )
     return "\n".join(line.rstrip() for line in html.splitlines()) + "\n"
 
 
@@ -117,6 +113,7 @@ def sync_assets() -> None:
     copies = {
         ROOT / "static" / "css" / "styles.css": DOCS / "assets" / "css" / "styles.css",
         ROOT / "static" / "js" / "app-bundle.js": DOCS / "assets" / "js" / "app-bundle.js",
+        ROOT / "static" / "js" / "circuit-breakers.js": DOCS / "assets" / "js" / "circuit-breakers.js",
         ROOT / "static" / "js" / "appliances.js": DOCS / "assets" / "js" / "appliances.js",
         ROOT / "static" / "js" / "sunrun-production.js": DOCS / "assets" / "js" / "sunrun-production.js",
         ROOT / "static" / "js" / "reference-editors.js": DOCS / "assets" / "js" / "reference-editors.js",
@@ -204,6 +201,7 @@ def main() -> None:
         "contract-summary.html": "/contract-summary",
         "dictionary.html": "/dictionary",
         "settings.html": "/settings",
+        "circuit-breakers.html": "/circuit-breakers?static=1",
     }
     for filename, route in static_pages.items():
         (DOCS / filename).write_text(render_static_page(route), encoding="utf-8")
