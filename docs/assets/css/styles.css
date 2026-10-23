@@ -3792,7 +3792,7 @@ body[data-page="dashboard"].dashboard-compact-mode .btn-contract {
 .bill-summary-box { background: linear-gradient(135deg, #f8fcfd, #edf6fa); border: 1px solid #bfdce8; border-radius: .9rem; display: flex; flex: 1 1 auto; flex-direction: column; justify-content: space-between; margin-top: .85rem; min-height: 0; padding: .8rem; }
 .bill-summary-heading, .bill-summary-nav { align-items: center; display: flex; gap: .55rem; justify-content: space-between; }
 .bill-summary-current { color: #244a60; display: grid; gap: .2rem; margin: .65rem 0; }
-.bill-summary-auto-note { color: #16714b; display: block; font-size: .67rem; font-weight: 700; margin-top: .25rem; }
+.bill-summary-auto-note { background: linear-gradient(135deg, #fff7b7, #ffe278); border: 1px solid #d7a817; border-left: .3rem solid #d18b00; border-radius: .45rem; box-shadow: 0 .12rem .35rem rgba(151, 105, 0, .18); color: #654500; display: block; font-size: .72rem; font-weight: 800; line-height: 1.35; margin-top: .35rem; padding: .28rem .45rem; }
 .bill-summary-current > strong { color: #164d6b; font-size: .88rem; }
 .bill-summary-current > span, .bill-summary-current small { color: #668094; font-size: .72rem; }
 .bill-summary-current div { display: flex; flex-wrap: wrap; gap: .25rem .38rem; }
