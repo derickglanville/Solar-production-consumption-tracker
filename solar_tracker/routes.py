@@ -731,6 +731,53 @@ HISTORICAL_IRRADIANCE_PEAKS = {
 }
 
 _recent_irradiance_cache = {"key": None, "expires": datetime.min.replace(tzinfo=timezone.utc), "values": {}}
+_recent_weather_cache = {"key": None, "expires": datetime.min.replace(tzinfo=timezone.utc), "values": {}}
+
+OPEN_METEO_WEATHER_LABELS = {
+    0: "Clear sky", 1: "Mostly clear", 2: "Partly cloudy", 3: "Overcast",
+    45: "Fog", 48: "Fog", 51: "Light drizzle", 53: "Drizzle", 55: "Heavy drizzle",
+    61: "Light rain", 63: "Rain", 65: "Heavy rain", 71: "Light snow", 73: "Snow",
+    75: "Heavy snow", 80: "Rain showers", 81: "Rain showers", 82: "Heavy showers",
+    95: "Thunderstorm", 96: "Thunderstorm", 99: "Thunderstorm",
+}
+
+
+def recent_open_meteo_weather(days: List[str]) -> Dict[str, Dict[str, object]]:
+    """Fill missing recent weather from Open-Meteo's daily archive/forecast."""
+    today = tracker_today()
+    recent = sorted({day for day in days if (today - timedelta(days=14)).isoformat() <= day <= today.isoformat()})
+    if not recent:
+        return {}
+    key = (recent[0], recent[-1])
+    now = datetime.now(timezone.utc)
+    if _recent_weather_cache["key"] == key and now < _recent_weather_cache["expires"]:
+        return _recent_weather_cache["values"]
+    query = urlencode({
+        "latitude": YORKTOWN_LATITUDE,
+        "longitude": YORKTOWN_LONGITUDE,
+        "start_date": recent[0],
+        "end_date": recent[-1],
+        "daily": "weather_code,temperature_2m_max,temperature_2m_min",
+        "temperature_unit": "fahrenheit",
+        "timezone": "America/New_York",
+    })
+    values: Dict[str, Dict[str, object]] = {}
+    try:
+        with urlopen(f"https://historical-forecast-api.open-meteo.com/v1/forecast?{query}", timeout=8) as response:
+            daily = json.load(response).get("daily", {})
+        for day, code, high, low in zip(
+            daily.get("time", []), daily.get("weather_code", []),
+            daily.get("temperature_2m_max", []), daily.get("temperature_2m_min", []),
+        ):
+            values[str(day)] = {
+                "condition": OPEN_METEO_WEATHER_LABELS.get(int(code or 0), "Weather data"),
+                "high_f": high,
+                "low_f": low,
+            }
+    except (OSError, ValueError, TypeError, KeyError):
+        values = {}
+    _recent_weather_cache.update(key=key, expires=now + timedelta(minutes=30 if values else 5), values=values)
+    return values
 
 
 def recent_open_meteo_irradiance_peaks(days: List[str]) -> Dict[str, int]:
@@ -851,6 +898,23 @@ def nyseg_usage_file():
                 details["low_f"] = item.get("low_f")
     except (OSError, ValueError, AttributeError):
         pass
+    missing_weather_days = [
+        row["Date"] for row in interval_file.get("daily_rows", [])
+        if (
+            row["Date"] not in weather_by_date
+            or weather_by_date[row["Date"]].get("condition") in {"", "Unknown"}
+            or weather_by_date[row["Date"]].get("high_f") is None
+            or weather_by_date[row["Date"]].get("low_f") is None
+        )
+    ]
+    for day, details in recent_open_meteo_weather(missing_weather_days).items():
+        existing = weather_by_date.setdefault(day, {"condition": "Unknown", "high_f": None, "low_f": None})
+        if existing["condition"] in {"", "Unknown"}:
+            existing["condition"] = details["condition"]
+        if existing["high_f"] is None:
+            existing["high_f"] = details["high_f"]
+        if existing["low_f"] is None:
+            existing["low_f"] = details["low_f"]
     for row in [*interval_file.get("daily_rows", []), *interval_file.get("rows", [])]:
         row["sunrun_power_kwh"] = sunrun_by_date.get(row["Date"], {}).get("production_kwh")
         row["daily_irradiance_wm2"] = irradiance_by_date.get(row["Date"])
@@ -900,6 +964,11 @@ def nyseg_usage_file():
             "production_kwh": sunrun_by_date.get(row["Date"], {}).get("production_kwh"),
             "delivered_kwh": row["Delivered"],
             "received_kwh": row["Received"],
+            "weather_condition": row.get("weather_condition") or "Unknown",
+            "weather_high_f": row.get("weather_high_f"),
+            "weather_low_f": row.get("weather_low_f"),
+            "irradiance_wm2": row.get("daily_irradiance_wm2"),
+            "sun_elevation_deg": row.get("sun_elevation_deg"),
             "edc_kwh": (
                 sunrun_by_date.get(row["Date"], {}).get("production_kwh", 0.0)
                 + float(row["Delivered"])
@@ -965,6 +1034,31 @@ def nyseg_usage_file():
         "edc_kwh": sum(month["edc_kwh"] for month in monthly_meter_totals),
     }
     meter_totals["combined_kwh"] = meter_totals["m01_kwh"] + meter_totals["m02_kwh"]
+    yearly_energy: dict[str, dict] = {}
+    for row in chart_rows:
+        year = row["date"][:4]
+        summary = yearly_energy.setdefault(year, {
+            "year": year,
+            "imported_kwh": 0.0,
+            "exported_kwh": 0.0,
+            "produced_kwh": 0.0,
+            "consumed_kwh": 0.0,
+        })
+        summary["imported_kwh"] += float(row["delivered_kwh"] or 0.0)
+        summary["exported_kwh"] += float(row["received_kwh"] or 0.0)
+        summary["produced_kwh"] += float(row["production_kwh"] or 0.0)
+        summary["consumed_kwh"] += float(row["edc_kwh"] or 0.0)
+    yearly_energy_rows = [yearly_energy[year] for year in sorted(yearly_energy)]
+    lifetime_energy = {
+        "imported_kwh": meter_totals["m01_kwh"],
+        "exported_kwh": meter_totals["m02_kwh"],
+        "produced_kwh": meter_totals["production_kwh"],
+        "consumed_kwh": meter_totals["edc_kwh"],
+        "net_imported_kwh": meter_totals["m01_kwh"] - meter_totals["m02_kwh"],
+        "grid_dependence_pct": (meter_totals["m01_kwh"] / meter_totals["edc_kwh"] * 100) if meter_totals["edc_kwh"] > 0 else 0.0,
+        "solar_coverage_pct": (max(0.0, meter_totals["production_kwh"] - meter_totals["m02_kwh"]) / meter_totals["edc_kwh"] * 100) if meter_totals["edc_kwh"] > 0 else 0.0,
+        "co2_avoided_lb": meter_totals["production_kwh"] * 0.855,
+    }
     daily_dates = sorted(row["Date"] for row in interval_file.get("daily_rows", []))
     net_charge_summary = {
         "import_kwh": meter_totals["m01_kwh"],
@@ -975,6 +1069,45 @@ def nyseg_usage_file():
         "day_count": len(daily_dates),
         "interval_count": len(interval_file.get("rows", [])),
     }
+    # The newest complete day gives the downloaded-file page a quick visual
+    # explanation of where energy came from and where it went.
+    flow_dates = sorted(
+        row["date"] for row in chart_rows if row.get("production_kwh") is not None
+    )
+    requested_flow_date = request.args.get("flow_date")
+    flow_row = next(
+        (
+            row for row in chart_rows
+            if row["date"] == requested_flow_date and row.get("production_kwh") is not None
+        ),
+        None,
+    )
+    if flow_row is None:
+        flow_row = next(
+            (row for row in chart_rows if row.get("production_kwh") is not None),
+            chart_rows[0] if chart_rows else None,
+        )
+    energy_flow = None
+    if flow_row:
+        imported_kwh = float(flow_row.get("delivered_kwh") or 0.0)
+        produced_kwh = float(flow_row.get("production_kwh") or 0.0)
+        exported_kwh = float(flow_row.get("received_kwh") or 0.0)
+        consumed_kwh = float(flow_row.get("edc_kwh") or 0.0)
+        solar_used_kwh = max(0.0, produced_kwh - exported_kwh)
+        energy_flow = {
+            "date": flow_row["date"],
+            "imported_kwh": imported_kwh,
+            "produced_kwh": produced_kwh,
+            "consumed_kwh": consumed_kwh,
+            "exported_kwh": exported_kwh,
+            "grid_dependence_pct": (imported_kwh / consumed_kwh * 100) if consumed_kwh > 0 else 0.0,
+            "solar_coverage_pct": (solar_used_kwh / consumed_kwh * 100) if consumed_kwh > 0 else 0.0,
+            "weather_condition": flow_row.get("weather_condition") or "Unknown",
+            "weather_high_f": flow_row.get("weather_high_f"),
+            "weather_low_f": flow_row.get("weather_low_f"),
+            "irradiance_wm2": flow_row.get("irradiance_wm2"),
+            "sun_elevation_deg": flow_row.get("sun_elevation_deg"),
+        }
     return render_template(
         "nyseg_usage_file.html",
         page_name="nyseg-usage-file",
@@ -990,6 +1123,10 @@ def nyseg_usage_file():
         net_charge_summary=net_charge_summary,
         monthly_meter_totals=monthly_meter_totals,
         meter_totals=meter_totals,
+        energy_flow=energy_flow,
+        flow_dates=flow_dates,
+        lifetime_energy=lifetime_energy,
+        yearly_energy_rows=yearly_energy_rows,
         nyseg_sync_status=load_nyseg_daily_sync_status(),
         bill_summary=build_bill_summary_report(),
         meter_reconciliation=build_meter_file_reconciliation(interval_file),
@@ -1342,12 +1479,14 @@ def electricity_usage():
 
 @main_blueprint.route("/circuit-breakers")
 def circuit_breakers():
+    static_view = request.args.get("static") == "1"
     return render_template(
         "circuit_breakers.html",
         page_name="circuit-breakers",
         local_snapshot_mode=False,
         bootstrap_data=build_bootstrap_data(),
         reference_data=load_circuit_breakers(),
+        static_view=static_view,
     )
 
 
@@ -1486,8 +1625,7 @@ def nyseg_meter_intervals_api():
             candidates = [
                 entry for entry in FirestoreRepository().list_entries()
                 if source_start <= entry.entry_date <= source_end
-                and entry.meter_01_import_reading >= 0
-                and entry.meter_02_export_reading >= 0
+                and entry.lookup_source == "nyseg-hourly-intervals"
             ]
             if candidates:
                 entry = max(candidates, key=lambda item: item.entry_date)
@@ -1544,17 +1682,20 @@ def nyseg_meter_intervals_apply_api():
     try:
         repository = FirestoreRepository()
         entries = repository.list_entries()
+        # Only a reading previously created from the NYSEG interval file is a
+        # safe cumulative-meter anchor.  Weather and irradiance updates create
+        # daily documents too, with zero/default M01/M02 fields; treating those
+        # placeholders as an anchor resets the cumulative registers.
         candidates = [
             entry for entry in entries
             if source_start <= entry.entry_date <= source_end
-            and entry.meter_01_import_reading >= 0
-            and entry.meter_02_export_reading >= 0
+            and entry.lookup_source == "nyseg-hourly-intervals"
         ]
         if not candidates:
             return jsonify({"error": "No cumulative M01/M02 anchor is available."}), 409
 
         anchor = max(candidates, key=lambda item: item.entry_date)
-        existing_dates = {entry.entry_date for entry in candidates}
+        entries_by_date = {entry.entry_date: entry for entry in entries}
         running_m01 = anchor.meter_01_import_reading
         running_m02 = anchor.meter_02_export_reading
         saved_dates = []
@@ -1565,7 +1706,14 @@ def nyseg_meter_intervals_apply_api():
                 continue
             running_m01 += row["import_kwh"]
             running_m02 += row["export_kwh"]
-            if row_date in existing_dates:
+            existing = entries_by_date.get(row_date)
+            if existing and existing.lookup_source == "nyseg-hourly-intervals":
+                continue
+            # A weather-generated entry has no confirmed meter reading.  It is
+            # safe to replace its placeholder values using the reviewed NYSEG
+            # intervals.  Other existing records are treated as manual data and
+            # remain untouched.
+            if existing and not existing.lookup_source.lower().startswith("open-meteo"):
                 continue
             repository.save_utility_meter_reading(
                 row_date,
@@ -1578,6 +1726,8 @@ def nyseg_meter_intervals_apply_api():
                 "date": row["date"],
                 "m01": round(running_m01, 1),
                 "m02": round(running_m02, 1),
+                "daily_m01": round(row["import_kwh"], 1),
+                "daily_m02": round(row["export_kwh"], 1),
             })
     except Exception as error:
         return jsonify({"error": f"Firebase M01/M02 import could not complete: {error}"}), 502

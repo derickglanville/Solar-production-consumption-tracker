@@ -63,6 +63,18 @@
   </div>
   {% endif %}
 </section>
+{% if interval_file.available %}
+<section class="nyseg-flow-card-grid mb-4" aria-label="NYSEG energy flow views">
+  {% if energy_flow %}
+  <section class="nyseg-energy-flow nyseg-flow-card" aria-label="Energy flow for {{ energy_flow.date }}">
+    <div class="nyseg-energy-flow-heading"><div><p class="eyebrow mb-1">Daily energy flow</p><h2 class="h6 mb-0">Where energy moved <small id="nyseg-flow-change-status" aria-live="polite">{{ energy_flow.date }}</small></h2></div><div class="nyseg-flow-day-nav"><button type="button" class="btn btn-contract btn-sm" id="nyseg-energy-flow-previous" aria-label="Show previous energy-flow day">‹</button><select id="nyseg-energy-flow-date" aria-label="Select a day for the energy flow">{% for day in flow_dates %}<option value="{{ day }}"{% if day == energy_flow.date %} selected{% endif %}>{{ day }}</option>{% endfor %}</select><button type="button" class="btn btn-contract btn-sm" id="nyseg-energy-flow-next" aria-label="Show next energy-flow day">›</button></div></div>
+    <div class="nyseg-energy-flow-layout"><div class="nyseg-flow-diagram"><span class="nyseg-flow-connector nyseg-flow-connector-grid" aria-hidden="true"></span><span class="nyseg-flow-connector nyseg-flow-connector-solar" aria-hidden="true"></span><span class="nyseg-flow-connector nyseg-flow-connector-export" aria-hidden="true"></span><article class="nyseg-flow-node nyseg-flow-import"><span class="nyseg-flow-icon">⇣</span><strong data-flow-import>{{ "%.1f"|format(energy_flow.imported_kwh) }}</strong><small>kWh imported<br>M01 from NYSEG</small></article><article class="nyseg-flow-node nyseg-flow-solar"><span class="nyseg-flow-icon">☀</span><strong data-flow-produced>{{ "%.1f"|format(energy_flow.produced_kwh) }}</strong><small>kWh produced<br>SunRun solar</small></article><article class="nyseg-flow-node nyseg-flow-home"><span class="nyseg-flow-icon">⌂</span><strong data-flow-consumed>{{ "%.1f"|format(energy_flow.consumed_kwh) }}</strong><small>kWh estimated<br>home consumed</small></article><article class="nyseg-flow-node nyseg-flow-export"><span class="nyseg-flow-icon">⇡</span><strong data-flow-export>{{ "%.1f"|format(energy_flow.exported_kwh) }}</strong><small>kWh exported<br>M02 to NYSEG</small></article></div><aside class="nyseg-flow-performance"><p>Performance</p><div><span>Grid dependence</span><b data-flow-grid-dependence>{{ "%.0f"|format(energy_flow.grid_dependence_pct) }}%</b><em><i data-flow-grid-meter style="width: {{ "%.0f"|format(energy_flow.grid_dependence_pct) }}%"></i></em><small>Home demand supplied by NYSEG.</small></div><div><span>Solar coverage</span><b data-flow-solar-coverage>{{ "%.0f"|format(energy_flow.solar_coverage_pct) }}%</b><em class="nyseg-flow-solar-meter"><i data-flow-solar-meter style="width: {{ "%.0f"|format(energy_flow.solar_coverage_pct) }}%"></i></em><small>Solar retained for home use.</small></div><div><span>Net grid flow</span><b data-flow-net-grid>{{ "%.1f"|format(energy_flow.imported_kwh - energy_flow.exported_kwh) }} kWh</b><small>Positive means imported from NYSEG.</small></div><div><span>Solar impact</span><b data-flow-solar-impact>{{ "%.1f"|format(energy_flow.produced_kwh * 0.855) }} lb</b><small>Estimated CO₂ avoided.</small></div></aside></div>
+  </section>
+  {% endif %}
+  <section class="nyseg-energy-flow nyseg-flow-card" aria-label="Hourly energy balance"><div class="nyseg-energy-flow-heading"><div><p class="eyebrow mb-1">Hourly energy balance</p><h2 class="h6 mb-0">Production, consumption, and grid flow</h2></div><span>Selected day</span></div><div class="nyseg-flow-context" aria-label="Selected-day weather conditions"><div><span>Weather</span><b data-flow-weather>{{ energy_flow.get('weather_condition', 'Unknown') if energy_flow else 'Unknown' }}</b><small data-flow-weather-temperature>{% if energy_flow and energy_flow.get('weather_high_f') is not none and energy_flow.get('weather_low_f') is not none %}{{ energy_flow.get('weather_high_f')|round(0)|int }}° / {{ energy_flow.get('weather_low_f')|round(0)|int }}°F{% else %}Temperature unavailable{% endif %}</small></div><div><span>Irradiance</span><b data-flow-irradiance>{% if energy_flow and energy_flow.get('irradiance_wm2') is not none %}{{ energy_flow.get('irradiance_wm2')|round(0)|int }} W/m²{% else %}—{% endif %}</b><small>Daily peak</small></div><div><span>Sun height</span><b data-flow-sun-height>{% if energy_flow and energy_flow.get('sun_elevation_deg') is not none %}+{{ energy_flow.get('sun_elevation_deg')|round(1) }}°{% else %}—{% endif %}</b><small>Peak elevation</small></div></div><div class="nyseg-flow-timeline"><div class="nyseg-flow-timeline-heading"><small>NYSEG M01/M02 bars are measured. SunRun production and home use are apportioned from daily totals for this visual.</small><label>Day <select id="nyseg-energy-timeline-date" aria-label="Select a day for the hourly energy balance"></select></label></div><div id="nyseg-energy-flow-chart" aria-label="Hourly production, consumption, import, and export timeline"></div></div></section>
+  <section class="nyseg-lifetime-flow nyseg-flow-card" aria-label="Lifetime energy summary"><div class="nyseg-lifetime-flow-heading"><div><p class="eyebrow mb-1">Lifetime energy</p><h2 class="h6 mb-0">Total Energy</h2></div><span>{{ net_charge_summary.first_date }} to {{ net_charge_summary.last_date }}</span></div><div class="nyseg-lifetime-flow-layout"><div class="nyseg-lifetime-metrics"><div class="nyseg-lifetime-import"><span>⇣ Imported / M01</span><b>{{ "{:,.1f}".format(lifetime_energy.imported_kwh) }} <small>kWh</small></b></div><div class="nyseg-lifetime-solar"><span>☀ Produced / SunRun</span><b>{{ "{:,.1f}".format(lifetime_energy.produced_kwh) }} <small>kWh</small></b></div><div class="nyseg-lifetime-home"><span>⌂ Consumed / EDC</span><b>{{ "{:,.1f}".format(lifetime_energy.consumed_kwh) }} <small>kWh</small></b></div><div class="nyseg-lifetime-export"><span>⇡ Exported / M02</span><b>{{ "{:,.1f}".format(lifetime_energy.exported_kwh) }} <small>kWh</small></b></div><strong class="{{ 'is-imported' if lifetime_energy.net_imported_kwh >= 0 else 'is-exported' }}">{{ "Net imported" if lifetime_energy.net_imported_kwh >= 0 else "Net exported" }}: {{ "{:,.1f}".format(lifetime_energy.net_imported_kwh|abs) }} kWh</strong><div class="nyseg-lifetime-performance"><span>Grid dependence <b>{{ "%.0f"|format(lifetime_energy.get('grid_dependence_pct', 0)) }}%</b></span><em><i style="width: {{ "%.0f"|format(lifetime_energy.get('grid_dependence_pct', 0)) }}%"></i></em><span>Solar coverage <b>{{ "%.0f"|format(lifetime_energy.get('solar_coverage_pct', 0)) }}%</b></span><em class="nyseg-flow-solar-meter"><i style="width: {{ "%.0f"|format(lifetime_energy.get('solar_coverage_pct', 0)) }}%"></i></em><small>☘ {{ "{:,.0f}".format(lifetime_energy.get('co2_avoided_lb', 0)) }} lb estimated CO₂ avoided</small></div></div><div id="nyseg-lifetime-energy-chart" aria-label="Year by year energy comparison"></div></div></section>
+</section>
+{% endif %}
 {% if interval_file.available and chart_rows %}
 <section class="nyseg-analytics-grid mb-4">
   <div class="card tracker-card nyseg-file-chart-card nyseg-story-chart-card"><div class="card-body"><div><p class="eyebrow mb-1">Daily energy comparison</p><h2 class="h5 mb-1">Solar production, meter flow, and estimated home demand</h2><p class="text-muted small mb-2">Follow the story: solar production, what NYSEG delivered (M01), what it received (M02), and estimated daily consumption (EDC).</p></div><div class="chart-popout-frame" data-chart-popout-label="Daily energy comparison"><button type="button" class="btn btn-contract btn-sm chart-popout-button" data-chart-popout>Pop Out</button><div data-chart-popout-content class="nyseg-chart-popout-content"><div class="nyseg-chart-controls" aria-label="Daily chart controls"><label>Range <select id="nyseg-daily-chart-range"><option value="14">Last 14 days</option><option value="30" selected>Last 30 days</option><option value="60">Last 60 days</option><option value="all">All available days</option></select></label><label>Style <select id="nyseg-daily-chart-style"><option value="area" selected>Vivid area</option><option value="line">Line + markers</option><option value="bar">Grouped bars</option></select></label></div><div id="nyseg-energy-story" class="nyseg-chart-story" aria-live="polite"></div><div id="nyseg-file-comparison-chart" class="nyseg-file-comparison-chart" aria-label="Daily energy comparison chart"></div></div></div></div></div>
@@ -157,6 +169,15 @@
   const hourlyReplayFaster = document.getElementById("nyseg-hourly-replay-faster");
   const hourlyReplayStatus = document.getElementById("nyseg-hourly-replay-status");
   const hourlyRows = {{ hourly_chart_rows|tojson }};
+  const dailyEnergyRows = rows;
+  const flowTimeline = document.getElementById("nyseg-energy-flow-chart");
+  const flowDate = document.getElementById("nyseg-energy-flow-date");
+  const flowPrevious = document.getElementById("nyseg-energy-flow-previous");
+  const flowNext = document.getElementById("nyseg-energy-flow-next");
+  const flowStatus = document.getElementById("nyseg-flow-change-status");
+  const timelineDate = document.getElementById("nyseg-energy-timeline-date");
+  const lifetimeChart = document.getElementById("nyseg-lifetime-energy-chart");
+  const yearlyEnergyRows = {{ yearly_energy_rows|tojson }};
   if (!hourlyChart || !hourlyStart || !hourlyEnd || !hourlyChartStyle || !hourlyPrevious || !hourlyNext || !hourlyReplay || !hourlyRows.length) return;
   const dates = [...new Set(hourlyRows.map((row) => row.date))].sort();
   const lastDate = dates[dates.length - 1];
@@ -166,6 +187,105 @@
   let replayDelay = 650;
   hourlyStart.min = dates[0]; hourlyStart.max = lastDate; hourlyStart.value = defaultStart;
   hourlyEnd.min = dates[0]; hourlyEnd.max = lastDate; hourlyEnd.value = lastDate;
+  const renderFlowTimeline = () => {
+    if (!flowTimeline || !timelineDate) return;
+    const dayRows = hourlyRows.filter((row) => row.date === timelineDate.value).sort((left, right) => left.hour - right.hour);
+    const hours = dayRows.map((row) => `${String(row.hour).padStart(2, "0")}:00`);
+    const daily = rows.find((row) => row.date === timelineDate.value) || {};
+    const solarTotal = Number(daily.production_kwh || 0);
+    const weights = dayRows.map((row) => Math.max(0, Math.sin(Math.PI * (Number(row.hour) - 6) / 12)));
+    const weightTotal = weights.reduce((total, weight) => total + weight, 0) || 1;
+    const solar = weights.map((weight) => solarTotal * weight / weightTotal);
+    const imported = dayRows.map((row) => Number(row.import_kwh || 0));
+    const exported = dayRows.map((row) => Number(row.export_kwh || 0));
+    const consumed = imported.map((value, index) => Math.max(0, value + solar[index] - exported[index]));
+    const shortHour = (hour) => {
+      const suffix = hour < 12 ? "a" : "p";
+      const displayed = hour % 12 || 12;
+      return `${displayed}${suffix}`;
+    };
+    const tickHours = hours.filter((_, index) => index % 3 === 0);
+    const tickLabels = dayRows.filter((_, index) => index % 3 === 0).map((row) => shortHour(Number(row.hour)));
+    Plotly.react(flowTimeline, [
+      { x: hours, y: solar, name: "SunRun produced · estimate", type: "bar", marker: { color: "#10b6df" }, hovertemplate: "%{x}<br>Estimated solar: %{y:.2f} kWh<extra></extra>" },
+      { x: hours, y: imported, name: "M01 imported", type: "bar", marker: { color: "#69747d" }, hovertemplate: "%{x}<br>M01 import: %{y:.2f} kWh<extra></extra>" },
+      { x: hours, y: consumed.map((value) => -value), name: "Estimated consumed", type: "bar", marker: { color: "#f28b39" }, hovertemplate: "%{x}<br>Estimated home use: %{customdata:.2f} kWh<extra></extra>", customdata: consumed },
+      { x: hours, y: exported.map((value) => -value), name: "M02 exported", type: "bar", marker: { color: "#9aa4ad" }, hovertemplate: "%{x}<br>M02 export: %{customdata:.2f} kWh<extra></extra>", customdata: exported }
+    ], { barmode: "relative", bargap: .16, margin: { l: 43, r: 12, t: 42, b: 36 }, height: Math.max(180, flowTimeline.clientHeight || 240), legend: { orientation: "h", x: 0, y: 1.24, font: { size: 9 } }, paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)", xaxis: { title: "Hour", tickmode: "array", tickvals: tickHours, ticktext: tickLabels, tickangle: 0, showgrid: false }, yaxis: { title: "kWh", gridcolor: "#d9e8ee", zeroline: true, zerolinecolor: "#62808f", zerolinewidth: 1.5 } }, { responsive: true, displayModeBar: false });
+  };
+  if (flowTimeline && timelineDate) {
+    timelineDate.innerHTML = dates.slice().reverse().map((day) => `<option value="${day}">${day}</option>`).join("");
+    timelineDate.value = flowDate?.value || lastDate;
+    timelineDate.addEventListener("change", renderFlowTimeline);
+    renderFlowTimeline();
+  }
+  const flowNumber = (value) => Number(value || 0);
+  const flowKwh = (value) => flowNumber(value).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  const updateFlowText = (selector, value) => {
+    const element = document.querySelector(selector);
+    if (element) element.textContent = value;
+  };
+  const updateFlowMeter = (selector, value) => {
+    const meter = document.querySelector(selector);
+    if (meter) meter.style.width = `${Math.max(0, Math.min(100, value))}%`;
+  };
+  const renderDailyFlow = () => {
+    if (!flowDate) return;
+    const daily = dailyEnergyRows.find((row) => row.date === flowDate.value);
+    if (!daily) return;
+    const imported = flowNumber(daily.delivered_kwh);
+    const produced = flowNumber(daily.production_kwh);
+    const exported = flowNumber(daily.received_kwh);
+    const consumed = flowNumber(daily.edc_kwh);
+    const solarUsed = Math.max(0, produced - exported);
+    const gridDependence = consumed ? (imported / consumed) * 100 : 0;
+    const solarCoverage = consumed ? (solarUsed / consumed) * 100 : 0;
+    const netGrid = imported - exported;
+    updateFlowText("[data-flow-import]", flowKwh(imported));
+    updateFlowText("[data-flow-produced]", flowKwh(produced));
+    updateFlowText("[data-flow-consumed]", flowKwh(consumed));
+    updateFlowText("[data-flow-export]", flowKwh(exported));
+    updateFlowText("[data-flow-grid-dependence]", `${Math.round(gridDependence)}%`);
+    updateFlowText("[data-flow-solar-coverage]", `${Math.round(solarCoverage)}%`);
+    updateFlowText("[data-flow-net-grid]", `${flowKwh(Math.abs(netGrid))} kWh ${netGrid >= 0 ? "imported" : "exported"}`);
+    updateFlowText("[data-flow-solar-impact]", `${flowKwh(produced * 0.855)} lb`);
+    updateFlowText("[data-flow-weather]", daily.weather_condition || "Unknown");
+    updateFlowText("[data-flow-weather-temperature]", daily.weather_high_f != null && daily.weather_low_f != null ? `${Math.round(flowNumber(daily.weather_high_f))}° / ${Math.round(flowNumber(daily.weather_low_f))}°F` : "Temperature unavailable");
+    updateFlowText("[data-flow-irradiance]", daily.irradiance_wm2 != null ? `${Math.round(flowNumber(daily.irradiance_wm2))} W/m²` : "—");
+    updateFlowText("[data-flow-sun-height]", daily.sun_elevation_deg != null ? `+${flowNumber(daily.sun_elevation_deg).toFixed(1)}°` : "—");
+    updateFlowMeter("[data-flow-grid-meter]", gridDependence);
+    updateFlowMeter("[data-flow-solar-meter]", solarCoverage);
+    if (flowStatus) flowStatus.textContent = `Showing ${daily.date}`;
+    if (timelineDate) {
+      timelineDate.value = daily.date;
+      renderFlowTimeline();
+    }
+    if (flowPrevious) flowPrevious.disabled = flowDate.selectedIndex <= 0;
+    if (flowNext) flowNext.disabled = flowDate.selectedIndex >= flowDate.options.length - 1;
+  };
+  const navigateFlowDay = (direction) => {
+    if (!flowDate) return;
+    const optionIndex = flowDate.selectedIndex + direction;
+    if (optionIndex < 0 || optionIndex >= flowDate.options.length) return;
+    flowDate.selectedIndex = optionIndex;
+    renderDailyFlow();
+  };
+  if (flowDate) {
+    flowDate.addEventListener("change", renderDailyFlow);
+    renderDailyFlow();
+  }
+  flowPrevious?.addEventListener("click", () => navigateFlowDay(-1));
+  flowNext?.addEventListener("click", () => navigateFlowDay(1));
+  if (lifetimeChart && yearlyEnergyRows.length) {
+    const years = yearlyEnergyRows.map((row) => row.year);
+    const values = (field) => yearlyEnergyRows.map((row) => Number(row[field] || 0));
+    Plotly.react(lifetimeChart, [
+      { x: years, y: values("produced_kwh"), name: "SunRun produced", type: "bar", marker: { color: "#10b6df" } },
+      { x: years, y: values("consumed_kwh").map((value) => -value), name: "EDC consumed", type: "bar", marker: { color: "#f28b39" } },
+      { x: years, y: values("imported_kwh"), name: "M01 imported", type: "bar", marker: { color: "#66717b" } },
+      { x: years, y: values("exported_kwh").map((value) => -value), name: "M02 exported", type: "bar", marker: { color: "#9aa4ad" } }
+    ], { barmode: "relative", bargap: .28, margin: { l: 46, r: 10, t: 72, b: 36 }, height: Math.max(220, lifetimeChart.clientHeight || 245), legend: { orientation: "h", x: 0, y: 1.48, font: { size: 10 } }, paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)", xaxis: { title: "Year", type: "category", showgrid: false }, yaxis: { title: "kWh", gridcolor: "#d9e8ee", zeroline: true, zerolinecolor: "#62808f", zerolinewidth: 1.5 } }, { responsive: true, displayModeBar: false });
+  }
   const renderHourlyChart = () => {
     if (hourlyStart.value > hourlyEnd.value) hourlyEnd.value = hourlyStart.value;
     const selected = hourlyRows.filter((row) => row.date >= hourlyStart.value && row.date <= hourlyEnd.value);

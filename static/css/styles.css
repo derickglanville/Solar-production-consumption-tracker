@@ -3070,25 +3070,90 @@ body[data-page="dashboard"].dashboard-compact-mode .btn-contract {
 .usage-reference-table th:nth-child(3) { width: 28%; }
 
 .circuit-reference-table-scroll {
-  max-height: 57vh;
+  max-height: none;
+  overflow-x: auto;
+  overflow-y: visible;
+  background: linear-gradient(145deg, #f3fbff 0%, #f8fbff 46%, #f7fffb 100%);
+  border: 1px solid #b6d5e3;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.92);
 }
 
 .circuit-reference-table {
-  min-width: 900px;
+  min-width: 940px;
 }
 
+.reference-editor-card:has(.circuit-reference-table) {
+  border: 1px solid #b7d9e7;
+  box-shadow: 0 0.75rem 1.75rem rgba(34, 108, 146, 0.13);
+}
+
+.circuit-map-heading {
+  align-items: center;
+  background: linear-gradient(110deg, #e1f4ff, #eef9ff 48%, #e8fff2);
+  border: 1px solid #b9dfed;
+  border-radius: 0.85rem;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  padding: 0.8rem 0.95rem;
+}
+
+.circuit-map-heading h2 { color: #145a7e; }
+.circuit-map-heading p:last-child { color: #507486; font-size: 0.78rem; }
+
+.circuit-map-summary { display: flex; flex-wrap: wrap; gap: 0.45rem; justify-content: flex-end; }
+.circuit-map-summary span { background: rgba(255, 255, 255, 0.88); border: 1px solid #b6dce9; border-radius: 999px; color: #28647e; font-size: 0.71rem; font-weight: 700; padding: 0.38rem 0.6rem; white-space: nowrap; }
+.circuit-map-summary span:last-child { background: #fff2e0; border-color: #edc28e; color: #9a5a16; }
+
 .circuit-reference-table th:first-child { width: 13%; }
-.circuit-reference-table th:nth-child(2) { width: 31%; }
-.circuit-reference-table th:nth-child(3) { width: 46%; }
+.circuit-reference-table th:nth-child(2) { width: 8%; }
+.circuit-reference-table th:nth-child(3) { width: 27%; }
+.circuit-reference-table th:nth-child(4) { width: 43%; }
+.circuit-reference-table .reference-action-column { width: 9%; }
+
+.circuit-reference-table thead th {
+  background: linear-gradient(135deg, #176a91, #2781a5);
+  border-bottom: 2px solid #0f587c;
+  color: #fff;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.15);
+}
+
+.circuit-reference-table tbody tr:nth-child(even) td { background: rgba(49, 129, 166, 0.07); }
+.circuit-reference-table tbody tr:hover td { background: rgba(255, 221, 133, 0.28); }
 
 .circuit-reference-table .circuit-number-input {
+  background: linear-gradient(135deg, #e2f5ff, #f8fdff);
+  border-color: #85bed7;
+  color: #145b80;
   font-weight: 700;
   text-align: center;
 }
 
+.circuit-reference-table .circuit-amperage-input {
+  background: #f8fcff;
+  border-color: #b6d4e1;
+  color: #23566c;
+  margin-inline: auto;
+  max-width: 5.5rem;
+  text-align: center;
+}
+
+.circuit-reference-table .circuit-amperage-50 {
+  background: #ffe1df;
+  border-color: #e8928c;
+  color: #8f302c;
+  font-weight: 800;
+}
+
 .circuit-row-probable td { background: rgba(225, 166, 63, 0.18); }
 .circuit-row-unknown td { background: rgba(214, 92, 74, 0.16); }
-.circuit-row-240v td { background: rgba(119, 159, 180, 0.14); }
+.circuit-row-240v td { background: rgba(120, 93, 183, 0.13) !important; }
+.circuit-row-240v .circuit-number-input { background: #eee8ff; border-color: #aa98df; color: #5d4697; }
+
+@media (max-width: 700px) {
+  .circuit-map-heading { align-items: stretch; flex-direction: column; }
+  .circuit-map-summary { justify-content: flex-start; }
+}
 
 .circuit-safety-input {
   border-color: rgba(214, 92, 74, 0.38);
@@ -3865,6 +3930,19 @@ body[data-page="dashboard"].dashboard-compact-mode .btn-contract {
 .nyseg-file-header .eyebrow { color: #23779d; letter-spacing: .12em; }
 .nyseg-file-header h1 { color: #153f58; font-size: clamp(1.45rem, 2.1vw, 2rem); }
 .nyseg-file-header code { background: #f7eafe; border-radius: .3rem; color: #aa2474; font-size: .71rem; padding: .12rem .28rem; }
+.nyseg-energy-flow { background: linear-gradient(135deg, #fbfdff, #f4f9ff 52%, #f6fffa); border: 1px solid #b9dbe8; border-radius: 1rem; box-shadow: 0 .55rem 1.25rem rgba(30, 91, 117, .10); margin-top: .9rem; overflow: hidden; }
+.nyseg-energy-flow-heading { align-items: center; background: linear-gradient(90deg, #e5f7ff, #effff6); border-bottom: 1px solid #cce3ec; display: flex; justify-content: space-between; padding: .62rem .8rem; }.nyseg-energy-flow-heading .eyebrow { font-size: .65rem; }.nyseg-energy-flow-heading h2 { color: #194f69; }.nyseg-energy-flow-heading h2 small { color: #4a7c90; display: block; font-size: .62rem; font-weight: 700; margin-top: .16rem; }.nyseg-energy-flow-heading > span { background: #fff; border: 1px solid #c9e1ea; border-radius: 999px; color: #397087; font-size: .62rem; font-weight: 700; padding: .28rem .45rem; }
+.nyseg-energy-flow-layout { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(180px, .75fr); }.nyseg-flow-diagram { align-items: center; display: grid; grid-template-columns: 1fr 32px 1fr; grid-template-rows: auto 25px auto; justify-items: center; padding: .75rem .75rem .85rem; }.nyseg-flow-node { align-content: center; background: #fff; border: 2px solid #a9cad9; border-radius: 50%; display: grid; height: 6.1rem; justify-items: center; padding: .35rem; text-align: center; width: 6.1rem; }.nyseg-flow-node strong { color: #174f69; font-size: 1.05rem; line-height: 1; }.nyseg-flow-node small { color: #587687; font-size: .59rem; line-height: 1.15; }.nyseg-flow-icon { font-size: 1.1rem; line-height: 1; }.nyseg-flow-import { border-color: #8695a2; grid-column: 1; grid-row: 1; }.nyseg-flow-import .nyseg-flow-icon { color: #61717c; }.nyseg-flow-solar { border-color: #15b9e6; grid-column: 3; grid-row: 1; }.nyseg-flow-solar .nyseg-flow-icon { color: #099fcc; }.nyseg-flow-home { border-color: #f08b48; grid-column: 2; grid-row: 2 / span 2; height: 6.7rem; width: 6.7rem; }.nyseg-flow-home .nyseg-flow-icon { color: #ea7b35; }.nyseg-flow-export { border-color: #82909a; grid-column: 2; grid-row: 4; }.nyseg-flow-export .nyseg-flow-icon { color: #60717c; }.nyseg-flow-arrow { color: #55717e; font-size: 1.2rem; font-style: normal; font-weight: 700; }.nyseg-flow-arrow-import { grid-column: 1; grid-row: 2; }.nyseg-flow-arrow-solar { grid-column: 3; grid-row: 2; }.nyseg-flow-arrow-export { grid-column: 2; grid-row: 4; margin-top: -1.1rem; }
+.nyseg-flow-performance { background: linear-gradient(180deg, #f4f0ff, #fbfaff); border-left: 1px solid #d9d0ee; padding: .8rem; }.nyseg-flow-performance > p { color: #7862a1; font-size: .67rem; font-weight: 800; letter-spacing: .08em; margin: 0 0 .5rem; text-transform: uppercase; }.nyseg-flow-performance > div { border-top: 1px solid #e1dcef; display: grid; gap: .18rem; padding: .52rem 0; }.nyseg-flow-performance span { color: #3c5364; font-size: .72rem; font-weight: 700; }.nyseg-flow-performance b { color: #29779b; font-size: .92rem; }.nyseg-flow-performance em { background: #dbe8f1; border-radius: 999px; display: block; height: .34rem; overflow: hidden; }.nyseg-flow-performance em i { background: linear-gradient(90deg, #0ba8d0, #31c7db); border-radius: inherit; display: block; height: 100%; }.nyseg-flow-performance .nyseg-flow-solar-meter i { background: linear-gradient(90deg, #f0a43a, #ffd55d); }.nyseg-flow-performance small { color: #6a7d89; font-size: .61rem; line-height: 1.25; }
+.nyseg-flow-timeline { border-top: 1px solid #cce3ec; padding: .7rem .8rem .15rem; }.nyseg-flow-timeline-heading { align-items: center; display: flex; gap: .7rem; justify-content: space-between; }.nyseg-flow-timeline h3 { color: #205c77; font-size: .82rem; }.nyseg-flow-timeline small { color: #637d8b; display: block; font-size: .64rem; margin-top: .12rem; }.nyseg-flow-timeline label { align-items: center; color: #3b6b80; display: inline-flex; font-size: .68rem; font-weight: 700; gap: .3rem; white-space: nowrap; }.nyseg-flow-timeline select { background: #fff; border: 1px solid #aad0df; border-radius: .35rem; color: #205d77; font: inherit; padding: .22rem .35rem; }.nyseg-flow-timeline > div:last-child { height: 205px; width: 100%; }
+.nyseg-lifetime-flow { background: linear-gradient(135deg, #f6fbff, #faf8ff); border-top: 1px solid #cce3ec; padding: .75rem .8rem .25rem; }.nyseg-lifetime-flow-heading { align-items: center; display: flex; justify-content: space-between; }.nyseg-lifetime-flow-heading h3 { color: #205c77; font-size: .84rem; }.nyseg-lifetime-flow-heading > span { color: #607987; font-size: .64rem; font-weight: 700; }.nyseg-lifetime-flow-layout { align-items: stretch; display: grid; gap: .7rem; grid-template-columns: minmax(190px, .75fr) minmax(0, 1.5fr); margin-top: .55rem; }.nyseg-lifetime-metrics { display: grid; gap: .35rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }.nyseg-lifetime-metrics > div { background: #fff; border: 1px solid #d2e2ea; border-radius: .48rem; display: grid; gap: .12rem; padding: .4rem; }.nyseg-lifetime-metrics span { color: #56717f; font-size: .59rem; font-weight: 700; }.nyseg-lifetime-metrics b { color: #205c77; font-size: .78rem; }.nyseg-lifetime-metrics b small { font-size: .58rem; font-weight: 600; }.nyseg-lifetime-import { border-left: .22rem solid #69747d !important; }.nyseg-lifetime-solar { border-left: .22rem solid #10b6df !important; }.nyseg-lifetime-home { border-left: .22rem solid #f28b39 !important; }.nyseg-lifetime-export { border-left: .22rem solid #9aa4ad !important; }.nyseg-lifetime-metrics > strong { border-radius: .48rem; font-size: .67rem; grid-column: 1 / -1; padding: .35rem .45rem; text-align: center; }.nyseg-lifetime-metrics .is-imported { background: #fff0e5; color: #b75b1a; }.nyseg-lifetime-metrics .is-exported { background: #e4f7ec; color: #167447; }.nyseg-lifetime-flow-layout > div:last-child { height: 245px; min-width: 0; }
+.nyseg-flow-card-grid { align-items: stretch; display: grid; gap: 1rem; grid-template-columns: repeat(3, minmax(0, 1fr)); }.nyseg-flow-card { border: 1px solid #b9dbe8; border-radius: 1rem; box-shadow: 0 .55rem 1.25rem rgba(30, 91, 117, .10); margin-top: 0; min-width: 0; overflow: hidden; }.nyseg-flow-card .nyseg-energy-flow-layout { grid-template-columns: 1fr; }.nyseg-flow-card .nyseg-flow-diagram { padding: .55rem; }.nyseg-flow-card .nyseg-flow-node { height: 4.7rem; width: 4.7rem; }.nyseg-flow-card .nyseg-flow-home { height: 5.15rem; width: 5.15rem; }.nyseg-flow-card .nyseg-flow-node strong { font-size: .9rem; }.nyseg-flow-card .nyseg-flow-node small { font-size: .52rem; }.nyseg-flow-card .nyseg-flow-performance { border-left: 0; border-top: 1px solid #d9d0ee; display: grid; gap: .45rem; grid-template-columns: repeat(2, minmax(0, 1fr)); padding: .55rem .65rem; }.nyseg-flow-card .nyseg-flow-performance > p { grid-column: 1 / -1; margin-bottom: 0; }.nyseg-flow-card .nyseg-flow-performance > div { padding: .3rem 0; }.nyseg-flow-card .nyseg-flow-timeline { border-top: 0; padding: .7rem .7rem .15rem; }.nyseg-flow-card .nyseg-flow-timeline > div:last-child { height: 240px; }.nyseg-flow-card .nyseg-lifetime-flow-layout { grid-template-columns: 1fr; }.nyseg-flow-card .nyseg-lifetime-flow-layout > div:last-child { height: 240px; }.nyseg-flow-card .nyseg-lifetime-metrics { margin-top: .1rem; }.nyseg-flow-card .nyseg-lifetime-flow-heading { padding-bottom: .28rem; }.nyseg-flow-day-nav { align-items: center; display: flex; gap: .22rem; }.nyseg-flow-day-nav .btn { font-size: 1.05rem; line-height: 1; padding: .22rem .45rem; }.nyseg-flow-day-nav select { background: #fff; border: 1px solid #aad0df; border-radius: .35rem; color: #205d77; font-size: .66rem; font-weight: 700; padding: .25rem .3rem; }.nyseg-flow-day-nav .btn:disabled { opacity: .4; }
+.nyseg-flow-card .nyseg-flow-diagram { display: block; height: 17.8rem; padding: 0; position: relative; }.nyseg-flow-card .nyseg-flow-connectors { height: 100%; inset: 0; overflow: visible; pointer-events: none; position: absolute; width: 100%; }.nyseg-flow-card .nyseg-flow-connector { fill: none; stroke: #7b8d96; stroke-linecap: round; stroke-linejoin: round; stroke-width: 3.1; }.nyseg-flow-card .nyseg-flow-connector-grid { stroke: #7b8791; }.nyseg-flow-card .nyseg-flow-connector-solar { stroke: #27aeca; }.nyseg-flow-card .nyseg-flow-connector-export { stroke: #74818a; }.nyseg-flow-card .nyseg-flow-connectors marker path { fill: #71808a; stroke: none; }.nyseg-flow-card .nyseg-flow-node { position: absolute; transform: translateX(-50%); z-index: 1; }.nyseg-flow-card .nyseg-flow-import { left: 22.7%; top: .7rem; }.nyseg-flow-card .nyseg-flow-solar { left: 77.3%; top: .7rem; }.nyseg-flow-card .nyseg-flow-home { left: 50%; top: 7.65rem; }.nyseg-flow-card .nyseg-flow-export { left: 50%; top: 13.15rem; }
+.nyseg-flow-context { background: #f9fdff; border-bottom: 1px solid #d5e8ef; display: grid; gap: .4rem; grid-template-columns: repeat(3, minmax(0, 1fr)); padding: .48rem .7rem; }.nyseg-flow-context > div { border-right: 1px solid #dce9ee; display: grid; gap: .05rem; min-width: 0; padding-right: .35rem; }.nyseg-flow-context > div:last-child { border-right: 0; }.nyseg-flow-context span { color: #4f7385; font-size: .57rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }.nyseg-flow-context b { color: #215d79; font-size: .76rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.nyseg-flow-context small { color: #718692; font-size: .56rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.nyseg-lifetime-performance { border-top: 1px solid #d8e4ea; display: grid; gap: .2rem; grid-column: 1 / -1; padding-top: .38rem; }.nyseg-lifetime-performance span { color: #526f7d; display: flex; font-size: .6rem; justify-content: space-between; }.nyseg-lifetime-performance span b { color: #247797; font-size: .65rem; }.nyseg-lifetime-performance em { background: #dce8ed; border-radius: 999px; display: block; height: .25rem; overflow: hidden; }.nyseg-lifetime-performance em i { background: linear-gradient(90deg, #10b6df, #2ac8dc); border-radius: inherit; display: block; height: 100%; }.nyseg-lifetime-performance .nyseg-flow-solar-meter i { background: linear-gradient(90deg, #f0a43a, #ffd55d); }.nyseg-lifetime-performance small { color: #418264; font-size: .57rem; font-weight: 700; }
+.nyseg-flow-card .nyseg-flow-diagram { height: 18.45rem; }.nyseg-flow-card span.nyseg-flow-connector { border-style: solid; border-width: 0; display: block; position: absolute; transform: none; z-index: 0; }.nyseg-flow-card .nyseg-flow-connector::after { border: solid currentColor; border-width: 0 2px 2px 0; content: ""; height: .38rem; position: absolute; width: .38rem; }.nyseg-flow-card .nyseg-flow-connector-grid { border-bottom: 1.5px solid currentColor !important; border-left: 1.5px solid currentColor !important; border-radius: 0 0 0 .6rem; color: #7b8791; height: 2rem; left: 22.7%; top: 5.35rem; width: 14.8%; }.nyseg-flow-card .nyseg-flow-connector-grid::after { bottom: -.28rem; right: -.1rem; transform: rotate(-45deg); }.nyseg-flow-card .nyseg-flow-connector-solar { border-bottom: 1.5px solid currentColor !important; border-right: 1.5px solid currentColor !important; border-radius: 0 0 .6rem 0; color: #1fa7cc; height: 2rem; left: 62.5%; top: 5.35rem; width: 14.8%; }.nyseg-flow-card .nyseg-flow-connector-solar::after { bottom: -.28rem; left: -.1rem; transform: rotate(45deg); }.nyseg-flow-card .nyseg-flow-connector-export { border-left: 1.5px solid currentColor !important; color: #74818a; height: 1rem; left: 50%; top: 12.8rem; }.nyseg-flow-card .nyseg-flow-connector-export::after { bottom: -.05rem; left: -.25rem; transform: rotate(45deg); }.nyseg-flow-card .nyseg-flow-export { top: 13.95rem; }
+@media (max-width: 1180px) { .nyseg-flow-card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }.nyseg-flow-card:last-child { grid-column: 1 / -1; } }
+@media (max-width: 720px) { .nyseg-flow-card-grid { grid-template-columns: 1fr; }.nyseg-flow-card:last-child { grid-column: auto; } }
+@media (max-width: 620px) { .nyseg-energy-flow-heading { align-items: flex-start; flex-direction: column; gap: .35rem; }.nyseg-energy-flow-layout { grid-template-columns: 1fr; }.nyseg-flow-performance { border-left: 0; border-top: 1px solid #d9d0ee; display: grid; gap: .45rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }.nyseg-flow-performance > p { grid-column: 1 / -1; margin-bottom: 0; }.nyseg-flow-performance > div { padding-top: .4rem; }.nyseg-flow-diagram { padding-inline: .35rem; }.nyseg-flow-timeline-heading, .nyseg-lifetime-flow-heading { align-items: flex-start; flex-direction: column; }.nyseg-flow-timeline > div:last-child { height: 190px; }.nyseg-lifetime-flow-layout { grid-template-columns: 1fr; }.nyseg-lifetime-flow-layout > div:last-child { height: 205px; } }
 .nyseg-file-header-side { gap: .85rem; grid-template-rows: auto auto minmax(0, 1fr); }
 .nyseg-file-actions {
   background: linear-gradient(110deg, #e7f6ff 0%, #f7fbfe 47%, #fff3d3 100%);
