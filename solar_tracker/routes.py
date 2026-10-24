@@ -14,7 +14,6 @@ from urllib.parse import urlencode
 from urllib.request import urlopen
 from typing import Dict, List, Optional, Tuple
 from dateutil.tz import gettz
-
 import pandas as pd
 from flask import Blueprint, Response, jsonify, redirect, render_template, request, send_file, send_from_directory, url_for
 from plotly.offline.offline import get_plotlyjs
@@ -235,12 +234,36 @@ def nyseg_sync_process_is_active(pid: Optional[int]) -> bool:
 def clear_stale_nyseg_sync_state() -> None:
     """Recover after an interrupted runner leaves its lock or running status behind."""
     pid = nyseg_sync_process_pid()
-    if pid and not nyseg_sync_process_is_active(pid):
+    started_at = None
+    try:
+        process_state = json.loads(NYSEG_DAILY_SYNC_PROCESS_PATH.read_text(encoding="utf-8"))
+        started_at = datetime.fromisoformat(str(process_state.get("started_at") or ""))
+        if started_at.tzinfo is None:
+            started_at = started_at.replace(tzinfo=timezone.utc)
+    except (OSError, ValueError, TypeError, AttributeError):
+        pass
+    if started_at is None and NYSEG_DAILY_SYNC_LOCK_PATH.is_file():
+        try:
+            started_at = datetime.fromtimestamp(
+                NYSEG_DAILY_SYNC_LOCK_PATH.stat().st_mtime
+            ).astimezone()
+        except OSError:
+            pass
+    # A Task Scheduler process may reject a browser-hosted process probe even
+    # while it is still running.  Keep its markers for the full retry window
+    # instead of treating a failed probe as proof that the run is stale.
+    stale_after = datetime.now().astimezone() - timedelta(hours=2)
+    is_old_enough_to_clear = started_at is not None and started_at.astimezone() < stale_after
+    if pid and is_old_enough_to_clear and not nyseg_sync_process_is_active(pid):
         try:
             NYSEG_DAILY_SYNC_PROCESS_PATH.unlink()
         except FileNotFoundError:
             pass
-    if NYSEG_DAILY_SYNC_LOCK_PATH.is_file() and not NYSEG_DAILY_SYNC_PROCESS_PATH.is_file():
+    if (
+        NYSEG_DAILY_SYNC_LOCK_PATH.is_file()
+        and not NYSEG_DAILY_SYNC_PROCESS_PATH.is_file()
+        and is_old_enough_to_clear
+    ):
         try:
             NYSEG_DAILY_SYNC_LOCK_PATH.unlink()
         except FileNotFoundError:
@@ -781,7 +804,7 @@ def recent_open_meteo_weather(days: List[str]) -> Dict[str, Dict[str, object]]:
 
 
 def recent_open_meteo_irradiance_peaks(days: List[str]) -> Dict[str, int]:
-    """Fill missing recent grid days from the same hourly GHI field used by Daily Entry."""
+    """Fill missing grid days from historical hourly GHI, with live forecast fallback."""
     today = tracker_today()
     recent = sorted({day for day in days if (today - timedelta(days=14)).isoformat() <= day <= today.isoformat()})
     if not recent:
@@ -795,25 +818,36 @@ def recent_open_meteo_irradiance_peaks(days: List[str]) -> Dict[str, int]:
         "longitude": YORKTOWN_LONGITUDE,
         "start_date": recent[0],
         "end_date": recent[-1],
-        "past_days": 14,
         "hourly": "shortwave_radiation_instant",
         "timezone": "America/New_York",
     })
-    try:
-        with urlopen(f"https://api.open-meteo.com/v1/forecast?{query}", timeout=5) as response:
+
+    def peaks_from(endpoint: str) -> Dict[str, int]:
+        with urlopen(f"{endpoint}?{query}", timeout=8) as response:
             hourly = json.load(response).get("hourly", {})
-        values = {}
+        values: Dict[str, int] = {}
         for timestamp, irradiance in zip(hourly.get("time", []), hourly.get("shortwave_radiation_instant", [])):
-            if irradiance is None:
-                continue
-            day = str(timestamp)[:10]
-            values[day] = max(values.get(day, 0), round(float(irradiance)))
-        _recent_irradiance_cache.update(key=key, expires=now + timedelta(minutes=30), values=values)
+            if irradiance is not None:
+                day = str(timestamp)[:10]
+                values[day] = max(values.get(day, 0), round(float(irradiance)))
         return values
+
+    try:
+        # This endpoint retains actual, recently completed days after the live
+        # forecast window changes, so the grid keeps its daily irradiance peak.
+        values = peaks_from("https://historical-forecast-api.open-meteo.com/v1/forecast")
     except (OSError, ValueError, TypeError, KeyError):
-        # An unavailable weather service must not prevent the bill grid from loading.
-        _recent_irradiance_cache.update(key=key, expires=now + timedelta(minutes=5), values={})
-        return {}
+        try:
+            # Keep the live service as a short-term fallback for today's data.
+            values = peaks_from("https://api.open-meteo.com/v1/forecast")
+        except (OSError, ValueError, TypeError, KeyError):
+            values = {}
+    _recent_irradiance_cache.update(
+        key=key,
+        expires=now + timedelta(minutes=30 if values else 5),
+        values=values,
+    )
+    return values
 
 YORKTOWN_LATITUDE = 41.2706
 YORKTOWN_LONGITUDE = -73.7774
@@ -918,7 +952,7 @@ def nyseg_usage_file():
     for row in [*interval_file.get("daily_rows", []), *interval_file.get("rows", [])]:
         row["sunrun_power_kwh"] = sunrun_by_date.get(row["Date"], {}).get("production_kwh")
         row["daily_irradiance_wm2"] = irradiance_by_date.get(row["Date"])
-        row["daily_irradiance_source"] = "Open-Meteo recent hourly data" if row["Date"] in forecast_irradiance else "Saved Daily Entry or historical archive" if row["daily_irradiance_wm2"] is not None else "Unavailable"
+        row["daily_irradiance_source"] = "Open-Meteo historical forecast hourly data" if row["Date"] in forecast_irradiance else "Saved Daily Entry or historical archive" if row["daily_irradiance_wm2"] is not None else "Unavailable"
         if grouped or "Start Time" not in row:
             if row["Date"] not in peak_angle_by_date:
                 peak_angle_by_date[row["Date"]] = daily_peak_sun_elevation(row["Date"])
@@ -1071,20 +1105,28 @@ def nyseg_usage_file():
     }
     # The newest complete day gives the downloaded-file page a quick visual
     # explanation of where energy came from and where it went.
-    flow_dates = sorted(
-        row["date"] for row in chart_rows if row.get("production_kwh") is not None
-    )
+    # The day selector follows the downloaded NYSEG file, even when SunRun
+    # production has not yet arrived for a particular day.  That keeps the
+    # selected date visible and lets the grid values remain reviewable.
+    flow_dates = sorted(row["date"] for row in chart_rows)
     requested_flow_date = request.args.get("flow_date")
     flow_row = next(
-        (
-            row for row in chart_rows
-            if row["date"] == requested_flow_date and row.get("production_kwh") is not None
-        ),
+        (row for row in chart_rows if row["date"] == requested_flow_date),
         None,
     )
     if flow_row is None:
+        # Prefer the latest downloaded NYSEG day that already has the same
+        # weather context displayed in the grid.  The SunRun portal can have
+        # a newer pending row before NYSEG and weather data are complete.
         flow_row = next(
-            (row for row in chart_rows if row.get("production_kwh") is not None),
+            (
+                row for row in chart_rows
+                if row.get("weather_condition") not in {None, "", "Unknown"}
+                and row.get("weather_high_f") is not None
+                and row.get("weather_low_f") is not None
+                and row.get("irradiance_wm2") is not None
+                and row.get("sun_elevation_deg") is not None
+            ),
             chart_rows[0] if chart_rows else None,
         )
     energy_flow = None

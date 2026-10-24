@@ -30,7 +30,20 @@ for ($attempt = 1; $attempt -le $maximumAttempts; $attempt++) {
         try {
             $status = Get-Content -LiteralPath (Join-Path $logDirectory 'nyseg-daily-sync-status.json') -Raw | ConvertFrom-Json
             $history = Get-Content -LiteralPath (Join-Path $projectRoot 'JSON\Daily_NYSEG_Load_History.json') -Raw | ConvertFrom-Json
-            $completedAt = [datetimeoffset]::Parse($status.completed_at)
+            $completedAtText = [string]$status.completed_at
+            if ([string]::IsNullOrWhiteSpace($completedAtText)) {
+                throw "The sync runner ended with status '$($status.status)' but did not write a completion timestamp."
+            }
+            try {
+                $completedAt = [datetimeoffset]::Parse(
+                    $completedAtText,
+                    [Globalization.CultureInfo]::InvariantCulture,
+                    [Globalization.DateTimeStyles]::RoundtripKind
+                )
+            }
+            catch {
+                throw "The sync runner wrote an invalid completion timestamp '$completedAtText'."
+            }
             $today = Get-Date -Format 'yyyy-MM-dd'
             $historyRecord = $history.records | Where-Object { $_.date -eq $today -and $_.status -eq 'Success' } | Select-Object -First 1
             if ($status.status -ne 'success' -or $status.operation -ne 'sync' -or $completedAt.LocalDateTime -lt $attemptStartedAt -or -not $historyRecord) {

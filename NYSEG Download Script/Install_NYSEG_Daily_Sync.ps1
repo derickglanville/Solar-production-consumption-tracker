@@ -4,7 +4,8 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
-$settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -ExecutionTimeLimit (New-TimeSpan -Minutes 20) -MultipleInstances IgnoreNew
+# The retry workflow can span its initial run plus three 20-minute waits.
+$settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -ExecutionTimeLimit (New-TimeSpan -Minutes 90) -MultipleInstances IgnoreNew
 $principal = New-ScheduledTaskPrincipal -UserId $currentUser -LogonType Interactive -RunLevel Limited
 
 $importTaskName = 'Solar Energy Tracker - NYSEG Daily Sync'
