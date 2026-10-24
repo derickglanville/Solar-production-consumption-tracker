@@ -10,6 +10,7 @@ from typing import Iterable
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 SUNRUN_CSV_PATH = PROJECT_ROOT / "SunRun Data" / "Sunrun_Daily_Production_Data.csv"
+SUNRUN_DOWNLOADS_DIRECTORY = PROJECT_ROOT / "SunRun Data" / "Script" / "downloads"
 _DAILY_ROW_LOCK = Lock()
 
 
@@ -38,19 +39,40 @@ def load_sunrun_daily_production() -> dict:
             "latest_available_date": None,
         }
 
-    parsed_rows: list[tuple[date, float, float]] = []
-    with SUNRUN_CSV_PATH.open("r", encoding="utf-8-sig", newline="") as handle:
-        reader = csv.DictReader(handle)
-        for record in reader:
-            entry_date_text = str(record.get("Date", "")).strip().strip('"')
-            if not entry_date_text:
+    def parse_rows(path: Path) -> list[tuple[date, float, float]]:
+        parsed: list[tuple[date, float, float]] = []
+        with path.open("r", encoding="utf-8-sig", newline="") as handle:
+            reader = csv.DictReader(handle)
+            for record in reader:
+                entry_date_text = str(record.get("Date", "")).strip().strip('"')
+                if not entry_date_text:
+                    continue
+                try:
+                    entry_date = date.fromisoformat(entry_date_text)
+                except ValueError:
+                    continue
+                parsed.append((
+                    entry_date,
+                    _parse_float(record.get("Solar Produced (kWh)")),
+                    _parse_float(record.get("End-of-Day Meter Reading (kWh)")),
+                ))
+        return parsed
+
+    source_path = SUNRUN_CSV_PATH
+    parsed_rows = parse_rows(source_path)
+    # A portal job can briefly replace the primary file with today's pending
+    # zero-value row.  Preserve the visible history by using the newest saved
+    # portal download with more records until the primary file is complete.
+    if len(parsed_rows) <= 1 and SUNRUN_DOWNLOADS_DIRECTORY.is_dir():
+        for candidate in sorted(SUNRUN_DOWNLOADS_DIRECTORY.glob("sunrun_production_*.csv"), reverse=True):
+            try:
+                candidate_rows = parse_rows(candidate)
+            except OSError:
                 continue
-
-            entry_date = date.fromisoformat(entry_date_text)
-            production_kwh = _parse_float(record.get("Solar Produced (kWh)"))
-            end_meter_kwh = _parse_float(record.get("End-of-Day Meter Reading (kWh)"))
-
-            parsed_rows.append((entry_date, production_kwh, end_meter_kwh))
+            if len(candidate_rows) > len(parsed_rows):
+                parsed_rows = candidate_rows
+                source_path = candidate
+                break
 
     rows: list[SunrunProductionRow] = []
     previous_end_meter_kwh: float | None = None
@@ -87,7 +109,7 @@ def load_sunrun_daily_production() -> dict:
 
     return {
         "available": True,
-        "source_path": str(SUNRUN_CSV_PATH),
+        "source_path": str(source_path),
         "rows": [
             {
                 "entry_date": row.entry_date.isoformat(),
