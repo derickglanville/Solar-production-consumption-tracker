@@ -3,7 +3,9 @@ import {
   collection,
   doc,
   getDoc,
+  getDocFromServer,
   getDocs,
+  getDocsFromServer,
   initializeFirestore,
   onSnapshot,
   orderBy,
@@ -995,11 +997,13 @@ async function loadFirestoreRestState() {
 
 async function loadFirestoreState(db) {
   try {
-    const configSnapshot = await withTimeout(getDoc(doc(db, configCollectionName, configDocumentId)), 8000, "Firebase SDK configuration request timed out.");
+    // Safari can restore a static page from its page cache days after it was
+    // opened. Always request the Firestore server copy, not an SDK cache result.
+    const configSnapshot = await withTimeout(getDocFromServer(doc(db, configCollectionName, configDocumentId)), 8000, "Firebase SDK configuration request timed out.");
     const config = configSnapshot.exists() ? mergeConfig(configSnapshot.data()) : mergeConfig();
     meterSimulationCheckpoints = normalizeMeterSimulationCheckpoints(config.meter_simulation_checkpoints);
     const entryQuery = query(collection(db, entryCollectionName), orderBy("entry_date"));
-    const entrySnapshot = await withTimeout(getDocs(entryQuery), 8000, "Firebase SDK entries request timed out.");
+    const entrySnapshot = await withTimeout(getDocsFromServer(entryQuery), 8000, "Firebase SDK entries request timed out.");
     const entries = entrySnapshot.docs.map((docSnapshot) => normalizeEntry({ entry_date: docSnapshot.data().entry_date || docSnapshot.id, ...docSnapshot.data() }));
     return { config, entries: applySunrunProductionToEntries(entries), connection: "sdk" };
   } catch (sdkError) {
@@ -5613,6 +5617,30 @@ async function bootDashboard(db) {
   }
 }
 
+
+let mobileDashboardRefreshTimer = null;
+
+function startMobileDashboardRefresh(db) {
+  if (!isStaticSite() || mobileDashboardRefreshTimer) return;
+  let refreshing = false;
+  const refresh = async () => {
+    if (document.hidden || !navigator.onLine || refreshing) return;
+    refreshing = true;
+    try {
+      await bootDashboard(db);
+    } catch (error) {
+      console.warn("Mobile dashboard refresh failed; keeping the last live view.", error);
+    } finally {
+      refreshing = false;
+    }
+  };
+  window.addEventListener("online", refresh);
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) refresh();
+  });
+  mobileDashboardRefreshTimer = window.setInterval(refresh, 120000);
+}
+
 function buildNysegMeterImportPreview(entries, dailyIntervals) {
   const entryByDate = new Map((entries || []).map((entry) => [entry.entry_date, entry]));
   const updates = [];
@@ -6151,6 +6179,7 @@ async function bootPage() {
   startLocalSnapshotScheduler(context.db);
   if (getPageName() === "dashboard") {
     await bootDashboard(context.db);
+    startMobileDashboardRefresh(context.db);
     return;
   }
   if (getPageName() === "entries") {

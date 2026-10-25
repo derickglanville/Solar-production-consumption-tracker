@@ -23874,10 +23874,19 @@ This typically indicates that your device does not have a healthy Internet conne
     const e = __PRIVATE_cast(t.firestore, Firestore), n = ensureFirestoreConfigured(e);
     return __PRIVATE_firestoreClientGetDocumentViaSnapshotListener(n, t._key).then((n2) => __PRIVATE_convertToDocSnapshot(e, t, n2));
   }
-  function getDocs(t) {
+  function getDocFromServer(t) {
+    t = __PRIVATE_cast(t, DocumentReference);
+    const e = __PRIVATE_cast(t.firestore, Firestore), n = ensureFirestoreConfigured(e);
+    return __PRIVATE_firestoreClientGetDocumentViaSnapshotListener(n, t._key, {
+      source: "server"
+    }).then((n2) => __PRIVATE_convertToDocSnapshot(e, t, n2));
+  }
+  function getDocsFromServer(t) {
     t = __PRIVATE_cast(t, Query);
     const e = __PRIVATE_cast(t.firestore, Firestore), n = ensureFirestoreConfigured(e), r = new __PRIVATE_ExpUserDataWriter(e);
-    return __PRIVATE_validateHasExplicitOrderByForLimitToLast(t._query), __PRIVATE_firestoreClientGetDocumentsViaSnapshotListener(n, t._query).then((n2) => new QuerySnapshot(e, r, t, n2));
+    return __PRIVATE_firestoreClientGetDocumentsViaSnapshotListener(n, t._query, {
+      source: "server"
+    }).then((n2) => new QuerySnapshot(e, r, t, n2));
   }
   function setDoc(t, e, n) {
     t = __PRIVATE_cast(t, DocumentReference);
@@ -23941,7 +23950,7 @@ This typically indicates that your device does not have a healthy Internet conne
     registerVersion(Yt2, Kt2, "esm2020");
   }();
 
-  // static/js/app-client.js
+  // ../Solar Energy - SunRun-nyseg-publish/static/js/app-client.js
   async function setDoc2(reference, values, options) {
     if (reference.parent.id !== entryCollectionName) return setDoc(reference, values, options);
     if (!activeFirestoreDb) throw new Error("Historical Entries is not connected to Firebase yet. Refresh the page and try again.");
@@ -24717,11 +24726,11 @@ This typically indicates that your device does not have a healthy Internet conne
   }
   async function loadFirestoreState(db) {
     try {
-      const configSnapshot = await withTimeout(getDoc(doc(db, configCollectionName, configDocumentId)), 8e3, "Firebase SDK configuration request timed out.");
+      const configSnapshot = await withTimeout(getDocFromServer(doc(db, configCollectionName, configDocumentId)), 8e3, "Firebase SDK configuration request timed out.");
       const config = configSnapshot.exists() ? mergeConfig(configSnapshot.data()) : mergeConfig();
       meterSimulationCheckpoints = normalizeMeterSimulationCheckpoints(config.meter_simulation_checkpoints);
       const entryQuery = query(collection(db, entryCollectionName), orderBy("entry_date"));
-      const entrySnapshot = await withTimeout(getDocs(entryQuery), 8e3, "Firebase SDK entries request timed out.");
+      const entrySnapshot = await withTimeout(getDocsFromServer(entryQuery), 8e3, "Firebase SDK entries request timed out.");
       const entries = entrySnapshot.docs.map((docSnapshot) => normalizeEntry({ entry_date: docSnapshot.data().entry_date || docSnapshot.id, ...docSnapshot.data() }));
       return { config, entries: applySunrunProductionToEntries(entries), connection: "sdk" };
     } catch (sdkError) {
@@ -28309,6 +28318,27 @@ This is a reconciliation, not an independent measurement, because EDC includes S
       );
     }
   }
+  var mobileDashboardRefreshTimer = null;
+  function startMobileDashboardRefresh(db) {
+    if (!isStaticSite() || mobileDashboardRefreshTimer) return;
+    let refreshing = false;
+    const refresh = async () => {
+      if (document.hidden || !navigator.onLine || refreshing) return;
+      refreshing = true;
+      try {
+        await bootDashboard(db);
+      } catch (error) {
+        console.warn("Mobile dashboard refresh failed; keeping the last live view.", error);
+      } finally {
+        refreshing = false;
+      }
+    };
+    window.addEventListener("online", refresh);
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden) refresh();
+    });
+    mobileDashboardRefreshTimer = window.setInterval(refresh, 12e4);
+  }
   function buildNysegMeterImportPreview(entries, dailyIntervals) {
     const entryByDate = new Map((entries || []).map((entry) => [entry.entry_date, entry]));
     const updates = [];
@@ -28863,6 +28893,7 @@ This is a reconciliation, not an independent measurement, because EDC includes S
     startLocalSnapshotScheduler(context.db);
     if (getPageName() === "dashboard") {
       await bootDashboard(context.db);
+      startMobileDashboardRefresh(context.db);
       return;
     }
     if (getPageName() === "entries") {
