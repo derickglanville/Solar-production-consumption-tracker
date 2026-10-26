@@ -4204,6 +4204,7 @@ body[data-page="dashboard"].dashboard-compact-mode .btn-contract {
 .nyseg-flow-tooltip summary::-webkit-details-marker { display: none; }
 .nyseg-flow-tooltip div { background: #173f55; border-radius: .45rem; box-shadow: 0 .4rem 1rem rgba(16, 52, 70, .28); color: #fff; font-size: .68rem; font-weight: 500; left: 50%; line-height: 1.35; padding: .55rem .62rem; position: absolute; text-align: left; top: 1.45rem; transform: translateX(-50%); width: min(13rem, 72vw); }
 .nyseg-flow-tooltip div b { color: #9eeaff; }
+.nyseg-flow-solar .nyseg-flow-tooltip div { transform: translateX(-70%); }
 .nyseg-flow-tooltip-up div { bottom: 1.45rem; top: auto; }
 .nyseg-flow-tooltip[open] summary { background: #e5f7ff; border-color: #119cc5; color: #08799d; }
 @media (max-width: 620px) { .nyseg-flow-tooltip summary { height: 1.3rem; width: 1.3rem; } .nyseg-flow-tooltip div { font-size: .7rem; width: min(14rem, 78vw); } }
