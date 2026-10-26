@@ -1078,11 +1078,27 @@
       { x: years, y: values("exported_kwh").map((value) => -value), name: "M02 exported", type: "bar", marker: { color: "#9aa4ad" } }
     ], { barmode: "relative", bargap: .28, margin: { l: 46, r: 10, t: 72, b: 36 }, height: Math.max(220, lifetimeChart.clientHeight || 245), legend: { orientation: "h", x: 0, y: 1.48, font: { size: 10 } }, paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)", xaxis: { title: "Year", type: "category", showgrid: false }, yaxis: { title: "kWh", gridcolor: "#d9e8ee", zeroline: true, zerolinecolor: "#62808f", zerolinewidth: 1.5 } }, { responsive: true, displayModeBar: false });
   }
+  // The grid's Running M01 and Running M02 values are the source of truth.
+  // Keep a calculated fallback for an older saved page that predates those
+  // fields, so the chart never silently collapses to zero.
+  let fallbackM01 = 0;
+  let fallbackM02 = 0;
+  const meterSeries = rows.map((row) => {
+    fallbackM01 += Number(row.delivered_kwh || 0);
+    fallbackM02 += Number(row.received_kwh || 0);
+    const runningM01 = Number(row.running_m01_kwh);
+    const runningM02 = Number(row.running_m02_kwh);
+    return {
+      ...row,
+      m01: Number.isFinite(runningM01) ? runningM01 : fallbackM01,
+      m02: Number.isFinite(runningM02) ? runningM02 : fallbackM02,
+    };
+  });
   const renderMeterChart = () => {
     if (meterStart.value > meterEnd.value) meterEnd.value = meterStart.value;
-    const selected = rows.filter((row) => row.date >= meterStart.value && row.date <= meterEnd.value);
-    const m01 = selected.map((row) => Number(row.running_m01_kwh || 0));
-    const m02 = selected.map((row) => Number(row.running_m02_kwh || 0));
+    const selected = meterSeries.filter((row) => row.date >= meterStart.value && row.date <= meterEnd.value);
+    const m01 = selected.map((row) => row.m01);
+    const m02 = selected.map((row) => row.m02);
     const gaps = m01.map((value, index) => value - m02[index]);
     const startIndex = dates.indexOf(meterStart.value);
     const endIndex = dates.indexOf(meterEnd.value);
@@ -1092,8 +1108,8 @@
     const gap = gaps[gaps.length - 1] || 0;
     meterGapSummary.textContent = `Latest gap: ${Math.abs(gap).toLocaleString(undefined, { maximumFractionDigits: 1 })} kWh ${gap >= 0 ? "M01 ahead" : "M02 ahead"}`;
     Plotly.react(meterChart, [
-      { x: selected.map((row) => row.date), y: m01, name: "M01 delivered", type: "scatter", mode: "lines+markers", line: { color: "#69747d", width: 2.8 }, marker: { size: 5 }, hovertemplate: "%{x}<br>M01 delivered: %{y:,.1f} kWh<extra></extra>" },
-      { x: selected.map((row) => row.date), y: m02, name: "M02 received", type: "scatter", mode: "lines+markers", line: { color: "#10b6df", width: 2.8 }, marker: { size: 5 }, fill: "tonexty", fillcolor: "rgba(242, 139, 57, .16)", hovertemplate: "%{x}<br>M02 received: %{y:,.1f} kWh<extra></extra>" },
+      { x: selected.map((row) => row.date), y: m01, name: "Running M01", type: "scatter", mode: "lines+markers", line: { color: "#69747d", width: 2.8 }, marker: { size: 5 }, hovertemplate: "%{x}<br>Running M01: %{y:,.1f} kWh<extra></extra>" },
+      { x: selected.map((row) => row.date), y: m02, name: "Running M02", type: "scatter", mode: "lines+markers", line: { color: "#10b6df", width: 2.8 }, marker: { size: 5 }, fill: "tonexty", fillcolor: "rgba(242, 139, 57, .16)", hovertemplate: "%{x}<br>Running M02: %{y:,.1f} kWh<extra></extra>" },
       { x: selected.map((row) => row.date), y: gaps, name: "M01 − M02 gap", type: "scatter", mode: "lines", yaxis: "y2", line: { color: "#f28b39", width: 2, dash: "dot" }, hovertemplate: "%{x}<br>M01 − M02: %{y:,.1f} kWh<extra></extra>" }
     ], { margin: { l: 54, r: 54, t: 40, b: 50 }, height: Math.max(260, meterChart.clientHeight || 290), legend: { orientation: "h", y: 1.14, yanchor: "bottom", x: 0 }, xaxis: { title: "Date", tickangle: -35, showgrid: false, nticks: 7 }, yaxis: { title: "Cumulative kWh", gridcolor: "#dce8ee", zeroline: false }, yaxis2: { title: "Gap kWh", overlaying: "y", side: "right", showgrid: false, zeroline: true, zerolinecolor: "#f3c688" }, paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)" }, { responsive: true, displayModeBar: false });
   };
