@@ -122,7 +122,7 @@
 <section class="nyseg-analytics-grid mb-4">
   <div class="card tracker-card nyseg-file-chart-card nyseg-story-chart-card"><div class="card-body"><div><p class="eyebrow mb-1">Daily energy comparison</p><h2 class="h5 mb-1">Solar production, meter flow, and estimated home demand</h2><p class="text-muted small mb-2">Follow the story: solar production, what NYSEG delivered (M01), what it received (M02), and estimated daily consumption (EDC).</p></div><div class="chart-popout-frame" data-chart-popout-label="Daily energy comparison"><button type="button" class="btn btn-contract btn-sm chart-popout-button" data-chart-popout>Pop Out</button><div data-chart-popout-content class="nyseg-chart-popout-content"><div class="nyseg-chart-controls" aria-label="Daily chart controls"><label>Range <select id="nyseg-daily-chart-range"><option value="14">Last 14 days</option><option value="30" selected>Last 30 days</option><option value="60">Last 60 days</option><option value="all">All available days</option></select></label><label>Style <select id="nyseg-daily-chart-style"><option value="area" selected>Vivid area</option><option value="line">Line + markers</option><option value="bar">Grouped bars</option></select></label></div><div id="nyseg-energy-story" class="nyseg-chart-story" aria-live="polite"></div><div id="nyseg-file-comparison-chart" class="nyseg-file-comparison-chart" aria-label="Daily energy comparison chart"></div></div></div></div></div>
   <div class="card tracker-card nyseg-file-chart-card nyseg-story-chart-card"><div class="card-body"><div><p class="eyebrow mb-1">Daily estimated cost</p><h2 class="h5 mb-1">NYSEG import, export value, and net bill effect</h2><p class="text-muted small mb-2">Uses the configured &dollar;0.24/kWh rate. A negative net cost means exported energy is reducing estimated energy charges.</p></div><div class="chart-popout-frame" data-chart-popout-label="Daily NYSEG estimated cost"><button type="button" class="btn btn-contract btn-sm chart-popout-button" data-chart-popout>Pop Out</button><div data-chart-popout-content class="nyseg-chart-popout-content"><div class="nyseg-chart-controls" aria-label="Daily cost chart controls"><label>Range <select id="nyseg-cost-chart-range"><option value="14">Last 14 days</option><option value="30" selected>Last 30 days</option><option value="60">Last 60 days</option><option value="all">All available days</option></select></label><label>Style <select id="nyseg-cost-chart-style"><option value="area" selected>Vivid area</option><option value="line">Line + markers</option><option value="bar">Grouped bars</option></select></label></div><div id="nyseg-cost-story" class="nyseg-chart-story" aria-live="polite"></div><div id="nyseg-file-cost-chart" class="nyseg-file-comparison-chart" aria-label="Daily NYSEG estimated cost chart"></div></div></div></div></div>
-  <div class="card tracker-card nyseg-file-chart-card nyseg-hourly-chart-card"><div class="card-body"><div><p class="eyebrow mb-1">Cumulative meter relationship</p><h2 class="h5 mb-1">M01 vs M02</h2><p class="text-muted small mb-2">Compare the two cumulative NYSEG meter readings: delivery (M01) and solar export received (M02). The space between the two lines shows when they diverge or converge.</p></div><div class="chart-popout-frame" data-chart-popout-label="M01 versus M02"><button type="button" class="btn btn-contract btn-sm chart-popout-button" data-chart-popout>Pop Out</button><div data-chart-popout-content class="nyseg-hourly-chart-content"><div class="nyseg-hourly-date-controls" aria-label="M01 and M02 chart date range"><label>Start <input id="nyseg-meter-start-date" type="date"></label><label>End <input id="nyseg-meter-end-date" type="date"></label><div class="nyseg-hourly-range-actions"><button type="button" class="btn btn-contract btn-sm" id="nyseg-meter-previous" aria-label="Show the previous meter date range">Previous</button><button type="button" class="btn btn-contract btn-sm" id="nyseg-meter-next" aria-label="Show the next meter date range">Next</button></div><span id="nyseg-meter-range-summary"></span></div><div id="nyseg-m01-m02-chart" class="nyseg-file-comparison-chart" aria-label="M01 versus M02 cumulative meter chart"></div></div></div></div></div>
+  <div class="card tracker-card nyseg-file-chart-card nyseg-hourly-chart-card"><div class="card-body"><div><p class="eyebrow mb-1">Daily meter relationship</p><h2 class="h5 mb-1">M01 vs M02</h2><p class="text-muted small mb-2">Compare NYSEG's daily Delivered / M01 and Received / M02 values. The two lines show when daily imports and exports diverge or converge.</p></div><div class="chart-popout-frame" data-chart-popout-label="Daily M01 versus M02"><button type="button" class="btn btn-contract btn-sm chart-popout-button" data-chart-popout>Pop Out</button><div data-chart-popout-content class="nyseg-hourly-chart-content"><div class="nyseg-hourly-date-controls" aria-label="M01 and M02 chart date range"><label>Start <input id="nyseg-meter-start-date" type="date"></label><label>End <input id="nyseg-meter-end-date" type="date"></label><div class="nyseg-hourly-range-actions"><button type="button" class="btn btn-contract btn-sm" id="nyseg-meter-previous" aria-label="Show the previous meter date range">Previous</button><button type="button" class="btn btn-contract btn-sm" id="nyseg-meter-next" aria-label="Show the next meter date range">Next</button></div><span id="nyseg-meter-range-summary"></span></div><div id="nyseg-m01-m02-chart" class="nyseg-file-comparison-chart" aria-label="Daily M01 versus M02 chart"></div></div></div></div></div>
 </section>
 
 
@@ -1077,36 +1077,20 @@
       { x: years, y: values("exported_kwh").map((value) => -value), name: "M02 exported", type: "bar", marker: { color: "#9aa4ad" } }
     ], { barmode: "relative", bargap: .28, margin: { l: 46, r: 10, t: 72, b: 36 }, height: Math.max(220, lifetimeChart.clientHeight || 245), legend: { orientation: "h", x: 0, y: 1.48, font: { size: 10 } }, paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)", xaxis: { title: "Year", type: "category", showgrid: false }, yaxis: { title: "kWh", gridcolor: "#d9e8ee", zeroline: true, zerolinecolor: "#62808f", zerolinewidth: 1.5 } }, { responsive: true, displayModeBar: false });
   }
-  // The grid's Running M01 and Running M02 values are the source of truth.
-  // Keep a calculated fallback for an older saved page that predates those
-  // fields, so the chart never silently collapses to zero.
-  let fallbackM01 = 0;
-  let fallbackM02 = 0;
-  const meterSeries = rows.map((row) => {
-    fallbackM01 += Number(row.delivered_kwh || 0);
-    fallbackM02 += Number(row.received_kwh || 0);
-    const runningM01 = Number(row.running_m01_kwh);
-    const runningM02 = Number(row.running_m02_kwh);
-    return {
-      ...row,
-      m01: Number.isFinite(runningM01) ? runningM01 : fallbackM01,
-      m02: Number.isFinite(runningM02) ? runningM02 : fallbackM02,
-    };
-  });
   const renderMeterChart = () => {
     if (meterStart.value > meterEnd.value) meterEnd.value = meterStart.value;
-    const selected = meterSeries.filter((row) => row.date >= meterStart.value && row.date <= meterEnd.value);
-    const m01 = selected.map((row) => row.m01);
-    const m02 = selected.map((row) => row.m02);
+    const selected = rows.filter((row) => row.date >= meterStart.value && row.date <= meterEnd.value);
+    const m01 = selected.map((row) => Number(row.delivered_kwh || 0));
+    const m02 = selected.map((row) => Number(row.received_kwh || 0));
     const startIndex = dates.indexOf(meterStart.value);
     const endIndex = dates.indexOf(meterEnd.value);
     meterPrevious.disabled = startIndex <= 0;
     meterNext.disabled = endIndex < 0 || endIndex >= dates.length - 1;
     meterSummary.textContent = `${selected.length} day${selected.length === 1 ? "" : "s"} selected`;
     Plotly.react(meterChart, [
-      { x: selected.map((row) => row.date), y: m01, name: "Running M01", type: "scatter", mode: "lines+markers", line: { color: "#69747d", width: 2.8 }, marker: { size: 5 }, hovertemplate: "%{x}<br>Running M01: %{y:,.1f} kWh<extra></extra>" },
-      { x: selected.map((row) => row.date), y: m02, name: "Running M02", type: "scatter", mode: "lines+markers", line: { color: "#10b6df", width: 2.8 }, marker: { size: 5 }, fill: "tonexty", fillcolor: "rgba(242, 139, 57, .16)", hovertemplate: "%{x}<br>Running M02: %{y:,.1f} kWh<extra></extra>" }
-    ], { margin: { l: 54, r: 18, t: 40, b: 50 }, height: Math.max(260, meterChart.clientHeight || 290), legend: { orientation: "h", y: 1.14, yanchor: "bottom", x: 0 }, xaxis: { title: "Date", tickangle: -35, showgrid: false, nticks: 7 }, yaxis: { title: "Cumulative kWh", gridcolor: "#dce8ee", zeroline: false }, paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)" }, { responsive: true, displayModeBar: false });
+      { x: selected.map((row) => row.date), y: m01, name: "Delivered / M01", type: "scatter", mode: "lines+markers", line: { color: "#69747d", width: 2.8 }, marker: { size: 5 }, hovertemplate: "%{x}<br>Delivered / M01: %{y:,.1f} kWh<extra></extra>" },
+      { x: selected.map((row) => row.date), y: m02, name: "Received / M02", type: "scatter", mode: "lines+markers", line: { color: "#10b6df", width: 2.8 }, marker: { size: 5 }, fill: "tonexty", fillcolor: "rgba(242, 139, 57, .16)", hovertemplate: "%{x}<br>Received / M02: %{y:,.1f} kWh<extra></extra>" }
+    ], { margin: { l: 54, r: 18, t: 40, b: 50 }, height: Math.max(260, meterChart.clientHeight || 290), legend: { orientation: "h", y: 1.14, yanchor: "bottom", x: 0 }, xaxis: { title: "Date", tickangle: -35, showgrid: false, nticks: 7 }, yaxis: { title: "Daily kWh", gridcolor: "#dce8ee", zeroline: true, zerolinecolor: "#62808f", zerolinewidth: 1.5 }, paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)" }, { responsive: true, displayModeBar: false });
   };
   const moveMeterRange = (direction) => {
     const startIndex = dates.indexOf(meterStart.value);
