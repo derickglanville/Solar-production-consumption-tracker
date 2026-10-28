@@ -4003,6 +4003,14 @@ body[data-page="dashboard"].dashboard-compact-mode .btn-contract {
 .nyseg-file-grid-popout .chart-popout-button { position: static; }
 .nyseg-grid-row-count { color: #287157; font-size: .82rem; font-weight: 700; margin-right: .15rem; white-space: nowrap; }
 .credit-bank-forecast-card { background: linear-gradient(145deg, #f4fffa, #f5f8ff); border: 1px solid #b8ddcb; border-radius: 1rem; box-shadow: 0 .5rem 1.2rem rgba(34, 105, 73, .09); margin: 1rem 0; padding: 1rem; }
+.credit-bank-forecast-summary { align-items: center; color: #176942; cursor: pointer; display: flex; justify-content: space-between; list-style: none; gap: .75rem; }
+.credit-bank-forecast-summary::-webkit-details-marker { display: none; }
+.credit-bank-forecast-summary .eyebrow { display: block; margin-bottom: .15rem; }
+.credit-bank-forecast-summary strong { display: block; font-size: 1.2rem; }
+.credit-bank-forecast-summary-action { border: 1px solid #a9d8bd; border-radius: 999px; color: #28734e; font-size: .75rem; font-weight: 700; padding: .35rem .6rem; white-space: nowrap; }
+.credit-bank-forecast-card[open] .credit-bank-forecast-summary { border-bottom: 1px solid #d5eadf; margin-bottom: .9rem; padding-bottom: .75rem; }
+.credit-bank-forecast-card[open] .credit-bank-forecast-summary-action { font-size: 0; }
+.credit-bank-forecast-card[open] .credit-bank-forecast-summary-action::after { content: 'Hide forecast'; font-size: .75rem; }
 .credit-bank-forecast-metrics { display: grid; gap: .7rem; grid-template-columns: repeat(4, minmax(0, 1fr)); margin: .9rem 0; }
 .credit-bank-forecast-metrics article { background: rgba(255,255,255,.76); border: 1px solid #d1e8dc; border-radius: .7rem; padding: .65rem .75rem; }
 .credit-bank-forecast-metrics span, .credit-bank-forecast-metrics small { display: block; font-size: .75rem; }
@@ -4015,9 +4023,11 @@ body[data-page="dashboard"].dashboard-compact-mode .btn-contract {
 .credit-bank-forecast-table { font-size: .84rem; margin-bottom: .65rem; }
 .credit-bank-forecast-table thead th { background: #e3f4ec; color: #226a4a; white-space: nowrap; }
 .credit-bank-forecast-table small { color: #66808d; display: block; font-size: .72rem; font-weight: 500; }
+.credit-bank-forecast-next { border-top: 1px solid #d7e8df; margin: 0 -.8rem; padding: .55rem .8rem 0; }
+.credit-bank-forecast-next > summary { color: #20724a; cursor: pointer; font-size: .8rem; font-weight: 700; margin-bottom: .55rem; }
 .credit-bank-forecast-note { color: #466170; font-size: .8rem; }
 @media (max-width: 900px) { .credit-bank-forecast-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (max-width: 500px) { .credit-bank-forecast-metrics { grid-template-columns: 1fr; } }
+@media (max-width: 500px) { .credit-bank-forecast-metrics { grid-template-columns: 1fr; } .credit-bank-forecast-summary strong { font-size: 1rem; } .credit-bank-forecast-summary-action { font-size: .67rem; padding: .3rem .45rem; } }
 .daily-run-history-grid { gap: .85rem; }
 .sunrun-run-summary {
   background: linear-gradient(145deg, #f6fcff, #e8f4fb);
