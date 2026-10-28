@@ -4001,6 +4001,7 @@ body[data-page="dashboard"].dashboard-compact-mode .btn-contract {
 .chart-popout-frame > .chart-popout-button { box-shadow: 0 .18rem .5rem rgba(33, 82, 107, .10); }
 .nyseg-file-grid-popout .nyseg-grid-actions { align-items: center; display: flex; flex-wrap: wrap; gap: .55rem; justify-content: flex-end; margin-bottom: .55rem; }
 .nyseg-file-grid-popout .chart-popout-button { position: static; }
+.nyseg-grid-row-count { color: #287157; font-size: .82rem; font-weight: 700; margin-right: .15rem; white-space: nowrap; }
 .daily-run-history-grid { gap: .85rem; }
 .sunrun-run-summary {
   background: linear-gradient(145deg, #f6fcff, #e8f4fb);
