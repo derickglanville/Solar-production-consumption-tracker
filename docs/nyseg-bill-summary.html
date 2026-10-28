@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/styles.css?v=20261022-irradiance-backfill">
+  <link rel="stylesheet" href="assets/css/styles.css?v=20261025-mobile-live-refresh">
   <link rel="stylesheet" href="assets/css/solar-process-notes.css?v=20261020">
   <script src="https://cdn.plot.ly/plotly-3.4.0.min.js"></script>
 </head>
@@ -73,23 +73,40 @@
 
     </div>
   </section>
+
+
+  <section class="credit-bank-forecast-card" aria-label="Credit Bank Forecast">
+    <div class="credit-bank-history-heading"><div><p class="eyebrow mb-1">Credit Bank Forecast</p><h2 class="h4 mb-1">Projected NYSEG credit balance and future meter flow</h2><p class="mb-0">The official balance comes from NYSEG. New interval data estimates what has changed since that statement. Future M02 uses matching calendar-month data when available; otherwise it is seasonally adjusted for Yorktown Heights, so winter solar production falls before rising in spring.</p></div><span>12-month forecast from 2026-10-24</span></div>
+    <div class="credit-bank-forecast-plan" aria-label="Twelve month credit bank forecast">
+      <div class="credit-bank-forecast-plan-heading"><strong>Starting official balance: 2,056 kWh</strong><span>Estimated change since statement: +137.6 kWh</span></div>
+      <p>Each monthly balance applies the expected net grid usage to the credit bank. A positive value is electricity imported; a negative value is exported.</p>
+      <table class="table align-middle credit-bank-forecast-table"><thead><tr><th>Month</th><th class="text-end">Estimated net grid usage</th><th class="text-end">Ending credit bank</th></tr></thead><tbody><tr><td><strong>November 2026</strong></td><td class="text-end text-success">381 kWh exported<small>M01 601 · M02 982</small></td><td class="text-end fw-semibold">2,574 kWh</td></tr><tr><td><strong>December 2026</strong></td><td class="text-end text-success">61 kWh exported<small>M01 649 · M02 710</small></td><td class="text-end fw-semibold">2,635 kWh</td></tr><tr><td><strong>January 2027</strong></td><td class="text-end text-success">81 kWh exported<small>M01 655 · M02 736</small></td><td class="text-end fw-semibold">2,716 kWh</td></tr><tr><td><strong>February 2027</strong></td><td class="text-end text-success">414 kWh exported<small>M01 571 · M02 985</small></td><td class="text-end fw-semibold">3,130 kWh</td></tr><tr><td><strong>March 2027</strong></td><td class="text-end text-success">999 kWh exported<small>M01 598 · M02 1,598</small></td><td class="text-end fw-semibold">4,129 kWh</td></tr><tr><td><strong>April 2027</strong></td><td class="text-end text-success">1,472 kWh exported<small>M01 541 · M02 2,013</small></td><td class="text-end fw-semibold">5,601 kWh</td></tr><tr><td><strong>May 2027</strong></td><td class="text-end text-success">1,899 kWh exported<small>M01 536 · M02 2,435</small></td><td class="text-end fw-semibold">7,500 kWh</td></tr><tr><td><strong>June 2027</strong></td><td class="text-end text-success">2,045 kWh exported<small>M01 508 · M02 2,553</small></td><td class="text-end fw-semibold">9,545 kWh</td></tr><tr><td><strong>July 2027</strong></td><td class="text-end text-success">964 kWh exported<small>M01 545 · M02 1,509</small></td><td class="text-end fw-semibold">10,509 kWh</td></tr><tr><td><strong>August 2027</strong></td><td class="text-end text-success">854 kWh exported<small>M01 571 · M02 1,425</small></td><td class="text-end fw-semibold">11,362 kWh</td></tr><tr><td><strong>September 2027</strong></td><td class="text-end text-success">580 kWh exported<small>M01 479 · M02 1,059</small></td><td class="text-end fw-semibold">11,942 kWh</td></tr><tr><td><strong>October 2027</strong></td><td class="text-end text-success">278 kWh exported<small>M01 454 · M02 731</small></td><td class="text-end fw-semibold">12,220 kWh</td></tr></tbody></table>
+    </div>
+    <div class="credit-bank-forecast-metrics">
+      <article><span>Official NYSEG credit balance</span><strong>2,056.0 kWh</strong><small>Statement 2026-10-08</small></article>
+      <article><span>Estimated credits since statement</span><strong>+137.6 kWh</strong><small>M02 402.1 − M01 264.5</small></article>
+      <article><span>Forecast opening balance</span><strong>2,193.6 kWh</strong><small>Official balance plus estimated unbilled net flow</small></article>
+      <article><span>Credit-bank exhaustion</span><strong>Not in next 12 months</strong><small>Based on this forecast only</small></article>
+    </div>    <p class="credit-bank-forecast-note mb-0"><strong>Charge estimate:</strong> net monthly use left after projected credits × $0.0880/kWh from the latest bill. It estimates energy charges only; NYSEG fixed, delivery, tax, prior balance, and NYSEG's final credit treatment may differ.</p>
+  </section>
+
   <section class="bill-report-grid">
     <article class="tracker-card bill-report-card"><div class="card-body"><p class="eyebrow mb-1">Usage and energy charges over time</p><h2 class="h5">Post-solar grid flow and cost</h2><div id="bill-history-chart" class="bill-history-chart"></div></div></article>
     <article class="tracker-card bill-report-card"><div class="card-body"><p class="eyebrow mb-1">Extra generation credit bank</p><h2 class="h5">How NYSEG applied solar excess</h2><div class="credit-bank-flow"><div><strong>1376 kWh</strong><span>Prior excess</span></div><i>+</i><div><strong>1175 kWh</strong><span>Current M02 generation</span></div><i>−</i><div><strong>495 kWh</strong><span>Used against billed use</span></div><i>=</i><div><strong>2056 kWh</strong><span>Shown remaining</span></div></div><p class="tracker-modal-note mb-0">Automatically extracted from the saved NYSEG PDF. Review the source bill if a corrected statement changes the period.</p></div></article>
   </section>
 
   <section class="meter-file-reconciliation-card" aria-label="Bill Summary reconciliation">
-    <div class="credit-reconciliation-heading"><div><p class="eyebrow mb-1">Bill Summary reconciliation</p><h2 class="h5 mb-0">Why the smart meter and NYSEG file totals differ</h2></div><span class="credit-reconciliation-status">Smart meter through 2026-10-08 · NYSEG file through 2026-10-20</span></div>
+    <div class="credit-reconciliation-heading"><div><p class="eyebrow mb-1">Bill Summary reconciliation</p><h2 class="h5 mb-0">Why the smart meter and NYSEG file totals differ</h2></div><span class="credit-reconciliation-status">Smart meter through 2026-10-08 · NYSEG file through 2026-10-24</span></div>
     <p class="meter-file-reconciliation-lead">These are different reporting windows. The smart meter is cumulative through October 8; NYSEG's downloaded interval file begins July 31 and currently ends October 5. The difference is not an additional credit-bank balance.</p>
     <div class="meter-file-reconciliation-grid">
       <article><span>Solar production since power-on</span><strong>5,079 kWh</strong><small>Reported from solar power-on 2026-07-09 through the October 8 meter snapshot.</small></article>
       <article><span>Estimated self-consumed solar</span><strong>1,584 kWh · 31.2%</strong><small>5,079 produced − 3,495 sent to the grid on M02.</small></article>
       <article><span>Actual smart-meter M01 · 2026-10-08</span><strong>1,421 kWh</strong><small>This is the running grid-import register displayed by the smart meter.</small></article>
       <article><span>Actual smart-meter M02 · 2026-10-08</span><strong>3,495 kWh</strong><small>This is the running grid-export register displayed by the smart meter.</small></article>
-      <article><span>M01 included in this NYSEG download</span><strong>1,362.1 kWh</strong><small>Grid import that NYSEG has published for 2026-07-31 through 2026-10-20.</small></article>
-      <article><span>M02 included in this NYSEG download</span><strong>3,006.1 kWh</strong><small>Grid export that NYSEG has published for 2026-07-31 through 2026-10-20.</small></article>
-      <article class="meter-file-gap"><span>M01 not included in this download yet</span><strong>58.9 kWh</strong><small>The difference between the full smart-meter total and the partial NYSEG file. It includes dates before July 31 and after October 5.</small></article>
-      <article class="meter-file-gap"><span>M02 not included in this download yet</span><strong>488.9 kWh</strong><small>The difference between the full smart-meter total and the partial NYSEG file. It includes dates before July 31 and after October 5.</small></article>
+      <article><span>M01 included in this NYSEG download</span><strong>1,419.6 kWh</strong><small>Grid import that NYSEG has published for 2026-07-31 through 2026-10-24.</small></article>
+      <article><span>M02 included in this NYSEG download</span><strong>3,099.3 kWh</strong><small>Grid export that NYSEG has published for 2026-07-31 through 2026-10-24.</small></article>
+      <article class="meter-file-gap"><span>M01 not included in this download yet</span><strong>1.4 kWh</strong><small>The difference between the full smart-meter total and the partial NYSEG file. It includes dates before July 31 and after October 5.</small></article>
+      <article class="meter-file-gap"><span>M02 not included in this download yet</span><strong>395.7 kWh</strong><small>The difference between the full smart-meter total and the partial NYSEG file. It includes dates before July 31 and after October 5.</small></article>
       <article class="meter-file-financial"><span>Estimated July value not yet visible in NYSEG download</span><strong>≈ $341</strong><small>For July 10–30, 2026: 689 kWh self-consumed (≈ $165) plus 731 kWh exported (≈ $175) at $0.24/kWh.</small></article>
     </div>
     <div class="meter-file-reconciliation-note"><strong>What causes the gap:</strong> the NYSEG file excludes the July 1–30 period before its first row, and it has not yet published October 6–8 due to its normal delay. The July estimate above begins July 10 because solar was not producing July 1–9. As a historical comparison, the nearby July 2025 NYSEG read was 1,005 kWh (about $241 at the tracker rate). The 731 kWh July export could first offset the 204 kWh July grid import, leaving about 527 kWh for a future NYSEG credit. This is an estimate, not money lost: fixed charges remain and NYSEG decides when export becomes an official bill credit.</div>
@@ -109,23 +126,23 @@
 Carry-over balance: $413.73
 New bill charges: $54.52
 Calculation: $413.73 + $54.52 = $468.25"><span>Current NYSEG amount due</span><strong>$468.25</strong><div><b>Carry-over balance</b><em>$413.73</em></div><div><b>New bill charges</b><em>$54.52</em></div><small>Carry-over + new charges = amount due · hover for the full calculation.</small></aside><aside class="next-bill-estimate" aria-label="Estimated next NYSEG bill" title="Estimated next-bill calculation (not an NYSEG invoice):
-Unbilled interval window: 2026-10-07 through 2026-10-20 (14 days)
-M01 grid import: 206.9 kWh
-M02 solar export: 308.8 kWh
-M02 - M01 net meter flow: +101.9 kWh
+Unbilled interval window: 2026-10-07 through 2026-10-24 (18 days)
+M01 grid import: 264.5 kWh
+M02 solar export: 402.1 kWh
+M02 - M01 net meter flow: +137.6 kWh
 ---
 Rate basis: latest corrected bill, $43.57 on 495 kWh M01
 Delivery rate: $40.99 / 495 kWh = $0.0828/kWh
 Supply rate: $0.00 / 495 kWh = $0.0000/kWh
 Tax rate: $2.58 / 495 kWh = $0.0052/kWh
 ---
-Delivery: 206.9 kWh x $0.0828/kWh = $17.13
-Supply: 206.9 kWh x $0.0000/kWh = $0.00
-Taxes and surcharges: 206.9 kWh x $0.0052/kWh = $1.08
-Estimated energy charges: $18.21
+Delivery: 264.5 kWh x $0.0828/kWh = $21.90
+Supply: 264.5 kWh x $0.0000/kWh = $0.00
+Taxes and surcharges: 264.5 kWh x $0.0052/kWh = $1.38
+Estimated energy charges: $23.28
 Payment/billing service charge: $0.95
 ---
-Estimated new charges: $19.16
+Estimated new charges: $24.23
 Solar assumption: the latest corrected bill applied a solar offset and showed $0.00 supply charges. NYSEG determines the official credit treatment.
 ---
 Projected credit-bank working ledger:
@@ -133,30 +150,30 @@ Prior excess shown on corrected bill: 1,376.0 kWh
 Current M02 generation on corrected bill: +1,175.0 kWh
 Less NYSEG offset against billed M01: -495.0 kWh
 Expected balance after corrected bill: 2,056.0 kWh
-Current-period M02 - M01 net export: +101.9 kWh
-Projected credit-bank balance: 2,157.9 kWh
+Current-period M02 - M01 net export: +137.6 kWh
+Projected credit-bank balance: 2,193.6 kWh
 NYSEG currently posted: 2,056.0 kWh
-Balance to ask NYSEG to explain: 101.9 kWh
+Balance to ask NYSEG to explain: 137.6 kWh
 This is the expected kWh ledger, assuming net exported kWh becomes credit; it is not an official NYSEG bank posting.
-Estimated statement date: 2026-10-25 (five days after the interval period)
-NYSEG&#39;s bills say payment is due upon receipt. Prior balance and payment-plan amounts are excluded."><span>Estimated next bill · hover for calculation</span><strong>≈ $19</strong><b>Due upon receipt (about Oct 25, 2026)</b><small>2026-10-07–2026-10-20 · 207 kWh M01 · 309 kWh M02</small><small>New charges only; it excludes any prior account balance or payment plan.</small><small>Seasonal reference: Oct 2025 before solar was 1002 kWh / $235. This estimate refreshes as new interval and bill data arrive.</small><div class="projected-credit-bank" title="Estimated next-bill calculation (not an NYSEG invoice):
-Unbilled interval window: 2026-10-07 through 2026-10-20 (14 days)
-M01 grid import: 206.9 kWh
-M02 solar export: 308.8 kWh
-M02 - M01 net meter flow: +101.9 kWh
+Estimated statement date: 2026-10-29 (five days after the interval period)
+NYSEG&#39;s bills say payment is due upon receipt. Prior balance and payment-plan amounts are excluded."><span>Estimated next bill · hover for calculation</span><strong>≈ $24</strong><b>Due upon receipt (about Oct 29, 2026)</b><small>2026-10-07–2026-10-24 · 264 kWh M01 · 402 kWh M02</small><small>New charges only; it excludes any prior account balance or payment plan.</small><small>Seasonal reference: Oct 2025 before solar was 1002 kWh / $235. This estimate refreshes as new interval and bill data arrive.</small><div class="projected-credit-bank" title="Estimated next-bill calculation (not an NYSEG invoice):
+Unbilled interval window: 2026-10-07 through 2026-10-24 (18 days)
+M01 grid import: 264.5 kWh
+M02 solar export: 402.1 kWh
+M02 - M01 net meter flow: +137.6 kWh
 ---
 Rate basis: latest corrected bill, $43.57 on 495 kWh M01
 Delivery rate: $40.99 / 495 kWh = $0.0828/kWh
 Supply rate: $0.00 / 495 kWh = $0.0000/kWh
 Tax rate: $2.58 / 495 kWh = $0.0052/kWh
 ---
-Delivery: 206.9 kWh x $0.0828/kWh = $17.13
-Supply: 206.9 kWh x $0.0000/kWh = $0.00
-Taxes and surcharges: 206.9 kWh x $0.0052/kWh = $1.08
-Estimated energy charges: $18.21
+Delivery: 264.5 kWh x $0.0828/kWh = $21.90
+Supply: 264.5 kWh x $0.0000/kWh = $0.00
+Taxes and surcharges: 264.5 kWh x $0.0052/kWh = $1.38
+Estimated energy charges: $23.28
 Payment/billing service charge: $0.95
 ---
-Estimated new charges: $19.16
+Estimated new charges: $24.23
 Solar assumption: the latest corrected bill applied a solar offset and showed $0.00 supply charges. NYSEG determines the official credit treatment.
 ---
 Projected credit-bank working ledger:
@@ -164,13 +181,13 @@ Prior excess shown on corrected bill: 1,376.0 kWh
 Current M02 generation on corrected bill: +1,175.0 kWh
 Less NYSEG offset against billed M01: -495.0 kWh
 Expected balance after corrected bill: 2,056.0 kWh
-Current-period M02 - M01 net export: +101.9 kWh
-Projected credit-bank balance: 2,157.9 kWh
+Current-period M02 - M01 net export: +137.6 kWh
+Projected credit-bank balance: 2,193.6 kWh
 NYSEG currently posted: 2,056.0 kWh
-Balance to ask NYSEG to explain: 101.9 kWh
+Balance to ask NYSEG to explain: 137.6 kWh
 This is the expected kWh ledger, assuming net exported kWh becomes credit; it is not an official NYSEG bank posting.
-Estimated statement date: 2026-10-25 (five days after the interval period)
-NYSEG&#39;s bills say payment is due upon receipt. Prior balance and payment-plan amounts are excluded."><span>Projected credit bank</span><strong>≈ 2,158 kWh</strong><small>2,056 kWh expected from the corrected bill + 102 kWh current net export</small><small>NYSEG posted 2,056 kWh · 102 kWh needs explanation</small></div></aside><span class="text-muted small">Hover a heading or value for its source and calculation. Green rows are used in totals.</span></div><div class="bill-duplicate-explanation"><strong>Why some kWh totals repeat:</strong> NYSEG may issue a corrected bill for the same service period. Both PDFs stay visible so you can see the audit trail, but only the green, newest statement is included in the report totals. The September 8 and September 16 rows both cover August 6–September 3; the September 16 correction changed charges and credit treatment, not the 518 kWh import or 1,260 kWh export.</div><div class="table-responsive"><table class="table align-middle bill-history-table"><thead><tr><th title="The statement date printed on the NYSEG PDF. Hover each date to see the source filename.">Statement</th><th title="The service start and end dates printed on the NYSEG PDF. A repeated period means NYSEG issued a corrected statement.">Billing period</th><th title="Electricity NYSEG billed as imported from the grid. It comes from Register 01 (M01), plus any old-meter use during a meter exchange.">Grid import</th><th title="Electricity NYSEG recorded as sent to the grid from Register 02 (M02) during the billing period.">Solar export</th><th title="Delivery charges + supply charges + taxes and surcharges. It excludes payment-plan amounts and miscellaneous charges.">Energy charges</th><th title="How NYSEG treated recorded solar export on this statement: recorded only, applied to billed use, or pre-solar.">Credit treatment</th></tr></thead><tbody><tr class="bill-authoritative"><td class="bill-summary-trigger-cell" title="Statement date from 06_05_26 - 07_01_26.pdf."><strong>2026-07-07</strong><br><small>06_05_26 - 07_01_26.pdf</small><button type="button" class="bill-summary-open" data-bill-summary-index="0">View bill summary</button></td><td class="bill-summary-trigger-cell" title="NYSEG service dates: 2026-06-05 through 2026-07-01. 27 days.">2026-06-05 to 2026-07-01<br><small>27 days</small><button type="button" class="bill-summary-open" data-bill-summary-index="0">View bill summary</button></td><td title="NYSEG billed 118 kWh of grid import for this pre-smart-meter period.">118 kWh</td><td class="text-success" title="No solar export register was available on this pre-solar statement.">0 kWh</td><td title="NYSEG energy-charge breakdown:
+Estimated statement date: 2026-10-29 (five days after the interval period)
+NYSEG&#39;s bills say payment is due upon receipt. Prior balance and payment-plan amounts are excluded."><span>Projected credit bank</span><strong>≈ 2,194 kWh</strong><small>2,056 kWh expected from the corrected bill + 138 kWh current net export</small><small>NYSEG posted 2,056 kWh · 138 kWh needs explanation</small></div></aside><span class="text-muted small">Hover a heading or value for its source and calculation. Green rows are used in totals.</span></div><div class="bill-duplicate-explanation"><strong>Why some kWh totals repeat:</strong> NYSEG may issue a corrected bill for the same service period. Both PDFs stay visible so you can see the audit trail, but only the green, newest statement is included in the report totals. The September 8 and September 16 rows both cover August 6–September 3; the September 16 correction changed charges and credit treatment, not the 518 kWh import or 1,260 kWh export.</div><div class="table-responsive"><table class="table align-middle bill-history-table"><thead><tr><th title="The statement date printed on the NYSEG PDF. Hover each date to see the source filename.">Statement</th><th title="The service start and end dates printed on the NYSEG PDF. A repeated period means NYSEG issued a corrected statement.">Billing period</th><th title="Electricity NYSEG billed as imported from the grid. It comes from Register 01 (M01), plus any old-meter use during a meter exchange.">Grid import</th><th title="Electricity NYSEG recorded as sent to the grid from Register 02 (M02) during the billing period.">Solar export</th><th title="Delivery charges + supply charges + taxes and surcharges. It excludes payment-plan amounts and miscellaneous charges.">Energy charges</th><th title="How NYSEG treated recorded solar export on this statement: recorded only, applied to billed use, or pre-solar.">Credit treatment</th></tr></thead><tbody><tr class="bill-authoritative"><td class="bill-summary-trigger-cell" title="Statement date from 06_05_26 - 07_01_26.pdf."><strong>2026-07-07</strong><br><small>06_05_26 - 07_01_26.pdf</small><button type="button" class="bill-summary-open" data-bill-summary-index="0">View bill summary</button></td><td class="bill-summary-trigger-cell" title="NYSEG service dates: 2026-06-05 through 2026-07-01. 27 days.">2026-06-05 to 2026-07-01<br><small>27 days</small><button type="button" class="bill-summary-open" data-bill-summary-index="0">View bill summary</button></td><td title="NYSEG billed 118 kWh of grid import for this pre-smart-meter period.">118 kWh</td><td class="text-success" title="No solar export register was available on this pre-solar statement.">0 kWh</td><td title="NYSEG energy-charge breakdown:
 Delivery charges: $32.58
 Supply charges: $10.69
 Taxes and surcharges: $2.49
@@ -234,7 +251,7 @@ Delivery charges, taxes, and fixed charges still apply."><strong>$43.57</strong>
     </div>
   </main>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/js/bootstrap.bundle.min.js"></script>
-  <script src="assets/js/site-bootstrap.js?v=20261022-irradiance-backfill"></script>
+  <script src="assets/js/site-bootstrap.js?v=20261025-mobile-live-refresh"></script>
   <script src="assets/js/firebase-config.js?v=20261025-mobile-live-refresh"></script>
   <script defer src="assets/js/app-bundle.js?v=20261025-mobile-live-refresh"></script>
   <script>
