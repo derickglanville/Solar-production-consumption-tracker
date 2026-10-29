@@ -4237,3 +4237,12 @@ body[data-page="dashboard"].dashboard-compact-mode .btn-contract {
 .nyseg-flow-tooltip-up div { bottom: 1.45rem; top: auto; }
 .nyseg-flow-tooltip[open] summary { background: #e5f7ff; border-color: #119cc5; color: #08799d; }
 @media (max-width: 620px) { .nyseg-flow-tooltip summary { height: 1.3rem; width: 1.3rem; } .nyseg-flow-tooltip div { font-size: .7rem; width: min(14rem, 78vw); } }
+.nyseg-grid-period-controls { align-items: center; display: flex; flex-wrap: wrap; gap: .35rem; }
+.nyseg-grid-period-controls label { align-items: center; color: #426174; display: flex; font-size: .77rem; font-weight: 700; gap: .3rem; }
+.nyseg-grid-period-controls select { background: #fff; border: 1px solid #b8d4e2; border-radius: .45rem; color: #195976; font: inherit; padding: .22rem .35rem; }
+#nyseg-grid-period-label { color: #1f5f48; font-size: .78rem; font-weight: 700; min-width: 9rem; text-align: center; }
+.nyseg-grid-period-totals { display: grid; gap: .55rem; grid-template-columns: repeat(4, minmax(0, 1fr)); margin: .55rem 0 .8rem; }
+.nyseg-grid-period-totals > div { background: #f5fbfd; border: 1px solid #c8e0eb; border-radius: .55rem; padding: .42rem .6rem; }
+.nyseg-grid-period-totals span { color: #527180; display: block; font-size: .7rem; font-weight: 700; text-transform: uppercase; }
+.nyseg-grid-period-totals strong { color: #155a78; display: block; font-size: .98rem; }
+@media (max-width: 700px) { .nyseg-grid-actions { align-items: flex-start; } .nyseg-grid-period-controls { order: 3; width: 100%; } .nyseg-grid-period-totals { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
