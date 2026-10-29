@@ -17452,7 +17452,7 @@
   const earliest = new Date(Math.min(...dateRows.map(item => item.point.valueOf())));
   const latest = new Date(Math.max(...dateRows.map(item => item.point.valueOf())));
   let anchor = new Date(latest);
-  const startFor = date => { const start = new Date(date); if (period.value === "week") { const day = (start.getDay() + 6) % 7; start.setDate(start.getDate() - day); } else if (period.value === "month") { start.setDate(1); } else { start.setMonth(0, 1); } return start; };
+  const startFor = date => { const start = new Date(date); if (period.value === "week") { const day = start.getDay(); start.setDate(start.getDate() - day); } else if (period.value === "month") { start.setDate(1); } else { start.setMonth(0, 1); } return start; };
   const endFor = start => { const end = new Date(start); if (period.value === "week") end.setDate(end.getDate() + 6); else if (period.value === "month") end.setMonth(end.getMonth() + 1, 0); else end.setMonth(11, 31); return end; };
   const move = direction => { const start = startFor(anchor); if (period.value === "week") start.setDate(start.getDate() + direction * 7); else if (period.value === "month") start.setMonth(start.getMonth() + direction); else start.setFullYear(start.getFullYear() + direction); anchor = start; render(); };
   const total = (visible, key) => visible.reduce((sum, row) => sum + (Number(row.dataset[key]) || 0), 0);
