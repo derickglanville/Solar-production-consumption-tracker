@@ -17134,7 +17134,7 @@
   if (!meterChart || !meterStart || !meterEnd || !meterPrevious || !meterNext || !hourlyRows.length) return;
   const dates = [...new Set(hourlyRows.map((row) => row.date))].sort();
   const lastDate = dates[dates.length - 1];
-  const defaultStart = dates[Math.max(0, dates.length - 7)];
+  const defaultStart = dates[Math.max(0, dates.length - 30)];
   meterStart.min = dates[0]; meterStart.max = lastDate; meterStart.value = defaultStart;
   meterEnd.min = dates[0]; meterEnd.max = lastDate; meterEnd.value = lastDate;
   const renderFlowTimeline = () => {
