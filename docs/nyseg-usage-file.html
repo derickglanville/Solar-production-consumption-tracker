@@ -132,7 +132,7 @@
     <div class="chart-popout-frame nyseg-file-grid-popout" data-chart-popout-label="Downloaded NYSEG usage file">
       <div class="nyseg-grid-actions"><span class="nyseg-grid-row-count">2112 rows</span><div class="nyseg-grid-period-controls" aria-label="Grid date span"><label>View <select id="nyseg-grid-period"><option value="week">Weekly</option><option value="month" selected>Monthly</option><option value="year">Yearly</option></select></label><button type="button" class="btn btn-contract btn-sm" id="nyseg-grid-period-previous" aria-label="Show previous grid period">‹</button><span id="nyseg-grid-period-label" aria-live="polite"></span><button type="button" class="btn btn-contract btn-sm" id="nyseg-grid-period-next" aria-label="Show next grid period">›</button></div><button type="button" class="btn btn-contract btn-sm" id="nyseg-grid-export-csv">Download CSV</button><button type="button" class="btn btn-contract btn-sm chart-popout-button" data-chart-popout>Pop Out</button></div>
       <div class="nyseg-file-grid-content" data-chart-popout-content>
-        <p class="text-muted small">Each row is one NYSEG hourly interval. Scroll vertically while the header stays visible. Select a weekly, monthly, or yearly span to navigate the same grid; sorting, notes, selection, CSV export, and Pop Out remain available. Dollar amounts use the configured $0.24/kWh rate.</p><div class="nyseg-grid-period-totals" aria-label="Selected grid span totals"><div><span>Power</span><strong data-nyseg-period-total="power">—</strong></div><div><span>M01</span><strong data-nyseg-period-total="m01">—</strong></div><div><span>M02</span><strong data-nyseg-period-total="m02">—</strong></div><div><span>EDC</span><strong data-nyseg-period-total="edc">—</strong></div></div>
+        <p class="text-muted small">Each row is one NYSEG hourly interval. Scroll vertically while the header stays visible. Select a weekly, monthly, or yearly span to navigate the same grid; sorting, notes, selection, CSV export, and Pop Out remain available. Dollar amounts use the configured $0.24/kWh rate.</p><div class="nyseg-grid-period-totals" aria-label="Selected grid span totals"><div><span>Power</span><strong data-nyseg-period-total="power">—</strong></div><div><span>M01</span><strong data-nyseg-period-total="m01">—</strong></div><div><span>M02</span><strong data-nyseg-period-total="m02">—</strong></div><div><span>EDC</span><strong data-nyseg-period-total="edc">—</strong></div><div><span>Net export to NYSEG</span><strong data-nyseg-period-total="net-export">—</strong></div></div>
         <div class="table-responsive nyseg-file-table-wrap" tabindex="0">
           <table class="table table-sm align-middle nyseg-file-table">
             <thead><tr>
@@ -17467,6 +17467,9 @@
     const visibleRows = visible.map(item => item.row);
     const fields = { power: "nysegPower", m01: "nysegDelivered", m02: "nysegReceived", edc: "nysegEdc" };
     Object.entries(fields).forEach(([name, key]) => { const target = document.querySelector(`[data-nyseg-period-total="${name}"]`); if (target) target.textContent = format(total(visibleRows, key)); });
+    const netExport = total(visibleRows, "nysegReceived") - total(visibleRows, "nysegDelivered");
+    const netExportTarget = document.querySelector('[data-nyseg-period-total="net-export"]');
+    if (netExportTarget) netExportTarget.textContent = `${netExport >= 0 ? "" : "−"}${format(Math.abs(netExport))}`;
     previous.disabled = start <= startFor(earliest);
     next.disabled = startFor(latest) <= start;
   };

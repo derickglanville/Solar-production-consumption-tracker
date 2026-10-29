@@ -4241,7 +4241,7 @@ body[data-page="dashboard"].dashboard-compact-mode .btn-contract {
 .nyseg-grid-period-controls label { align-items: center; color: #426174; display: flex; font-size: .77rem; font-weight: 700; gap: .3rem; }
 .nyseg-grid-period-controls select { background: #fff; border: 1px solid #b8d4e2; border-radius: .45rem; color: #195976; font: inherit; padding: .22rem .35rem; }
 #nyseg-grid-period-label { color: #1f5f48; font-size: .78rem; font-weight: 700; min-width: 9rem; text-align: center; }
-.nyseg-grid-period-totals { display: grid; gap: .55rem; grid-template-columns: repeat(4, minmax(0, 1fr)); margin: .55rem 0 .8rem; }
+.nyseg-grid-period-totals { display: grid; gap: .55rem; grid-template-columns: repeat(5, minmax(0, 1fr)); margin: .55rem 0 .8rem; }
 .nyseg-grid-period-totals > div { background: #f5fbfd; border: 1px solid #c8e0eb; border-radius: .55rem; padding: .42rem .6rem; }
 .nyseg-grid-period-totals span { color: #527180; display: block; font-size: .7rem; font-weight: 700; text-transform: uppercase; }
 .nyseg-grid-period-totals strong { color: #155a78; display: block; font-size: .98rem; }
