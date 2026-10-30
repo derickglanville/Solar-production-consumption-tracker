@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/styles.css?v=20261030-history-dialog">
+  <link rel="stylesheet" href="assets/css/styles.css?v=20261030-meter-grid">
   <link rel="stylesheet" href="assets/css/solar-process-notes.css?v=20261020">
   <script src="https://cdn.plot.ly/plotly-3.4.0.min.js"></script>
 </head>
@@ -155,9 +155,9 @@
     </div>
   </main>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/js/bootstrap.bundle.min.js"></script>
-  <script src="assets/js/site-bootstrap.js?v=20261030-history-dialog"></script>
-  <script src="assets/js/firebase-config.js?v=20261030-history-dialog"></script>
-  <script defer src="assets/js/app-bundle.js?v=20261030-history-dialog"></script>
+  <script src="assets/js/site-bootstrap.js?v=20261030-meter-grid"></script>
+  <script src="assets/js/firebase-config.js?v=20261030-meter-grid"></script>
+  <script defer src="assets/js/app-bundle.js?v=20261030-meter-grid"></script>
 
 <script>(() => { const open=document.getElementById("nyseg-history-analysis-open"), dialog=document.getElementById("nyseg-history-analysis-dialog"); if(open&&dialog) open.addEventListener("click", event => { event.preventDefault(); dialog.showModal(); }); })();</script>
 <script>
@@ -1127,7 +1127,7 @@
     Plotly.react(meterChart, [
       { x: selected.map((row) => row.date), y: m01, name: "Delivered / M01", type: "scatter", mode: "lines+markers", line: { color: "#69747d", width: 2.8 }, marker: { size: 5 }, customdata: hoverValues, hovertemplate: hoverTemplate },
       { x: selected.map((row) => row.date), y: m02, name: "Received / M02", type: "scatter", mode: "lines+markers", line: { color: "#10b6df", width: 2.8 }, marker: { size: 5 }, fill: "tonexty", fillcolor: "rgba(16, 182, 223, .14)", customdata: hoverValues, hovertemplate: hoverTemplate }
-    ], { margin: { l: 54, r: 18, t: 40, b: 50 }, height: Math.max(260, meterChart.clientHeight || 290), legend: { orientation: "h", y: 1.14, yanchor: "bottom", x: 0 }, xaxis: { title: "Date", tickangle: -35, showgrid: false, nticks: 7 }, yaxis: { title: "Daily kWh", gridcolor: "#dce8ee", zeroline: true, zerolinecolor: "#62808f", zerolinewidth: 1.5 }, paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)" }, { responsive: true, displayModeBar: false });
+    ], { margin: { l: 54, r: 18, t: 40, b: 50 }, height: Math.max(260, meterChart.clientHeight || 290), legend: { orientation: "h", y: 1.14, yanchor: "bottom", x: 0 }, xaxis: { title: "Date", tickangle: -35, showgrid: true, gridcolor: "#8baeba", gridwidth: 1.4, showline: true, linecolor: "#4e7483", linewidth: 2, tickcolor: "#4e7483", tickwidth: 1.5, nticks: 7 }, yaxis: { title: "Daily kWh", showgrid: true, gridcolor: "#8baeba", gridwidth: 1.4, showline: true, linecolor: "#4e7483", linewidth: 2, tickcolor: "#4e7483", tickwidth: 1.5, zeroline: true, zerolinecolor: "#315f70", zerolinewidth: 2.4 }, paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(248,253,254,.72)" }, { responsive: true, displayModeBar: false });
   };
   const moveMeterRange = (direction) => {
     const startIndex = dates.indexOf(meterStart.value);
