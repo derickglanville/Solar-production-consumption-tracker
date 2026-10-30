@@ -3329,6 +3329,18 @@ window.SOLAR_BOOTSTRAP = {
       }
     ]
   },
+  "sync_activity_snapshot": {
+    "completed_at": "2026-10-30T08:05:32-04:00",
+    "lines": [
+      "NYSEG CSV download completed and the daily readings were processed.",
+      "Firebase M01/M02 update: 1 record saved.",
+      "Sunrun portal meter history updated: 89 daily records.",
+      "Notification email sent.",
+      "SunRun download (2026-10-28): Success."
+    ],
+    "process": "Published NYSEG and SunRun sync snapshot",
+    "status": "success"
+  },
   "weather_options": [
     "Sunny",
     "Cloudy",
