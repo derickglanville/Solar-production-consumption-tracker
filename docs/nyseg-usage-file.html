@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/styles.css?v=20261103-nyseg-gap">
+  <link rel="stylesheet" href="assets/css/styles.css?v=20261103-m01-flow">
   <link rel="stylesheet" href="assets/css/solar-process-notes.css?v=20261020">
   <script src="https://cdn.plot.ly/plotly-3.4.0.min.js"></script>
 </head>
@@ -155,9 +155,9 @@
     </div>
   </main>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/js/bootstrap.bundle.min.js"></script>
-  <script src="assets/js/site-bootstrap.js?v=20261103-nyseg-gap"></script>
-  <script src="assets/js/firebase-config.js?v=20261103-nyseg-gap"></script>
-  <script defer src="assets/js/app-bundle.js?v=20261103-nyseg-gap"></script>
+  <script src="assets/js/site-bootstrap.js?v=20261103-m01-flow"></script>
+  <script src="assets/js/firebase-config.js?v=20261103-m01-flow"></script>
+  <script defer src="assets/js/app-bundle.js?v=20261103-m01-flow"></script>
 
 <script>(() => { const open=document.getElementById("nyseg-history-analysis-open"), dialog=document.getElementById("nyseg-history-analysis-dialog"); if(open&&dialog) open.addEventListener("click", event => { event.preventDefault(); dialog.showModal(); }); })();</script>
 <script>
@@ -17707,6 +17707,7 @@
   const flowNext = document.getElementById("nyseg-energy-flow-next");
   const flowStatus = document.getElementById("nyseg-flow-change-status");
   const flowExportNode = document.querySelector(".nyseg-flow-export");
+  const flowImportNode = document.querySelector(".nyseg-flow-import");
   const timelineDate = document.getElementById("nyseg-energy-timeline-date");
   const lifetimeChart = document.getElementById("nyseg-lifetime-energy-chart");
   const yearlyEnergyRows = [{"consumed_kwh": 2661.2254999999986, "exported_kwh": 3197.7960000000003, "imported_kwh": 1505.6665, "produced_kwh": 4353.3550000000005, "year": "2026"}];
@@ -17828,6 +17829,7 @@
     const solarCoverage = consumed ? (solarUsed / consumed) * 100 : 0;
     const netGrid = imported - exported;
     if (flowExportNode) flowExportNode.classList.toggle("is-net-import", exported < imported);
+    if (flowImportNode) flowImportNode.classList.toggle("is-net-export", imported < exported);
     updateFlowText("[data-flow-import]", flowKwh(imported));
     updateFlowText("[data-flow-produced]", flowKwh(produced));
     updateFlowText("[data-flow-consumed]", flowKwh(consumed));
