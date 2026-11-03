@@ -4264,3 +4264,12 @@ body[data-page="dashboard"].dashboard-compact-mode .btn-contract {
 .nyseg-history-analysis-dialog .table > :not(caption) > * > * { padding: .25rem .45rem; }
 .nyseg-history-analysis-dialog .table small { font-size: .74rem; line-height: 1.05; }
 @media (max-height: 720px) { .nyseg-history-analysis-dialog { overflow: auto; } .nyseg-history-analysis-dialog .table-responsive { overflow: visible; } }
+
+/* Display-only NYSEG placeholders for source dates NYSEG has not supplied. */
+.nyseg-temporary-data-notice { background: #f3eaff; border: 1px solid #c8a6ee; border-radius: .5rem; color: #5c3d7b; font-size: .78rem; margin-bottom: .6rem; padding: .52rem .68rem; }
+.nyseg-file-table tbody tr.nyseg-temporary-row:not(.nyseg-row-selected) > *,
+.nyseg-file-table tbody tr.nyseg-temporary-row:not(.nyseg-row-selected) > .nyseg-power-group,
+.nyseg-file-table tbody tr.nyseg-temporary-row:not(.nyseg-row-selected) > .nyseg-m01-group-start,
+.nyseg-file-table tbody tr.nyseg-temporary-row:not(.nyseg-row-selected) > .nyseg-m02-group-start,
+.nyseg-file-table tbody tr.nyseg-temporary-row:not(.nyseg-row-selected) > .nyseg-edc-group-start { background: #f3eaff !important; }
+.nyseg-temporary-label { color: #74509a; font-size: .62rem; font-weight: 700; }
