@@ -4249,8 +4249,8 @@ body[data-page="dashboard"].dashboard-compact-mode .btn-contract {
 
 .nyseg-history-analysis-button { background: #fff; border: 1px solid #9bcdb7; border-radius: .35rem; color: #087747; cursor: pointer; font: inherit; font-size: .66rem; font-weight: 700; margin-left: .35rem; padding: .12rem .32rem; text-transform: none; }
 .nyseg-history-analysis-button:hover, .nyseg-history-analysis-button:focus-visible { background: #eaf8f0; outline: 2px solid #2e9c68; outline-offset: 1px; }
-.nyseg-history-analysis-button-prominent { background: #087747; border: 2px solid #075f3a; box-shadow: 0 .15rem .35rem rgba(5, 95, 58, .22); color: #fff; font-size: .78rem; font-weight: 800; letter-spacing: .01em; margin-left: 0; padding: .36rem .64rem; }
-.nyseg-history-analysis-button-prominent:hover, .nyseg-history-analysis-button-prominent:focus-visible { background: #045f39; color: #fff; outline-color: #ffcb5c; }
+.nyseg-history-analysis-button-prominent { background: #8055b6; border: 2px solid #60388f; box-shadow: 0 .15rem .35rem rgba(96, 56, 143, .26); color: #fff; font-size: .78rem; font-weight: 800; letter-spacing: .01em; margin-left: 0; padding: .36rem .64rem; }
+.nyseg-history-analysis-button-prominent:hover, .nyseg-history-analysis-button-prominent:focus-visible { background: #633d98; color: #fff; outline-color: #ffd166; }
 .nyseg-history-analysis-dialog { background: #f8fcfd; border: 1px solid #bcd6e0; border-radius: 1rem; box-shadow: 0 1.5rem 4rem rgba(14, 45, 58, .35); color: #22313b; max-height: min(85vh, 48rem); max-width: 48rem; padding: 1.25rem; width: min(94vw, 48rem); }
 .nyseg-history-analysis-dialog::backdrop { background: rgba(0, 20, 35, .65); }
 .nyseg-history-analysis-dialog header { align-items: start; display: flex; gap: 1rem; justify-content: space-between; }
