@@ -23869,11 +23869,6 @@ This typically indicates that your device does not have a healthy Internet conne
     const s = ensureFirestoreConfigured(t);
     return __PRIVATE_firestoreClientTransaction(s, (n2) => e(new Transaction2(t, n2)), r);
   }
-  function getDoc(t) {
-    t = __PRIVATE_cast(t, DocumentReference);
-    const e = __PRIVATE_cast(t.firestore, Firestore), n = ensureFirestoreConfigured(e);
-    return __PRIVATE_firestoreClientGetDocumentViaSnapshotListener(n, t._key).then((n2) => __PRIVATE_convertToDocSnapshot(e, t, n2));
-  }
   function getDocFromServer(t) {
     t = __PRIVATE_cast(t, DocumentReference);
     const e = __PRIVATE_cast(t.firestore, Firestore), n = ensureFirestoreConfigured(e);
@@ -23950,7 +23945,7 @@ This typically indicates that your device does not have a healthy Internet conne
     registerVersion(Yt2, Kt2, "esm2020");
   }();
 
-  // ../Solar Energy - SunRun-nyseg-publish/static/js/app-client.js
+  // static/js/app-client.js
   async function setDoc2(reference, values, options) {
     if (reference.parent.id !== entryCollectionName) return setDoc(reference, values, options);
     if (!activeFirestoreDb) throw new Error("Historical Entries is not connected to Firebase yet. Refresh the page and try again.");
@@ -24131,6 +24126,7 @@ This typically indicates that your device does not have a healthy Internet conne
   var aiBootstrapStatus = bootstrap.ai_status || {};
   var historicalUsageBootstrap = bootstrap.historical_usage || {};
   var monthlyBillBootstrap = bootstrap.monthly_bill || {};
+  var historicalUsageAnalysisBootstrap = Array.isArray(bootstrap.historical_usage_analysis) ? bootstrap.historical_usage_analysis : [];
   var sunrunProductionBootstrap = bootstrap.sunrun_production || { available: false, by_date: {} };
   var nysegIntervalBootstrap = bootstrap.nyseg_interval || { available: false, daily: [] };
   var dashboardCompactModeStorageKey = "solar-dashboard-compact-mode";
@@ -24262,16 +24258,6 @@ This typically indicates that your device does not have a healthy Internet conne
   function isPastIsoDate(entryDate) {
     return String(entryDate) < String(getTodayIsoDate());
   }
-  function daysBeforeToday(entryDate) {
-    const entryTime = Date.parse(`${entryDate}T12:00:00Z`);
-    const todayTime = Date.parse(`${getTodayIsoDate()}T12:00:00Z`);
-    if (!Number.isFinite(entryTime) || !Number.isFinite(todayTime)) return null;
-    return Math.round((todayTime - entryTime) / 864e5);
-  }
-  function useRecentForecastHistory(entryDate) {
-    const ageInDays = daysBeforeToday(entryDate);
-    return ageInDays !== null && ageInDays >= 0 && ageInDays <= 5;
-  }
   function mapWeatherCodeToLabel(code) {
     const value = Number(code);
     if ([0, 1].includes(value)) return "Sunny";
@@ -24311,8 +24297,8 @@ This typically indicates that your device does not have a healthy Internet conne
       "wind_speed_10m",
       "weather_code"
     ];
-    const useArchive = isPastIsoDate(entryDate) && !useRecentForecastHistory(entryDate);
-    const baseUrl = useArchive ? "https://archive-api.open-meteo.com/v1/archive" : "https://api.open-meteo.com/v1/forecast";
+    const completedDay = isPastIsoDate(entryDate);
+    const baseUrl = completedDay ? "https://historical-forecast-api.open-meteo.com/v1/forecast" : "https://api.open-meteo.com/v1/forecast";
     const url = new URL(baseUrl);
     url.searchParams.set("latitude", String(yorktownHeightsLocation.latitude));
     url.searchParams.set("longitude", String(yorktownHeightsLocation.longitude));
@@ -24363,7 +24349,7 @@ This typically indicates that your device does not have a healthy Internet conne
     const weatherIndexes = daylightIndexes.length ? daylightIndexes : matchingIndexes;
     const weatherLabels = weatherIndexes.map((index) => mapWeatherCodeToLabel(hourly.weather_code?.[index]));
     const peakIrradiance = Math.round(maxNumericValue(shortwaveValues) || 0);
-    const sourceKind = useArchive ? "historical archive" : isPastIsoDate(entryDate) ? "recent forecast-history" : "forecast";
+    const sourceKind = completedDay ? "historical forecast" : "forecast";
     const dailyIndex = Array.isArray(payload?.daily?.time) ? payload.daily.time.findIndex((value) => String(value) === String(entryDate)) : -1;
     const sunriseTime = dailyIndex >= 0 ? String(payload.daily.sunrise?.[dailyIndex] || "") : "";
     const sunsetTime = dailyIndex >= 0 ? String(payload.daily.sunset?.[dailyIndex] || "") : "";
@@ -24379,7 +24365,7 @@ This typically indicates that your device does not have a healthy Internet conne
       wind_mph: roundToStep(maxNumericValue(windValues), 1),
       sunrise_time: sunriseTime,
       sunset_time: sunsetTime,
-      lookup_source: `open-meteo-${isPastIsoDate(entryDate) ? "historical" : "forecast"}`,
+      lookup_source: `open-meteo-${completedDay ? "historical-forecast" : "forecast"}`,
       notes: `Auto-filled from Open-Meteo ${sourceKind} data for ${yorktownHeightsLocation.label}. Irradiance is the full local day's peak instantaneous global horizontal irradiance (GHI).`
     };
   }
@@ -24939,6 +24925,61 @@ This typically indicates that your device does not have a healthy Internet conne
     const refreshedState = await loadFirestoreState(db);
     return { entries: refreshedState.entries, updated: true, count: updates.length };
   }
+  function entryNeedsIrradianceRevalidation(entry) {
+    if (String(entry.entry_date) > String(getTodayIsoDate())) return false;
+    if (entry.irradiance_method === "open-meteo-hourly-instant-ghi-v3" && Array.isArray(entry.irradiance_hourly_profile) && entry.irradiance_hourly_profile.length >= 20) return false;
+    if (String(entry.entry_date) === String(getTodayIsoDate())) return true;
+    const irradiance = Number(entry.irradiance_peak_wm2 || 0);
+    const source = String(entry.lookup_source || "").toLowerCase();
+    return irradiance < 450 || source.startsWith("fallback");
+  }
+  async function revalidateSuspiciousIrradiancePeaks(db, entries) {
+    const candidates = sortEntries(entries).filter((entry) => entryNeedsIrradianceRevalidation(entry)).slice(-14);
+    if (!candidates.length) {
+      return { entries, updated: false, count: 0 };
+    }
+    const updatedEntries = new Map(entries.map((entry) => [entry.entry_date, normalizeEntry(entry)]));
+    let changedCount = 0;
+    for (const entry of candidates) {
+      try {
+        const lookupValues = await fetchOpenMeteoLookupValues(entry.entry_date);
+        const correctedPeak = Number(lookupValues.irradiance_peak_wm2 || 0);
+        if (correctedPeak <= 0 || Math.abs(correctedPeak - Number(entry.irradiance_peak_wm2 || 0)) < 1) {
+          continue;
+        }
+        const existingNotes = String(entry.notes || "");
+        const canReplaceNotes = !entry.notes_manual && String(entry.lookup_source || "").toLowerCase() !== "manual" && (!existingNotes || /auto-filled|fallback|placeholder/i.test(existingNotes));
+        const mergedEntry = normalizeEntry({
+          ...entry,
+          irradiance_peak_wm2: correctedPeak,
+          weather: lookupValues.weather || entry.weather || "Unknown",
+          temperature_f: lookupValues.temperature_f ?? entry.temperature_f ?? null,
+          temperature_high_f: lookupValues.temperature_high_f ?? entry.temperature_high_f ?? null,
+          temperature_low_f: lookupValues.temperature_low_f ?? entry.temperature_low_f ?? null,
+          humidity_pct: lookupValues.humidity_pct ?? entry.humidity_pct ?? null,
+          cloud_cover_pct: lookupValues.cloud_cover_pct ?? entry.cloud_cover_pct ?? null,
+          wind_mph: lookupValues.wind_mph ?? entry.wind_mph ?? null,
+          sunrise_time: lookupValues.sunrise_time || entry.sunrise_time || "",
+          sunset_time: lookupValues.sunset_time || entry.sunset_time || "",
+          lookup_source: lookupValues.lookup_source || entry.lookup_source || "manual",
+          irradiance_method: "open-meteo-hourly-instant-ghi-v3",
+          irradiance_verified_at: (/* @__PURE__ */ new Date()).toISOString(),
+          irradiance_hourly_profile: lookupValues.irradiance_hourly_profile || entry.irradiance_hourly_profile || [],
+          notes: canReplaceNotes ? lookupValues.notes : existingNotes,
+          updated_at: (/* @__PURE__ */ new Date()).toISOString()
+        });
+        await setDoc2(doc(db, entryCollectionName, entry.entry_date), mergedEntry, { merge: true });
+        updatedEntries.set(entry.entry_date, mergedEntry);
+        changedCount += 1;
+      } catch (error) {
+      }
+    }
+    return {
+      entries: sortEntries([...updatedEntries.values()]),
+      updated: changedCount > 0,
+      count: changedCount
+    };
+  }
   function buildComputedEntries(entries, config = defaultConfig) {
     if (!entries.length) return [];
     const sortedEntries = sortEntries(entries);
@@ -25313,10 +25354,16 @@ This typically indicates that your device does not have a healthy Internet conne
       <td>${formatNumber(row.imported_kwh, 0, 0)}</td><td>${formatNumber(row.exported_kwh, 0, 0)}</td>
       <td class="${Number(row.net_grid_kwh) <= 0 ? "nyseg-net-positive" : "nyseg-net-negative"}">${Number(row.net_grid_kwh) >= 0 ? "+" : ""}${formatNumber(row.net_grid_kwh, 0, 0)}</td>
     </tr>`).join("");
-    const usageRows = (monthlyBill?.usage_records || []).map((row) => `
-    <tr><td><strong>${escapeHtml(row.month_label)}</strong></td><td>${escapeHtml(row.billing_start_date)} to ${escapeHtml(row.billing_end_date)}</td><td>${formatNumber(row.usage_kwh, 0, 0)} kWh</td><td>${formatCurrency(row.cost)}</td><td>$${formatNumber(row.effective_rate_per_kwh, 3, 3)}</td><td>${formatNumber(row.average_temperature_f, 0, 0)}\xB0F</td></tr>`).join("");
+    const verifiedUsageRows = historicalUsageAnalysisBootstrap.slice().reverse().map((row) => `
+    <tr title="${escapeHtml(row.source_name || "Reviewed NYSEG billing file")}">
+      <td><strong>${escapeHtml(row.month_label || "")}</strong></td>
+      <td>${escapeHtml(row.billing_start_date || "")} to ${escapeHtml(row.billing_end_date || "")}</td>
+      <td>${formatNumber(row.usage_kwh, 0, 0)} kWh${row.imported ? " imported" : ""}</td>
+      <td><strong>${formatCurrency(row.charges)}</strong></td>
+      <td>${escapeHtml(row.source_name || "Reviewed NYSEG statement")}</td>
+    </tr>`).join("");
     const sourceActions = isStaticSite() ? `<span class="ai-status-pill" title="Raw NYSEG files contain private account information and remain local">Source Files: Local Only</span>` : `<a class="btn btn-contract btn-sm" href="/documents/nyseg-bill/view">Historic Spreadsheet</a><a class="btn btn-contract btn-sm" href="/documents/nyseg-monthly-bill/view">Latest Bill</a>`;
-    if (monthlyBill?.available && (billingRows || usageRows)) {
+    if (monthlyBill?.available && (billingRows || verifiedUsageRows)) {
       return `
       <section class="mb-4"><div class="card tracker-card nyseg-baseline-card"><div class="card-body">
         <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
@@ -25333,7 +25380,7 @@ This typically indicates that your device does not have a healthy Internet conne
         <div class="nyseg-baseline-layout">
           <article class="nyseg-data-panel nyseg-data-panel-wide"><div class="nyseg-panel-heading"><div><h3>Historical Billing Month to Month</h3><p>Energy usage and itemized electricity charges from each PDF.</p></div></div><div class="nyseg-table-scroll"><table class="table nyseg-data-table mb-0"><thead><tr><th>Billing Period</th><th>Used</th><th>Delivery</th><th>Supply</th><th>Taxes</th><th>Misc.</th><th>Energy Total</th><th>Amount Due</th></tr></thead><tbody>${billingRows}</tbody></table></div><p class="nyseg-table-footnote">Amount Due can include prior balances, budget billing, or payment-plan amounts. Energy Total is the better month-to-month electricity-charge comparison.</p></article>
           <article class="nyseg-data-panel"><div class="nyseg-panel-heading"><div><h3>Net Metering</h3><p>Register 01 import versus Register 02 export.</p></div></div><div class="nyseg-table-scroll nyseg-table-scroll-compact"><table class="table nyseg-data-table mb-0"><thead><tr><th>Period</th><th>Import</th><th>Export</th><th>Net</th></tr></thead><tbody>${netRows}</tbody></table></div><div class="tracker-modal-note mt-2">The meter-transition bill includes 419 kWh from the old meter. Smart-meter-only totals are ${formatNumber(net.smart_meter_import_kwh, 0, 0)} kWh imported and ${formatNumber(net.export_kwh, 0, 0)} kWh exported.</div></article>
-          <article class="nyseg-data-panel nyseg-data-panel-full"><div class="nyseg-panel-heading"><div><h3>Usage Data Month to Month</h3><p>Scrollable NYSEG export history, newest month first.</p></div></div><div class="nyseg-table-scroll nyseg-usage-scroll"><table class="table nyseg-data-table mb-0"><thead><tr><th>Month</th><th>Billing Period</th><th>Usage</th><th>Usage Cost</th><th>Effective $/kWh</th><th>Avg. Temp.</th></tr></thead><tbody>${usageRows}</tbody></table></div></article>
+          <article class="nyseg-data-panel nyseg-data-panel-full"><div class="nyseg-panel-heading"><div><h3>Usage Data Month to Month</h3><p>Final NYSEG statements, newest service period first. Corrected statements replace earlier versions for the same period.</p></div></div><div class="nyseg-table-scroll nyseg-usage-scroll"><table class="table nyseg-data-table mb-0"><thead><tr><th>Month</th><th>Billing Period</th><th>Grid usage</th><th>Electricity charges</th><th>Source</th></tr></thead><tbody>${verifiedUsageRows}</tbody></table></div><p class="nyseg-table-footnote">Electricity charges exclude unrelated prior balances and payment arrangements. They are not calendar-month estimates.</p></article>
         </div>
       </div></div></section>`;
     }
@@ -28294,14 +28341,16 @@ This is a reconciliation, not an independent measurement, because EDC includes S
   async function bootDashboard(db) {
     try {
       const state = await loadFirestoreState(db);
+      const readOnlyConnection = state.connection === "rest";
+      const irradianceBackfill = readOnlyConnection ? { entries: state.entries, updated: false, count: 0 } : await revalidateSuspiciousIrradiancePeaks(db, state.entries);
       const fileThroughDate = getDashboardFileThroughDate();
-      const latestEntryDate = (state.entries || []).map((entry) => entry.entry_date).filter(Boolean).sort().at(-1) || "no saved date";
+      const latestEntryDate = (irradianceBackfill.entries || []).map((entry) => entry.entry_date).filter(Boolean).sort().at(-1) || "no saved date";
       const connectionLabel = state.connection === "rest" ? "HTTPS live read" : "Live Firestore";
       await renderDashboardUnified(
-        state.entries,
+        irradianceBackfill.entries,
         state.config,
         buildStatus(
-          `Firebase connected via ${connectionLabel}. Loaded ${(state.entries || []).length} daily record${(state.entries || []).length === 1 ? "" : "s"} through ${latestEntryDate}. ${fileThroughDate ? `Dashboard calculations use matching SunRun and NYSEG downloaded-file data through ${fileThroughDate}. The two most recent reporting days are excluded until both files publish final data.` : "Dashboard is waiting for matching SunRun and NYSEG downloaded-file data before calculating metrics."}`,
+          `Firebase connected via ${connectionLabel}. Loaded ${(irradianceBackfill.entries || []).length} daily record${(irradianceBackfill.entries || []).length === 1 ? "" : "s"} through ${latestEntryDate}.${irradianceBackfill.updated ? ` Restored irradiance for ${irradianceBackfill.count} recent day${irradianceBackfill.count === 1 ? "" : "s"}.` : ""} ${fileThroughDate ? `Dashboard calculations use matching SunRun and NYSEG downloaded-file data through ${fileThroughDate}. The two most recent reporting days are excluded until both files publish final data.` : "Dashboard is waiting for matching SunRun and NYSEG downloaded-file data before calculating metrics."}`,
           fileThroughDate ? "success" : "warning",
           !fileThroughDate
         )
@@ -28802,8 +28851,12 @@ This is a reconciliation, not an independent measurement, because EDC includes S
       return;
     }
     const readOnlyConnection = state.connection === "rest";
-    const entries = state.entries;
+    let entries = state.entries;
     entriesPageState.config = mergeConfig(state.config);
+    if (!readOnlyConnection) {
+      const irradianceBackfill = await revalidateSuspiciousIrradiancePeaks(db, entries);
+      entries = irradianceBackfill.entries;
+    }
     await loadValidatedNysegThrough();
     populateEntriesTable(entries);
     fillEntryForm(entries.find((entry) => entry.entry_date === getTodayIsoDate()) || entries[entries.length - 1]);
