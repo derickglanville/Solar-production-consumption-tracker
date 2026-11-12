@@ -8,9 +8,16 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/styles.css?v=20261108-history-purple">
+  <link rel="stylesheet" href="assets/css/styles.css?v=20261111-dark-default">
   <link rel="stylesheet" href="assets/css/solar-process-notes.css?v=20261020">
   <script src="https://cdn.plot.ly/plotly-3.4.0.min.js"></script>
+  <script>
+    (() => {
+      try {
+        if (window.localStorage.getItem("solar-theme") === "light") document.documentElement.dataset.theme = "light";
+      } catch (_) { /* Storage can be unavailable in private browsing. */ }
+    })();
+  </script>
 </head>
 <body data-page="dictionary" data-local-snapshot-mode="false">
   <nav class="navbar navbar-expand-lg tracker-nav">
@@ -35,6 +42,7 @@
         <a class="nav-link" href="settings.html">Settings</a>
         <a class="nav-link nav-link-button" href="dictionary.html">Dictionary</a>
         <a class="nav-link" href="solar_tracker_demo_export.csv">CSV Export</a>
+        <button type="button" class="nav-link nav-link-button theme-toggle" id="theme-toggle" aria-label="Switch to light mode" aria-pressed="false">Light mode</button>
       </div>
     </div>
   </nav>
@@ -201,9 +209,29 @@
     </div>
   </main>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/js/bootstrap.bundle.min.js"></script>
-  <script src="assets/js/site-bootstrap.js?v=20261108-history-purple"></script>
-  <script src="assets/js/firebase-config.js?v=20261108-history-purple"></script>
-  <script defer src="assets/js/app-bundle.js?v=20261108-history-purple"></script>
+  <script src="assets/js/site-bootstrap.js?v=20261111-dark-default"></script>
+  <script src="assets/js/firebase-config.js?v=20261111-dark-default"></script>
+  <script defer src="assets/js/app-bundle.js?v=20261111-dark-default"></script>
+  <script>
+    (() => {
+      const button = document.getElementById("theme-toggle");
+      if (!button) return;
+      const apply = (light) => {
+        if (light) document.documentElement.dataset.theme = "light";
+        else delete document.documentElement.dataset.theme;
+        button.textContent = light ? "Dark mode" : "Light mode";
+        button.setAttribute("aria-label", light ? "Switch to dark mode" : "Switch to light mode");
+        button.setAttribute("aria-pressed", String(light));
+      };
+      let light = document.documentElement.dataset.theme === "light";
+      apply(light);
+      button.addEventListener("click", () => {
+        light = !light;
+        apply(light);
+        try { window.localStorage.setItem("solar-theme", light ? "light" : "dark"); } catch (_) { /* Keep the session-only preference. */ }
+      });
+    })();
+  </script>
 
 </body>
 </html>

@@ -8,9 +8,16 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/styles.css?v=20261108-history-purple">
+  <link rel="stylesheet" href="assets/css/styles.css?v=20261111-dark-default">
   <link rel="stylesheet" href="assets/css/solar-process-notes.css?v=20261020">
   <script src="https://cdn.plot.ly/plotly-3.4.0.min.js"></script>
+  <script>
+    (() => {
+      try {
+        if (window.localStorage.getItem("solar-theme") === "light") document.documentElement.dataset.theme = "light";
+      } catch (_) { /* Storage can be unavailable in private browsing. */ }
+    })();
+  </script>
 </head>
 <body data-page="circuit-breakers" data-local-snapshot-mode="false">
   <nav class="navbar navbar-expand-lg tracker-nav">
@@ -35,6 +42,7 @@
         <a class="nav-link" href="settings.html">Settings</a>
         <a class="nav-link nav-link-button" href="dictionary.html">Dictionary</a>
         <a class="nav-link" href="solar_tracker_demo_export.csv">CSV Export</a>
+        <button type="button" class="nav-link nav-link-button theme-toggle" id="theme-toggle" aria-label="Switch to light mode" aria-pressed="false">Light mode</button>
       </div>
     </div>
   </nav>
@@ -107,12 +115,32 @@
     </div>
   </main>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/js/bootstrap.bundle.min.js"></script>
-  <script src="assets/js/site-bootstrap.js?v=20261108-history-purple"></script>
-  <script src="assets/js/firebase-config.js?v=20261108-history-purple"></script>
-  <script defer src="assets/js/app-bundle.js?v=20261108-history-purple"></script>
+  <script src="assets/js/site-bootstrap.js?v=20261111-dark-default"></script>
+  <script src="assets/js/firebase-config.js?v=20261111-dark-default"></script>
+  <script defer src="assets/js/app-bundle.js?v=20261111-dark-default"></script>
+  <script>
+    (() => {
+      const button = document.getElementById("theme-toggle");
+      if (!button) return;
+      const apply = (light) => {
+        if (light) document.documentElement.dataset.theme = "light";
+        else delete document.documentElement.dataset.theme;
+        button.textContent = light ? "Dark mode" : "Light mode";
+        button.setAttribute("aria-label", light ? "Switch to dark mode" : "Switch to light mode");
+        button.setAttribute("aria-pressed", String(light));
+      };
+      let light = document.documentElement.dataset.theme === "light";
+      apply(light);
+      button.addEventListener("click", () => {
+        light = !light;
+        apply(light);
+        try { window.localStorage.setItem("solar-theme", light ? "light" : "dark"); } catch (_) { /* Keep the session-only preference. */ }
+      });
+    })();
+  </script>
 
 <script>window.CIRCUIT_BREAKER_BOOTSTRAP = {"key_note": "Family-room electric heat: 8-foot electric baseboard heater, confirmed 240 V on paired breakers 15 and 17.", "records": [{"amperage": "50", "circuit": "1 \u0026 3", "identification": "Ductless AC system", "notes": "Former MBR AC circuit; repurposed for ductless AC."}, {"amperage": "50", "circuit": "2 \u0026 4", "identification": "Stove / Range", "notes": "240 V circuit."}, {"amperage": "20", "circuit": "5", "identification": "Refrigerator", "notes": "Identified."}, {"amperage": "50", "circuit": "6 \u0026 8", "identification": "Dryer", "notes": "240 V circuit."}, {"amperage": "20", "circuit": "7", "identification": "Basement / Laundry Room", "notes": "Identified."}, {"amperage": "20", "circuit": "9", "identification": "Missing - Empty", "notes": "Identified."}, {"amperage": "20", "circuit": "10", "identification": "Microwave", "notes": "Identified."}, {"amperage": "20", "circuit": "11", "identification": "Upstairs X", "notes": "Original 2020 notation; wording retained."}, {"amperage": "20", "circuit": "12", "identification": "Family Room / Dining Room / Kitchen / Basement stairs / Utility storage", "notes": "Lights: family room, dining room, kitchen, basement stairs, and utility storage room (wine cellar). Outlets: dining room and family room."}, {"amperage": "20", "circuit": "13", "identification": "Bathroom", "notes": "Identified."}, {"amperage": "20", "circuit": "14", "identification": "Boiler", "notes": "Oil-heating system electrical circuit."}, {"amperage": "50", "circuit": "15 \u0026 17", "identification": "Family Room Electric Baseboard Heater", "notes": "240 V family-room baseboard heat circuit (paired breakers 15 and 17)."}, {"amperage": "20", "circuit": "16", "identification": "Refrigerator", "notes": "Confirmed."}, {"amperage": "20", "circuit": "18", "identification": "MBR", "notes": "Confirmed."}, {"amperage": "20", "circuit": "19", "identification": "Dishwasher / Router", "notes": "Identified."}, {"amperage": "20", "circuit": "20", "identification": "Unknown", "notes": "Not identified"}], "safety_note": "Circuit identifications should be verified at the panel before electrical work. For 240 V equipment, both poles of the paired breaker must be treated as the same branch circuit.", "subtitle": "Working residential circuit map", "title": "Home Electrical Panel - Circuit Breaker Directory", "updated": "October 23, 2026"}; window.CIRCUIT_BREAKER_READ_ONLY = true;</script>
-<script defer src="assets/js/circuit-breakers.js?v=20261108-history-purple"></script>
+<script defer src="assets/js/circuit-breakers.js?v=20261111-dark-default"></script>
 
 </body>
 </html>
