@@ -4335,3 +4335,13 @@ html:not([data-theme="light"]) .nyseg-file-table td small { color: #284a55 !impo
 .nyseg-file-table tbody tr.nyseg-temporary-row:not(.nyseg-row-selected) > .nyseg-m02-group-start,
 .nyseg-file-table tbody tr.nyseg-temporary-row:not(.nyseg-row-selected) > .nyseg-edc-group-start { background: #f3eaff !important; }
 .nyseg-temporary-label { color: #74509a; font-size: .62rem; font-weight: 700; }
+
+/* Use dark status fills in dark mode instead of mixing a light row fill with
+   a light inherited table foreground. This covers Date, Day, weather,
+   irradiance, and sun-height cells as well as the meter columns. */
+html:not([data-theme="light"]) .nyseg-file-table tbody tr.nyseg-import-row:not(.nyseg-row-selected) > * { background: #5a4708 !important; color: #fffdf1 !important; }
+html:not([data-theme="light"]) .nyseg-file-table tbody tr.nyseg-export-row:not(.nyseg-row-selected) > * { background: #10483d !important; color: #effff8 !important; }
+html:not([data-theme="light"]) .nyseg-file-table tbody tr.nyseg-row-selected > * { background: #70590a !important; color: #fffdf1 !important; }
+html:not([data-theme="light"]) .nyseg-file-table tbody tr.nyseg-temporary-row:not(.nyseg-row-selected) > * { background: #3d2b5b !important; color: #fbf5ff !important; }
+html:not([data-theme="light"]) .nyseg-file-table .nyseg-weather-condition,
+html:not([data-theme="light"]) .nyseg-file-table td small { color: inherit !important; }
