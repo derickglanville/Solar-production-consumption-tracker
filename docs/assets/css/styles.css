@@ -4267,6 +4267,47 @@ body[data-page="dashboard"].dashboard-compact-mode .btn-contract {
 .nyseg-history-analysis-dialog .table small { font-size: .74rem; line-height: 1.05; }
 @media (max-height: 720px) { .nyseg-history-analysis-dialog { overflow: auto; } .nyseg-history-analysis-dialog .table-responsive { overflow: visible; } }
 
+/* Solar Tracker defaults to dark mode. data-theme="light" restores light mode. */
+html:not([data-theme="light"]) { color-scheme: dark; }
+html:not([data-theme="light"]) body { background: #091217; color: #e7f1f5; }
+html:not([data-theme="light"]) .tracker-nav { background: #102229; border-color: #2d5360; }
+html:not([data-theme="light"]) .navbar-brand,
+html:not([data-theme="light"]) .nav-link,
+html:not([data-theme="light"]) h1,
+html:not([data-theme="light"]) h2,
+html:not([data-theme="light"]) h3,
+html:not([data-theme="light"]) h4,
+html:not([data-theme="light"]) h5,
+html:not([data-theme="light"]) h6 { color: #ecf8f2; }
+html:not([data-theme="light"]) .nav-link:hover,
+html:not([data-theme="light"]) .nav-link:focus-visible { color: #8ee3bd; }
+html:not([data-theme="light"]) .dropdown-menu,
+html:not([data-theme="light"]) .card,
+html:not([data-theme="light"]) .tracker-card,
+html:not([data-theme="light"]) .modal-content,
+html:not([data-theme="light"]) dialog,
+html:not([data-theme="light"]) .nyseg-data-panel,
+html:not([data-theme="light"]) .nyseg-history-analysis-dialog { background-color: #102229; border-color: #315461; color: #e7f1f5; }
+html:not([data-theme="light"]) .table,
+html:not([data-theme="light"]) .table > :not(caption) > * > *,
+html:not([data-theme="light"]) .table thead th { --bs-table-bg: #102229; --bs-table-color: #e7f1f5; --bs-table-border-color: #315461; color: #e7f1f5; }
+html:not([data-theme="light"]) .table thead th { background: #18343d; }
+html:not([data-theme="light"]) .text-muted,
+html:not([data-theme="light"]) small.text-muted { color: #b6cbd3 !important; }
+html:not([data-theme="light"]) .form-control,
+html:not([data-theme="light"]) .form-select,
+html:not([data-theme="light"]) input,
+html:not([data-theme="light"]) select,
+html:not([data-theme="light"]) textarea { background-color: #0b1a20; border-color: #3c6673; color: #eef8fb; }
+html:not([data-theme="light"]) .form-control::placeholder,
+html:not([data-theme="light"]) textarea::placeholder { color: #9bb4bf; }
+html:not([data-theme="light"]) .theme-toggle { background: #8055b6; border: 1px solid #a98bce; border-radius: .45rem; color: #fff; font-weight: 800; margin-left: .25rem; padding: .32rem .62rem; }
+html:not([data-theme="light"]) .theme-toggle:hover,
+html:not([data-theme="light"]) .theme-toggle:focus-visible { background: #9a6dce; color: #fff; outline: 2px solid #ffd166; outline-offset: 2px; }
+html[data-theme="light"] .theme-toggle { background: #e7ddf4; border: 1px solid #8055b6; border-radius: .45rem; color: #60388f; font-weight: 800; margin-left: .25rem; padding: .32rem .62rem; }
+html[data-theme="light"] .theme-toggle:hover,
+html[data-theme="light"] .theme-toggle:focus-visible { background: #d8c7ed; color: #45266b; outline: 2px solid #8055b6; outline-offset: 2px; }
+
 /* Display-only NYSEG placeholders for source dates NYSEG has not supplied. */
 .nyseg-temporary-data-notice { background: #f3eaff; border: 1px solid #c8a6ee; border-radius: .5rem; color: #5c3d7b; font-size: .78rem; margin-bottom: .6rem; padding: .52rem .68rem; }
 .nyseg-file-table tbody tr.nyseg-temporary-row:not(.nyseg-row-selected) > *,
