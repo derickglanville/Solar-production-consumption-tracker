@@ -4318,6 +4318,15 @@ html[data-theme="light"] .theme-toggle:focus-visible { background: #d8c7ed; colo
   }
 }
 
+/* The NYSEG grid intentionally retains its light import/export row colors in
+   dark mode, so give every cell an explicit dark foreground for readability. */
+html:not([data-theme="light"]) .nyseg-file-table tbody tr.nyseg-import-row:not(.nyseg-row-selected) > *,
+html:not([data-theme="light"]) .nyseg-file-table tbody tr.nyseg-export-row:not(.nyseg-row-selected) > *,
+html:not([data-theme="light"]) .nyseg-file-table tbody tr.nyseg-row-selected > *,
+html:not([data-theme="light"]) .nyseg-file-table tbody tr.nyseg-temporary-row:not(.nyseg-row-selected) > * { color: #17313a !important; }
+html:not([data-theme="light"]) .nyseg-file-table .nyseg-weather-condition,
+html:not([data-theme="light"]) .nyseg-file-table td small { color: #284a55 !important; }
+
 /* Display-only NYSEG placeholders for source dates NYSEG has not supplied. */
 .nyseg-temporary-data-notice { background: #f3eaff; border: 1px solid #c8a6ee; border-radius: .5rem; color: #5c3d7b; font-size: .78rem; margin-bottom: .6rem; padding: .52rem .68rem; }
 .nyseg-file-table tbody tr.nyseg-temporary-row:not(.nyseg-row-selected) > *,
