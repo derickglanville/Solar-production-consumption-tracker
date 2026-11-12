@@ -4308,19 +4308,13 @@ html[data-theme="light"] .theme-toggle { background: #e7ddf4; border: 1px solid 
 html[data-theme="light"] .theme-toggle:hover,
 html[data-theme="light"] .theme-toggle:focus-visible { background: #d8c7ed; color: #45266b; outline: 2px solid #8055b6; outline-offset: 2px; }
 
-/* The navigation is intentionally dense; keep the appearance control within
-   thumb reach instead of allowing it to disappear beyond the mobile menu. */
+/* On phones this remains part of the expanded navigation list. */
 @media (max-width: 767px) {
   .theme-toggle {
-    align-items: center;
-    bottom: calc(1rem + env(safe-area-inset-bottom));
-    box-shadow: 0 .35rem .9rem rgba(0, 0, 0, .35);
-    display: inline-flex;
-    justify-content: center;
-    min-height: 2.7rem;
-    position: fixed;
-    right: 1rem;
-    z-index: 1060;
+    box-shadow: none;
+    margin: .2rem 0;
+    position: static;
+    width: 100%;
   }
 }
 
