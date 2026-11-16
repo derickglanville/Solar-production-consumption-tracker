@@ -3027,9 +3027,15 @@ window.SOLAR_BOOTSTRAP = {
         "end_of_day_meter_kwh": 6108.311,
         "entry_date": "2026-11-13",
         "production_kwh": 10.995
+      },
+      "2026-11-14": {
+        "available": true,
+        "end_of_day_meter_kwh": 6125.228,
+        "entry_date": "2026-11-14",
+        "production_kwh": 16.917
       }
     },
-    "latest_available_date": "2026-11-13",
+    "latest_available_date": "2026-11-14",
     "rows": [
       {
         "available": false,
@@ -3800,27 +3806,33 @@ window.SOLAR_BOOTSTRAP = {
         "production_kwh": 10.995
       },
       {
-        "available": false,
-        "end_of_day_meter_kwh": 0.0,
+        "available": true,
+        "end_of_day_meter_kwh": 6125.228,
         "entry_date": "2026-11-14",
-        "production_kwh": 0.0
+        "production_kwh": 16.917
       },
       {
         "available": false,
         "end_of_day_meter_kwh": 0.0,
         "entry_date": "2026-11-15",
         "production_kwh": 0.0
+      },
+      {
+        "available": false,
+        "end_of_day_meter_kwh": 0.0,
+        "entry_date": "2026-11-16",
+        "production_kwh": 0.0
       }
     ]
   },
   "sync_activity_snapshot": {
-    "completed_at": "2026-11-15T06:33:43-05:00",
+    "completed_at": "2026-11-16T07:04:59-05:00",
     "lines": [
       "NYSEG CSV download completed and the daily readings were processed.",
-      "Firebase M01/M02 update: 1 record saved.",
+      "Firebase M01/M02 update: 0 records saved.",
       "Sunrun portal meter history updated: 103 daily records.",
       "Notification email sent.",
-      "SunRun download (2026-11-13): Success."
+      "SunRun download (2026-11-14): Success."
     ],
     "process": "Published NYSEG and SunRun sync snapshot",
     "status": "success"
