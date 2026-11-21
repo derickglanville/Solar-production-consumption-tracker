@@ -23,3 +23,11 @@ NYSEG Bill/Data/
 # NYSEG credentials, authenticated browser profile, and automated-download diagnostics
 NYSEG Download Script/.nyseg-profile/
 NYSEG Download Script/nyseg_error.png
+
+# Sunrun automation credentials, session, and generated data
+SunRun Data/Login_Download/
+SunRun Data/Script/Email_Info.txt
+SunRun Data/Script/sunrun_session.json
+SunRun Data/Script/downloads/
+SunRun Data/Script/automation_logs/
+SunRun Data/Script/diagnostics/
