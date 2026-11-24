@@ -895,6 +895,15 @@ window.SOLAR_BOOTSTRAP = {
     "available": true,
     "daily": [
       {
+        "average_temperature_f": 50.041666666666664,
+        "date": "2026-11-21",
+        "export_kwh": 7.425000000000001,
+        "import_kwh": 22.367000000000004,
+        "net_export_kwh": -14.942000000000004,
+        "running_m01_kwh": 2005.461499999999,
+        "running_m02_kwh": 3472.428
+      },
+      {
         "average_temperature_f": 51.25,
         "date": "2026-11-20",
         "export_kwh": 14.879000000000001,
@@ -1916,170 +1925,170 @@ window.SOLAR_BOOTSTRAP = {
       {
         "export_kwh": 0.0,
         "hour": 0,
-        "import_kwh": 99.98000000000002,
+        "import_kwh": 100.55800000000002,
         "label": "12 AM",
-        "net_export_kwh": -99.98000000000002
+        "net_export_kwh": -100.55800000000002
       },
       {
         "export_kwh": 0.0,
         "hour": 1,
-        "import_kwh": 85.261,
+        "import_kwh": 85.85199999999999,
         "label": "1 AM",
-        "net_export_kwh": -85.261
+        "net_export_kwh": -85.85199999999999
       },
       {
         "export_kwh": 0.0,
         "hour": 2,
-        "import_kwh": 68.31699999999998,
+        "import_kwh": 68.85599999999998,
         "label": "2 AM",
-        "net_export_kwh": -68.31699999999998
+        "net_export_kwh": -68.85599999999998
       },
       {
         "export_kwh": 0.0,
         "hour": 3,
-        "import_kwh": 61.733000000000025,
+        "import_kwh": 62.16400000000002,
         "label": "3 AM",
-        "net_export_kwh": -61.733000000000025
+        "net_export_kwh": -62.16400000000002
       },
       {
         "export_kwh": 0.0,
         "hour": 4,
-        "import_kwh": 57.021,
+        "import_kwh": 57.415,
         "label": "4 AM",
-        "net_export_kwh": -57.021
+        "net_export_kwh": -57.415
       },
       {
         "export_kwh": 0.0,
         "hour": 5,
-        "import_kwh": 54.798000000000016,
+        "import_kwh": 55.19400000000002,
         "label": "5 AM",
-        "net_export_kwh": -54.798000000000016
+        "net_export_kwh": -55.19400000000002
       },
       {
         "export_kwh": 0.096,
         "hour": 6,
-        "import_kwh": 58.957,
+        "import_kwh": 59.357,
         "label": "6 AM",
-        "net_export_kwh": -58.861000000000004
+        "net_export_kwh": -59.261
       },
       {
-        "export_kwh": 4.533999999999999,
+        "export_kwh": 4.740999999999999,
         "hour": 7,
-        "import_kwh": 80.76599999999996,
+        "import_kwh": 80.83799999999997,
         "label": "7 AM",
-        "net_export_kwh": -76.23199999999997
+        "net_export_kwh": -76.09699999999997
       },
       {
-        "export_kwh": 21.836000000000002,
+        "export_kwh": 22.233,
         "hour": 8,
-        "import_kwh": 78.73400000000002,
+        "import_kwh": 79.64900000000003,
         "label": "8 AM",
-        "net_export_kwh": -56.898000000000025
+        "net_export_kwh": -57.416000000000025
       },
       {
-        "export_kwh": 90.52000000000008,
+        "export_kwh": 90.54800000000009,
         "hour": 9,
-        "import_kwh": 54.42850000000001,
+        "import_kwh": 55.59850000000001,
         "label": "9 AM",
-        "net_export_kwh": 36.091500000000075
+        "net_export_kwh": 34.94950000000008
       },
       {
-        "export_kwh": 396.50500000000005,
+        "export_kwh": 396.73400000000004,
         "hour": 10,
-        "import_kwh": 19.29800000000001,
+        "import_kwh": 20.11300000000001,
         "label": "10 AM",
-        "net_export_kwh": 377.20700000000005
+        "net_export_kwh": 376.62100000000004
       },
       {
-        "export_kwh": 505.813,
+        "export_kwh": 508.441,
         "hour": 11,
         "import_kwh": 17.013000000000005,
         "label": "11 AM",
-        "net_export_kwh": 488.79999999999995
+        "net_export_kwh": 491.428
       },
       {
-        "export_kwh": 640.3140000000002,
+        "export_kwh": 643.7120000000002,
         "hour": 12,
-        "import_kwh": 14.061999999999998,
+        "import_kwh": 14.185999999999998,
         "label": "12 PM",
-        "net_export_kwh": 626.2520000000002
+        "net_export_kwh": 629.5260000000002
       },
       {
-        "export_kwh": 607.216,
+        "export_kwh": 607.753,
         "hour": 13,
-        "import_kwh": 15.997000000000002,
+        "import_kwh": 17.582,
         "label": "1 PM",
-        "net_export_kwh": 591.219
+        "net_export_kwh": 590.171
       },
       {
-        "export_kwh": 508.50600000000003,
+        "export_kwh": 508.507,
         "hour": 14,
-        "import_kwh": 13.850999999999996,
+        "import_kwh": 16.087999999999994,
         "label": "2 PM",
-        "net_export_kwh": 494.65500000000003
+        "net_export_kwh": 492.419
       },
       {
         "export_kwh": 370.7139999999999,
         "hour": 15,
-        "import_kwh": 24.717999999999993,
+        "import_kwh": 25.57999999999999,
         "label": "3 PM",
-        "net_export_kwh": 345.99599999999987
+        "net_export_kwh": 345.1339999999999
       },
       {
         "export_kwh": 229.421,
         "hour": 16,
-        "import_kwh": 63.555000000000014,
+        "import_kwh": 65.09600000000002,
         "label": "4 PM",
-        "net_export_kwh": 165.86599999999999
+        "net_export_kwh": 164.325
       },
       {
         "export_kwh": 78.84099999999997,
         "hour": 17,
-        "import_kwh": 113.461,
+        "import_kwh": 117.678,
         "label": "5 PM",
-        "net_export_kwh": -34.62000000000003
+        "net_export_kwh": -38.83700000000003
       },
       {
         "export_kwh": 10.593000000000002,
         "hour": 18,
-        "import_kwh": 186.35600000000002,
+        "import_kwh": 187.85000000000002,
         "label": "6 PM",
-        "net_export_kwh": -175.76300000000003
+        "net_export_kwh": -177.25700000000003
       },
       {
         "export_kwh": 0.09400000000000001,
         "hour": 19,
-        "import_kwh": 200.28199999999998,
+        "import_kwh": 201.527,
         "label": "7 PM",
-        "net_export_kwh": -200.188
+        "net_export_kwh": -201.433
       },
       {
         "export_kwh": 0.0,
         "hour": 20,
-        "import_kwh": 179.84899999999993,
+        "import_kwh": 181.03199999999993,
         "label": "8 PM",
-        "net_export_kwh": -179.84899999999993
+        "net_export_kwh": -181.03199999999993
       },
       {
         "export_kwh": 0.0,
         "hour": 21,
-        "import_kwh": 158.65900000000002,
+        "import_kwh": 159.282,
         "label": "9 PM",
-        "net_export_kwh": -158.65900000000002
+        "net_export_kwh": -159.282
       },
       {
         "export_kwh": 0.0,
         "hour": 22,
-        "import_kwh": 145.25800000000004,
+        "import_kwh": 145.77600000000004,
         "label": "10 PM",
-        "net_export_kwh": -145.25800000000004
+        "net_export_kwh": -145.77600000000004
       },
       {
         "export_kwh": 0.0,
         "hour": 23,
-        "import_kwh": 130.73999999999998,
+        "import_kwh": 131.177,
         "label": "11 PM",
-        "net_export_kwh": -130.73999999999998
+        "net_export_kwh": -131.177
       }
     ],
     "monthly": [
@@ -2116,39 +2125,39 @@ window.SOLAR_BOOTSTRAP = {
         "net_export_kwh": 226.51199999999983
       },
       {
-        "days": 20,
-        "export_kwh": 233.61000000000004,
-        "import_kwh": 442.92099999999994,
+        "days": 21,
+        "export_kwh": 241.03500000000005,
+        "import_kwh": 465.28799999999995,
         "month": "November 2026",
         "month_key": "2026-11",
-        "net_export_kwh": -209.3109999999999
+        "net_export_kwh": -224.2529999999999
       }
     ],
-    "row_count": 2713,
-    "source_end": "2026-11-20",
+    "row_count": 2737,
+    "source_end": "2026-11-21",
     "source_name": "NYSEG_Daily_Usage_Data.csv",
     "source_start": "2026-07-31",
     "summary": {
-      "daytime_export_kwh": 3427.85,
-      "export_kwh": 3465.0029999999997,
-      "export_to_import_ratio": 1.747270742770958,
-      "import_kwh": 1983.094499999999,
+      "daytime_export_kwh": 3434.6710000000003,
+      "export_kwh": 3472.428,
+      "export_to_import_ratio": 1.7314857453010202,
+      "import_kwh": 2005.461499999999,
       "largest_export_hour": {
-        "export_kwh": 640.3140000000002,
+        "export_kwh": 643.7120000000002,
         "hour": 12,
-        "import_kwh": 14.061999999999998,
+        "import_kwh": 14.185999999999998,
         "label": "12 PM",
-        "net_export_kwh": 626.2520000000002
+        "net_export_kwh": 629.5260000000002
       },
       "largest_import_hour": {
         "export_kwh": 0.09400000000000001,
         "hour": 19,
-        "import_kwh": 200.28199999999998,
+        "import_kwh": 201.527,
         "label": "7 PM",
-        "net_export_kwh": -200.188
+        "net_export_kwh": -201.433
       },
-      "net_export_kwh": 1481.9085000000007,
-      "overnight_import_kwh": 1567.977
+      "net_export_kwh": 1466.966500000001,
+      "overnight_import_kwh": 1576.878
     }
   },
   "sample_entries": [
@@ -3165,9 +3174,15 @@ window.SOLAR_BOOTSTRAP = {
         "end_of_day_meter_kwh": 6308.8,
         "entry_date": "2026-11-21",
         "production_kwh": 24.615
+      },
+      "2026-11-22": {
+        "available": true,
+        "end_of_day_meter_kwh": 6322.471,
+        "entry_date": "2026-11-22",
+        "production_kwh": 13.671
       }
     },
-    "latest_available_date": "2026-11-21",
+    "latest_available_date": "2026-11-22",
     "rows": [
       {
         "available": false,
@@ -3986,27 +4001,33 @@ window.SOLAR_BOOTSTRAP = {
         "production_kwh": 24.615
       },
       {
-        "available": false,
-        "end_of_day_meter_kwh": 0.0,
+        "available": true,
+        "end_of_day_meter_kwh": 6322.471,
         "entry_date": "2026-11-22",
-        "production_kwh": 0.0
+        "production_kwh": 13.671
       },
       {
         "available": false,
         "end_of_day_meter_kwh": 0.0,
         "entry_date": "2026-11-23",
         "production_kwh": 0.0
+      },
+      {
+        "available": false,
+        "end_of_day_meter_kwh": 0.0,
+        "entry_date": "2026-11-24",
+        "production_kwh": 0.0
       }
     ]
   },
   "sync_activity_snapshot": {
-    "completed_at": "2026-11-23T07:34:38-05:00",
+    "completed_at": "2026-11-24T06:39:13-05:00",
     "lines": [
       "NYSEG CSV download completed and the daily readings were processed.",
-      "Firebase M01/M02 update: 2 records saved.",
-      "Sunrun portal meter history updated: 113 daily records.",
+      "Firebase M01/M02 update: 1 record saved.",
+      "Sunrun portal meter history updated: 114 daily records.",
       "Notification email sent.",
-      "SunRun download (2026-11-21): Success."
+      "SunRun download (2026-11-22): Success."
     ],
     "process": "Published NYSEG and SunRun sync snapshot",
     "status": "success"
